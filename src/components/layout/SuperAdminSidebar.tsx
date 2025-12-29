@@ -18,11 +18,13 @@ import {
     LifeBuoy,
     Zap,
     ShieldCheck,
-    FileText
+    FileText,
+    Shield
 } from "lucide-react"
 
 const superAdminMenuItems = [
     { icon: LayoutDashboard, label: "SA Dashboard", href: "/super-admin/dashboard" },
+    { icon: Shield, label: "Administradores", href: "/super-admin/administradores" },
     { icon: Building2, label: "Empresas", href: "/super-admin/empresas" },
     { icon: Package, label: "Planos", href: "/super-admin/planos" },
     { icon: CreditCard, label: "SA Financeiro", href: "/super-admin/financeiro" },
