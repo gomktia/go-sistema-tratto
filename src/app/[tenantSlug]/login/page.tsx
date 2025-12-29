@@ -1,25 +1,20 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { ChevronLeft, ArrowRight, Lock, User } from "lucide-react"
+import { ChevronLeft, ArrowRight, Lock, User, Briefcase, UserCog } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { tenants } from "@/mocks/tenants"
-import { mockCustomers, type Customer } from "@/mocks/customers"
 import { Badge } from "@/components/ui/badge"
 import { cn, getInitials } from "@/lib/utils"
+import { intelligentLogin, checkUserExists, type UserType, supabase } from "@/lib/auth-helpers"
 
-const normalizeCpf = (value: string) => value.replace(/\D/g, "")
-
-const findCustomerByIdentifier = (identifier: string): Customer | undefined => {
-    if (!identifier) return undefined
-    if (identifier.includes("@")) {
-        return mockCustomers.find((customer) => customer.email.toLowerCase() === identifier.toLowerCase())
-    }
-    const cpf = normalizeCpf(identifier)
-    return mockCustomers.find((customer) => normalizeCpf(customer.cpf) === cpf)
+interface DetectedUser {
+    name: string
+    email: string
+    userType: UserType
+    data: any
 }
 
 export default function CustomerLoginPage() {
@@ -27,47 +22,136 @@ export default function CustomerLoginPage() {
     const router = useRouter()
     const tenantSlug = params.tenantSlug as string
 
-    const tenant = useMemo(() => {
-        return tenants.find(t => t.slug === tenantSlug) || tenants[0]
-    }, [tenantSlug])
-
-    const tenantInitials = useMemo(() => getInitials(tenant.fullName || tenant.name), [tenant.fullName, tenant.name])
-    const tenantBadge = tenant.logo || tenantInitials || "BF"
+    const [tenant, setTenant] = useState<any>(null)
+    const [tenantId, setTenantId] = useState<string>("")
+    const [loading, setLoading] = useState(true)
 
     const [identifier, setIdentifier] = useState("")
     const [stage, setStage] = useState<'identify' | 'password' | 'signup'>('identify')
     const [password, setPassword] = useState("")
-    const [detectedCustomer, setDetectedCustomer] = useState<Customer | null>(null)
+    const [detectedUser, setDetectedUser] = useState<DetectedUser | null>(null)
     const [error, setError] = useState("")
+    const [isLoggingIn, setIsLoggingIn] = useState(false)
+
+    // Fetch tenant data from Supabase
+    useEffect(() => {
+        async function fetchTenant() {
+            try {
+                const { data, error } = await supabase
+                    .from('tenants')
+                    .select('*')
+                    .eq('slug', tenantSlug)
+                    .single()
+
+                if (error || !data) {
+                    console.error('Tenant not found:', error)
+                    router.push('/')
+                    return
+                }
+
+                setTenant(data)
+                setTenantId(data.id)
+            } catch (err) {
+                console.error('Error fetching tenant:', err)
+                router.push('/')
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        fetchTenant()
+    }, [tenantSlug, router])
+
+    const tenantInitials = useMemo(() => {
+        if (!tenant) return 'BF'
+        return getInitials(tenant.business_name || tenant.name || 'BeautyFlow')
+    }, [tenant])
+
+    const tenantBadge = tenant?.logo || tenantInitials
 
     const resetFlow = () => {
         setStage('identify')
-        setDetectedCustomer(null)
+        setDetectedUser(null)
         setPassword("")
         setError("")
     }
 
-    const handleIdentify = (e: React.FormEvent) => {
+    const handleIdentify = async (e: React.FormEvent) => {
         e.preventDefault()
         setError("")
-        const customer = findCustomerByIdentifier(identifier)
-        if (customer) {
-            setDetectedCustomer(customer)
-            setStage('password')
-            setPassword("")
-        } else {
-            setDetectedCustomer(null)
-            setStage('signup')
+        setIsLoggingIn(true)
+
+        if (!tenantId) {
+            setError("Erro ao identificar o salão")
+            setIsLoggingIn(false)
+            return
+        }
+
+        try {
+            // Check if user exists in either system
+            const result = await checkUserExists(identifier, tenantId)
+
+            if (result.exists && result.data) {
+                // Extract user information based on type
+                let userName = ''
+                let userEmail = identifier
+
+                if (result.userType === 'customer') {
+                    userName = result.data.customer?.name || 'Cliente'
+                    userEmail = result.data.email || identifier
+                } else {
+                    // Employee/Admin
+                    userName = result.data.full_name || 'Profissional'
+                }
+
+                setDetectedUser({
+                    name: userName,
+                    email: userEmail,
+                    userType: result.userType!,
+                    data: result.data
+                })
+                setStage('password')
+                setPassword("")
+            } else {
+                // User not found - go to signup
+                setDetectedUser(null)
+                setStage('signup')
+            }
+        } catch (err: any) {
+            console.error('Error checking user:', err)
+            setError('Erro ao verificar usuário. Tente novamente.')
+        } finally {
+            setIsLoggingIn(false)
         }
     }
 
-    const handleLogin = (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!detectedCustomer) return
-        if (detectedCustomer.password === password) {
-            router.push(`/${tenantSlug}/profile?email=${detectedCustomer.email}`)
-        } else {
-            setError("Senha incorreta. Tente novamente.")
+        if (!detectedUser || !tenantId) return
+
+        setError("")
+        setIsLoggingIn(true)
+
+        try {
+            // Use intelligent login to authenticate
+            const result = await intelligentLogin(identifier, password, tenantId)
+
+            if (result.success) {
+                // Store user session data (you may want to use a context or state management)
+                sessionStorage.setItem('userType', result.userType!)
+                sessionStorage.setItem('tenantSlug', tenantSlug)
+
+                // Redirect based on user type
+                const fullPath = `/${tenantSlug}${result.redirectPath}`
+                router.push(fullPath)
+            } else {
+                setError(result.error || "Falha no login. Verifique suas credenciais.")
+            }
+        } catch (err: any) {
+            console.error('Login error:', err)
+            setError("Erro ao fazer login. Tente novamente.")
+        } finally {
+            setIsLoggingIn(false)
         }
     }
 
@@ -77,6 +161,37 @@ export default function CustomerLoginPage() {
         { id: 'signup', label: 'Primeiro acesso' },
     ]
     const currentStepIndex = loginSteps.findIndex(stepItem => stepItem.id === stage)
+
+    // Get user type badge info
+    const getUserTypeBadge = (userType: UserType) => {
+        switch (userType) {
+            case 'customer':
+                return { label: 'Cliente', icon: User, color: 'border-blue-200 text-blue-600' }
+            case 'employee':
+                return { label: 'Profissional', icon: Briefcase, color: 'border-purple-200 text-purple-600' }
+            case 'company_admin':
+                return { label: 'Gerente', icon: UserCog, color: 'border-green-200 text-green-600' }
+            case 'super_admin':
+                return { label: 'Admin', icon: UserCog, color: 'border-red-200 text-red-600' }
+            default:
+                return { label: 'Usuário', icon: User, color: 'border-gray-200 text-gray-600' }
+        }
+    }
+
+    if (loading) {
+        return (
+            <div className="fixed inset-0 bg-white dark:bg-zinc-950 flex items-center justify-center">
+                <div className="text-center space-y-4">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-purple-600 mx-auto animate-pulse" />
+                    <p className="text-sm font-medium text-gray-600 dark:text-zinc-400">Carregando...</p>
+                </div>
+            </div>
+        )
+    }
+
+    if (!tenant) {
+        return null
+    }
 
     return (
         <div className="fixed inset-0 bg-white dark:bg-zinc-950 flex items-center justify-center p-6 font-sans overflow-auto">
@@ -96,8 +211,10 @@ export default function CustomerLoginPage() {
                         {tenantBadge}
                     </div>
                     <div>
-                        <h1 className="text-3xl font-black tracking-tight text-gray-900 dark:text-white">Área do Cliente</h1>
-                        <p className="text-gray-600 dark:text-zinc-400 font-medium">Acesse seus agendamentos e pontos em {tenant.name}.</p>
+                        <h1 className="text-3xl font-black tracking-tight text-gray-900 dark:text-white">Área de Login</h1>
+                        <p className="text-gray-600 dark:text-zinc-400 font-medium">
+                            {tenant.business_name || tenant.name} - Clientes e Profissionais
+                        </p>
                     </div>
                 </div>
 
@@ -143,26 +260,27 @@ export default function CustomerLoginPage() {
 
                             <Button
                                 type="submit"
-                                className="w-full h-12 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg shadow-blue-500/30 transition-all"
+                                disabled={isLoggingIn || !identifier}
+                                className="w-full h-12 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg shadow-blue-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Continuar
+                                {isLoggingIn ? 'Verificando...' : 'Continuar'}
                                 <ArrowRight className="w-5 h-5 ml-2" />
                             </Button>
                         </form>
                     )}
 
-                    {stage === 'password' && detectedCustomer && (
+                    {stage === 'password' && detectedUser && (
                         <form onSubmit={handleLogin} className="space-y-6">
                             <div className="flex items-center gap-3 p-4 rounded-xl border border-gray-100 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-800/50">
                                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-blue-500/20">
-                                    {detectedCustomer.name.charAt(0)}
+                                    {detectedUser.name.charAt(0)}
                                 </div>
                                 <div className="flex-1">
-                                    <p className="font-bold text-gray-900 dark:text-white">{detectedCustomer.name}</p>
-                                    <p className="text-xs text-gray-500 dark:text-zinc-400">{detectedCustomer.email}</p>
+                                    <p className="font-bold text-gray-900 dark:text-white">{detectedUser.name}</p>
+                                    <p className="text-xs text-gray-500 dark:text-zinc-400">{detectedUser.email}</p>
                                 </div>
-                                <Badge variant="outline" className="rounded-full border-blue-200 text-blue-600 text-[10px] font-bold uppercase tracking-widest">
-                                    Cliente
+                                <Badge variant="outline" className={cn("rounded-full text-[10px] font-bold uppercase tracking-widest", getUserTypeBadge(detectedUser.userType).color)}>
+                                    {getUserTypeBadge(detectedUser.userType).label}
                                 </Badge>
                             </div>
 
@@ -189,15 +307,17 @@ export default function CustomerLoginPage() {
                             <div className="space-y-3">
                                 <Button
                                     type="submit"
-                                    className="w-full h-12 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg shadow-blue-500/30 transition-all"
+                                    disabled={isLoggingIn || !password}
+                                    className="w-full h-12 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg shadow-blue-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    Entrar
+                                    {isLoggingIn ? 'Entrando...' : 'Entrar'}
                                     <ArrowRight className="w-5 h-5 ml-2" />
                                 </Button>
                                 <Button
                                     type="button"
                                     variant="ghost"
                                     onClick={resetFlow}
+                                    disabled={isLoggingIn}
                                     className="w-full h-10 rounded-xl text-gray-500 hover:text-blue-600"
                                 >
                                     Não é você? Informar outro CPF/E-mail
