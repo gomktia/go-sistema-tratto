@@ -234,20 +234,27 @@ export async function checkUserExists(
   const isEmail = identifier.includes('@')
 
   if (isEmail) {
-    // Check employee/admin first
-    const { data: authUsers, error: authError } = await supabase
-      .from('app_users')
+    // Check employee first by querying employees table
+    const { data: employee, error: employeeError } = await supabase
+      .from('employees')
       .select(`
         *,
-        auth_user:id
+        app_user:app_users!inner(full_name)
       `)
       .eq('email', identifier)
+      .eq('tenant_id', tenantId)
       .single()
 
-    if (!authError && authUsers) {
-      // Found in auth system, determine type
-      // This is a simplified check - in production you'd query auth.users metadata
-      return { exists: true, userType: 'employee', data: authUsers }
+    if (!employeeError && employee) {
+      return {
+        exists: true,
+        userType: 'employee',
+        data: {
+          full_name: employee.app_user?.full_name || employee.name,
+          email: employee.email,
+          ...employee
+        }
+      }
     }
 
     // Check customer

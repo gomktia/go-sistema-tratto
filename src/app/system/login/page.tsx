@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
@@ -17,8 +17,18 @@ export default function SystemLoginPage() {
     const [error, setError] = useState("")
     const [isLoading, setIsLoading] = useState(false)
 
-    const { login } = useAuth()
+    const { login, user, isSuperAdmin } = useAuth()
     const router = useRouter()
+
+    // Redirect if already logged in as super admin
+    useEffect(() => {
+        if (user && isSuperAdmin) {
+            router.push("/super-admin/dashboard")
+        } else if (user && !isSuperAdmin) {
+            // Logged in but not super admin - redirect to appropriate page
+            setError("Acesso negado. Esta área é apenas para Super Administradores.")
+        }
+    }, [user, isSuperAdmin, router])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -29,8 +39,11 @@ export default function SystemLoginPage() {
             const success = await login(email, password)
 
             if (success) {
-                // Check if user is super admin (you can add this logic to auth context)
-                router.push("/super-admin/empresas")
+                // The useEffect will handle redirect if user is super_admin
+                // If not super admin, show error
+                setTimeout(() => {
+                    // Check will happen in useEffect
+                }, 100)
             } else {
                 setError("Acesso negado. Credenciais de super admin inválidas.")
             }

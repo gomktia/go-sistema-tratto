@@ -137,9 +137,15 @@ export default function CustomerLoginPage() {
             const result = await intelligentLogin(identifier, password, tenantId)
 
             if (result.success) {
-                // Store user session data (you may want to use a context or state management)
+                // Store user session data securely
                 sessionStorage.setItem('userType', result.userType!)
                 sessionStorage.setItem('tenantSlug', tenantSlug)
+
+                // For customers, store email securely
+                if (result.userType === 'customer' && result.userData) {
+                    const customerEmail = result.userData.email || identifier
+                    sessionStorage.setItem('customerEmail', customerEmail)
+                }
 
                 // Redirect based on user type
                 const fullPath = `/${tenantSlug}${result.redirectPath}`
@@ -334,13 +340,20 @@ export default function CustomerLoginPage() {
                             <div className="space-y-2">
                                 <h3 className="text-xl font-black text-gray-900 dark:text-white">Ainda não encontramos você</h3>
                                 <p className="text-sm text-gray-600 dark:text-zinc-400">
-                                    Use o agendamento online para criar sua conta automaticamente e já garantir seu primeiro horário.
+                                    Crie sua conta para acessar o portal ou agende online para criar automaticamente.
                                 </p>
                             </div>
                             <div className="space-y-3">
                                 <Button
-                                    onClick={() => router.push(`/${tenantSlug}/book`)}
+                                    onClick={() => router.push(`/${tenantSlug}/signup`)}
                                     className="w-full h-12 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg shadow-blue-500/30 transition-all"
+                                >
+                                    Criar Conta
+                                </Button>
+                                <Button
+                                    onClick={() => router.push(`/${tenantSlug}/book`)}
+                                    variant="outline"
+                                    className="w-full h-12 rounded-full border-2 border-gray-200 font-semibold text-gray-700 hover:bg-gray-50 transition-all"
                                 >
                                     Agendar e criar acesso
                                 </Button>

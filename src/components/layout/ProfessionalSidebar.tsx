@@ -11,50 +11,43 @@ import {
     Users,
     Settings,
     Scissors,
-    UserCircle,
     LogOut,
-    Building2,
     DollarSign,
-    Package,
-    Megaphone,
-    Smartphone,
+    Clock,
+    CalendarCheck,
     Menu,
     X
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-const menuSections = [
+const professionalMenuSections = [
     {
-        title: "Principal",
+        title: "Meu Espaço",
         items: [
-            { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
-            { icon: Calendar, label: "Agenda", href: "/agenda" },
+            { icon: LayoutDashboard, label: "Dashboard", href: "/profissional/dashboard" },
+            { icon: Calendar, label: "Agenda", href: "/profissional/agenda" },
+            { icon: DollarSign, label: "Financeiro", href: "/profissional/financeiro" },
         ]
     },
     {
-        title: "Gestão",
+        title: "Gestão Pessoal",
         items: [
-            { icon: Users, label: "Clientes", href: "/clientes" },
-            { icon: Scissors, label: "Serviços", href: "/servicos" },
-            { icon: UserCircle, label: "Funcionários", href: "/funcionarios" },
-            { icon: DollarSign, label: "Financeiro", href: "/financeiro" },
-            { icon: Package, label: "Estoque & PDV", href: "/estoque" },
-            { icon: Megaphone, label: "CRM & Marketing", href: "/crm" },
-            { icon: Smartphone, label: "Vista Profissional", href: "/profissional" },
+            { icon: Users, label: "Meus Clientes", href: "/profissional/clientes" },
+            { icon: CalendarCheck, label: "Disponibilidade", href: "/profissional/disponibilidade" },
+            { icon: Clock, label: "Folgas & Ausências", href: "/profissional/folgas" },
         ]
     },
     {
         title: "Configurações",
         items: [
-            { icon: Building2, label: "Perfil", href: "/perfil" },
-            { icon: Settings, label: "Configurações", href: "/configuracoes" },
+            { icon: Settings, label: "Preferências", href: "/profissional/configuracoes" },
         ]
     }
 ]
 
-export function Sidebar() {
+export function ProfessionalSidebar() {
     const pathname = usePathname()
-    const { logout } = useAuth()
+    const { user, logout } = useAuth()
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
     return (
@@ -98,9 +91,22 @@ export function Sidebar() {
                 </div>
             </div>
 
+            {/* Professional Info */}
+            <div className="px-4 py-4 border-b border-black/5 dark:border-white/10">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                        {user?.name?.charAt(0) || 'P'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-foreground truncate">{user?.name || 'Profissional'}</p>
+                        <p className="text-xs text-muted-foreground">Profissional</p>
+                    </div>
+                </div>
+            </div>
+
             {/* Navigation */}
             <nav className="flex-1 px-3 py-6 space-y-6 overflow-y-auto">
-                {menuSections.map((section) => (
+                {professionalMenuSections.map((section) => (
                     <div key={section.title}>
                         <p className="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                             {section.title}
@@ -132,7 +138,7 @@ export function Sidebar() {
                 ))}
             </nav>
 
-            {/* User / Logout */}
+            {/* Logout */}
             <div className="p-4 border-t border-black/5 dark:border-white/10">
                 <button
                     onClick={logout}

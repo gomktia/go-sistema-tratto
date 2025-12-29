@@ -1,6 +1,8 @@
 "use client"
 
-import React, { createContext, useContext, useState, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { supabase } from '@/lib/auth-helpers'
+import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 export type UserRole = 'super_admin' | 'company_admin' | 'employee' | 'customer'
 
@@ -19,86 +21,141 @@ interface AuthContextType {
     isAuthenticated: boolean
     isSuperAdmin: boolean
     isCompanyAdmin: boolean
+    isLoading: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-// Mock users for development
-const MOCK_USERS: User[] = [
-    {
-        id: 'super-1',
-        name: 'Geison Hoehr',
-        email: 'geisonhoehr@gmail.com',
-        role: 'super_admin'
-    },
-    {
-        id: 'super-2',
-        name: 'Oseias Santos',
-        email: 'oseias01fab@gmail.com',
-        role: 'super_admin'
-    },
-    {
-        id: 'super-3',
-        name: 'Admin Master',
-        email: 'admin@beautyflow.com',
-        role: 'super_admin'
-    },
-    {
-        id: 'company-1',
-        name: 'Gerente Beleza Pura',
-        email: 'gerente@belezapura.com',
-        role: 'company_admin',
-        companyId: '1'
-    },
-    {
-        id: 'company-2',
-        name: 'Gerente Studio Glamour',
-        email: 'gerente@studioglamour.com',
-        role: 'company_admin',
-        companyId: '2'
+/**
+ * Maps Supabase user to our User interface
+ */
+async function mapSupabaseUser(supabaseUser: SupabaseUser): Promise<User | null> {
+    const metadata = supabaseUser.user_metadata
+    const role = metadata.role as UserRole || 'customer'
+    const tenantId = metadata.tenant_id
+
+    // For super_admin, just return basic info
+    if (role === 'super_admin') {
+        return {
+            id: supabaseUser.id,
+            name: metadata.full_name || metadata.name || 'Super Admin',
+            email: supabaseUser.email || '',
+            role: 'super_admin',
+        }
     }
-]
 
-// Mock passwords for development (in production, use proper hashing)
-const MOCK_PASSWORDS: Record<string, string> = {
-    'geisonhoehr@gmail.com': '123456',
-    'oseias01fab@gmail.com': 'Oseias01$',
-    'admin@beautyflow.com': 'admin',
-    'gerente@belezapura.com': 'senha',
-    'gerente@studioglamour.com': 'senha'
-}
+    // For company_admin, fetch tenant info if needed
+    if (role === 'company_admin') {
+        return {
+            id: supabaseUser.id,
+            name: metadata.full_name || metadata.name || 'Administrador',
+            email: supabaseUser.email || '',
+            role: 'company_admin',
+            companyId: tenantId,
+        }
+    }
 
-function getStoredUser(): User | null {
-    if (typeof window === 'undefined') return null
-    const savedUser = window.localStorage.getItem('currentUser')
-    if (!savedUser) return null
-    try {
-        return JSON.parse(savedUser) as User
-    } catch (error) {
-        console.error('Error loading user:', error)
-        return null
+    // For employee, fetch employee record
+    if (role === 'employee') {
+        const { data: employee } = await supabase
+            .from('employees')
+            .select('id, name, tenant_id')
+            .eq('user_id', supabaseUser.id)
+            .single()
+
+        return {
+            id: supabaseUser.id,
+            name: employee?.name || metadata.full_name || metadata.name || 'Funcionário',
+            email: supabaseUser.email || '',
+            role: 'employee',
+            companyId: employee?.tenant_id || tenantId,
+        }
+    }
+
+    // For customer (shouldn't happen in this context, but handle it)
+    return {
+        id: supabaseUser.id,
+        name: metadata.full_name || metadata.name || 'Cliente',
+        email: supabaseUser.email || '',
+        role: 'customer',
     }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-    const [user, setUser] = useState<User | null>(() => getStoredUser())
+    const [user, setUser] = useState<User | null>(null)
+    const [isLoading, setIsLoading] = useState(true)
 
-    const login = async (email: string, password: string): Promise<boolean> => {
-        // Mock authentication - in production, this would call an API
-        const foundUser = MOCK_USERS.find(u => u.email === email)
+    // Check for existing session on mount
+    useEffect(() => {
+        let isMounted = true
 
-        if (foundUser && MOCK_PASSWORDS[email] === password) {
-            setUser(foundUser)
-            localStorage.setItem('currentUser', JSON.stringify(foundUser))
-            return true
+        async function loadSession() {
+            try {
+                const { data: { session } } = await supabase.auth.getSession()
+
+                if (session?.user && isMounted) {
+                    const mappedUser = await mapSupabaseUser(session.user)
+                    setUser(mappedUser)
+                }
+            } catch (error) {
+                console.error('Error loading session:', error)
+            } finally {
+                if (isMounted) {
+                    setIsLoading(false)
+                }
+            }
         }
 
-        return false
+        loadSession()
+
+        // Listen for auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if (event === 'SIGNED_IN' && session?.user && isMounted) {
+                const mappedUser = await mapSupabaseUser(session.user)
+                setUser(mappedUser)
+            } else if (event === 'SIGNED_OUT' && isMounted) {
+                setUser(null)
+            }
+        })
+
+        return () => {
+            isMounted = false
+            subscription.unsubscribe()
+        }
+    }, [])
+
+    const login = async (email: string, password: string): Promise<boolean> => {
+        try {
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            })
+
+            if (error) {
+                console.error('Login error:', error.message)
+                return false
+            }
+
+            if (!data.user) {
+                return false
+            }
+
+            const mappedUser = await mapSupabaseUser(data.user)
+            setUser(mappedUser)
+            return true
+        } catch (error) {
+            console.error('Login exception:', error)
+            return false
+        }
     }
 
-    const logout = () => {
-        setUser(null)
-        localStorage.removeItem('currentUser')
+    const logout = async () => {
+        try {
+            await supabase.auth.signOut()
+            setUser(null)
+        } catch (error) {
+            console.error('Logout error:', error)
+        }
     }
 
     return (
@@ -108,7 +165,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             logout,
             isAuthenticated: !!user,
             isSuperAdmin: user?.role === 'super_admin',
-            isCompanyAdmin: user?.role === 'company_admin'
+            isCompanyAdmin: user?.role === 'company_admin',
+            isLoading,
         }}>
             {children}
         </AuthContext.Provider>

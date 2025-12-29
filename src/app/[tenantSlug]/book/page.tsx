@@ -763,7 +763,13 @@ export default function BookingPage() {
 
                     <div className="flex flex-col sm:flex-row gap-3">
                         <Button
-                            onClick={() => router.push(`/${tenantSlug}/profile?email=${clientData.email}`)}
+                            onClick={() => {
+                                // Store customer email securely in sessionStorage
+                                sessionStorage.setItem('customerEmail', clientData.email)
+                                sessionStorage.setItem('userType', 'customer')
+                                sessionStorage.setItem('tenantSlug', tenantSlug)
+                                router.push(`/${tenantSlug}/profile`)
+                            }}
                             variant="outline"
                             className="flex-1 h-14 rounded-full border-2 border-gray-200 font-semibold text-gray-700 hover:bg-gray-50 transition-all"
                         >

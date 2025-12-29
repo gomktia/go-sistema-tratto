@@ -5,6 +5,7 @@ import { addDays, format, isSameDay, startOfToday } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { appointments, services } from "@/mocks/data"
 import { useTenant } from "@/contexts/tenant-context"
+import { useAuth } from "@/contexts/auth-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -28,20 +29,27 @@ const timelineStyles: Record<string, string> = {
 
 export default function ProfissionalAgendaPage() {
     const { currentTenant } = useTenant()
+    const { user } = useAuth()
     const [currentDate, setCurrentDate] = useState(startOfToday())
     const [filter, setFilter] = useState("Todos")
     const [viewMode, setViewMode] = useState<"cards" | "timeline">("cards")
 
-    const dayAppointments = useMemo(() => (
-        appointments
-            .filter(apt => apt.tenantId === currentTenant.id && apt.staffId === "1")
+    // Filter appointments for the logged-in professional only
+    const dayAppointments = useMemo(() => {
+        if (!user) return []
+
+        return appointments
+            .filter(apt =>
+                apt.tenantId === currentTenant.id &&
+                apt.staffId === user.id // Only show this professional's appointments
+            )
             .filter(apt => isSameDay(new Date(apt.date), currentDate))
             .filter(apt => filter === "Todos" || statusLabels[apt.status] === filter)
             .map(apt => ({
                 ...apt,
                 service: services.find(service => service.id === apt.serviceId),
             }))
-    ), [currentTenant.id, currentDate, filter])
+    }, [currentTenant.id, currentDate, filter, user])
 
     const timelineSlots = useMemo(() => (
         dayAppointments

@@ -150,7 +150,7 @@ export default function AdministradoresPage() {
     }
 
     const filteredAdmins = admins.filter(admin =>
-        admin.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        admin.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         admin.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
     )
 

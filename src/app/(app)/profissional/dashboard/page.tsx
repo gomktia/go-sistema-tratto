@@ -33,14 +33,20 @@ export default function ProfissionalDashboard() {
     const { currentTenant } = useTenant()
     const { user } = useAuth()
 
-    const todayAppointments = useMemo(() => (
-        appointments
-            .filter(apt => apt.tenantId === currentTenant.id && apt.staffId === "1")
+    // Filter appointments for the logged-in professional only
+    const todayAppointments = useMemo(() => {
+        if (!user) return []
+
+        return appointments
+            .filter(apt =>
+                apt.tenantId === currentTenant.id &&
+                apt.staffId === user.id // Only show this professional's appointments
+            )
             .map(apt => ({
                 ...apt,
                 service: services.find(service => service.id === apt.serviceId),
             }))
-    ), [currentTenant.id])
+    }, [currentTenant.id, user])
 
     const timelineEvents = useMemo(() => (
         todayAppointments

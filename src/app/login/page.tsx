@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
@@ -18,7 +18,7 @@ export default function LoginPage() {
     const [error, setError] = useState("")
     const [isLoading, setIsLoading] = useState(false)
 
-    const { login } = useAuth()
+    const { login, user } = useAuth()
     const router = useRouter()
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -30,7 +30,11 @@ export default function LoginPage() {
             const success = await login(email, password)
 
             if (success) {
-                router.push("/dashboard")
+                // Redirect based on user role (wait a tick for user state to update)
+                setTimeout(() => {
+                    // This will be updated by the auth context
+                    window.location.href = "/dashboard"
+                }, 100)
             } else {
                 setError("Email ou senha inválidos")
             }
@@ -40,6 +44,25 @@ export default function LoginPage() {
             setIsLoading(false)
         }
     }
+
+    // Redirect if already logged in
+    useEffect(() => {
+        if (user) {
+            switch (user.role) {
+                case 'super_admin':
+                    router.push('/super-admin/dashboard')
+                    break
+                case 'company_admin':
+                    router.push('/dashboard')
+                    break
+                case 'employee':
+                    router.push('/profissional/dashboard')
+                    break
+                default:
+                    router.push('/dashboard')
+            }
+        }
+    }, [user, router])
 
     return (
         <div className="fixed inset-0 flex items-center justify-center bg-white overflow-auto p-4">
@@ -143,26 +166,6 @@ export default function LoginPage() {
                                 )}
                             </Button>
                         </form>
-
-                        {/* Demo credentials */}
-                        <div className="mt-8 p-4 bg-blue-50 rounded-xl border border-blue-100">
-                            <p className="text-xs font-bold text-blue-900 mb-3 uppercase tracking-wider">
-                                Contas de teste (Empresas/Staff)
-                            </p>
-                            <div className="space-y-3 text-xs">
-                                <div className="space-y-1">
-                                    <p className="font-semibold text-blue-900">Empresa 1 (Beleza Pura)</p>
-                                    <p className="text-blue-700">gerente@belezapura.com</p>
-                                    <p className="text-blue-600">Senha: senha</p>
-                                </div>
-                                <div className="h-px bg-blue-200" />
-                                <div className="space-y-1">
-                                    <p className="font-semibold text-blue-900">Profissional</p>
-                                    <p className="text-blue-700">julia@belezapura.com</p>
-                                    <p className="text-blue-600">Senha: senha</p>
-                                </div>
-                            </div>
-                        </div>
                     </Card>
 
                     {/* Footer */}

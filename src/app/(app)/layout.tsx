@@ -12,11 +12,14 @@ export default function Layout({
 }: {
     children: React.ReactNode
 }) {
-    const { isAuthenticated, isSuperAdmin, logout } = useAuth()
+    const { isAuthenticated, isSuperAdmin, isLoading } = useAuth()
     const router = useRouter()
     const pathname = usePathname()
 
     useEffect(() => {
+        // Don't redirect while loading session
+        if (isLoading) return
+
         // 1. Check if user is authenticated
         if (!isAuthenticated) {
             router.push("/login")
@@ -27,7 +30,16 @@ export default function Layout({
         if (pathname.startsWith("/super-admin") && !isSuperAdmin) {
             router.push("/dashboard")
         }
-    }, [isAuthenticated, isSuperAdmin, pathname, router])
+    }, [isAuthenticated, isSuperAdmin, isLoading, pathname, router])
+
+    // Show loading state while checking session
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+            </div>
+        )
+    }
 
     if (!isAuthenticated) {
         return null // Will redirect in useEffect

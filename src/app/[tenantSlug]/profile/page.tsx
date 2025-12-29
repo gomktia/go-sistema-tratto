@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useRef, useState, type ChangeEvent } from "react"
+import { useMemo, useRef, useState, useEffect, type ChangeEvent } from "react"
 import { useParams, useSearchParams, useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { format, parseISO, differenceInHours, isAfter, addHours } from "date-fns"
@@ -20,7 +20,8 @@ import {
     Sparkles,
     Tag,
     TrendingUp,
-    User
+    User,
+    Star
 } from "lucide-react"
 import { FloatingWhatsApp } from "@/components/FloatingWhatsApp"
 import { Button } from "@/components/ui/button"
@@ -33,13 +34,36 @@ import { services } from "@/mocks/services"
 import { mockCustomers, type Customer } from "@/mocks/customers"
 import { combos } from "@/mocks/combos"
 import { cn, getInitials } from "@/lib/utils"
+import { supabase } from "@/lib/supabase"
 
 export default function CustomerProfilePage() {
     const params = useParams()
     const searchParams = useSearchParams()
     const router = useRouter()
     const tenantSlug = params.tenantSlug as string
-    const customerEmail = searchParams.get('email')
+
+    // Try to get email from sessionStorage first (secure), fallback to URL params (legacy support)
+    const [customerEmail, setCustomerEmail] = useState<string | null>(null)
+
+    useEffect(() => {
+        // Check sessionStorage first
+        const storedEmail = sessionStorage.getItem('customerEmail')
+        if (storedEmail) {
+            setCustomerEmail(storedEmail)
+            return
+        }
+
+        // Fallback to URL params (legacy support)
+        const urlEmail = searchParams.get('email')
+        if (urlEmail) {
+            setCustomerEmail(urlEmail)
+            // Store in sessionStorage for future use
+            sessionStorage.setItem('customerEmail', urlEmail)
+        } else {
+            // No authentication found, redirect to login
+            router.push(`/${tenantSlug}/login`)
+        }
+    }, [searchParams, tenantSlug, router])
 
     const tenant = useMemo(() => {
         return tenants.find(t => t.slug === tenantSlug) || tenants[0]
@@ -145,23 +169,14 @@ export default function CustomerProfilePage() {
             .slice(0, 3)
     }, [allAppointments])
 
-    const dependentProfiles = useMemo(() => [
-        { id: "dep-1", name: "Lívia", relation: "Filha", credits: 180, status: "Ativa" },
-        { id: "dep-2", name: "Marcos", relation: "Cônjuge", credits: 90, status: "Ativo" }
-    ], [])
+    // Mock data - These features are planned but not yet functional
+    const dependentProfiles = useMemo(() => [], [])  // Disabled mock data
 
-    const purchaseHistory = useMemo(() => [
-        { id: "ord-1", title: "Kit Nutri Glow", amount: 189.9, date: "2024-02-10", status: "Enviado" },
-        { id: "ord-2", title: "Gift Card R$ 300", amount: 300, date: "2024-01-28", status: "Utilizado" },
-        { id: "ord-3", title: "Combo Autocuidado", amount: 420, date: "2023-12-12", status: "Finalizado" }
-    ], [])
+    const purchaseHistory = useMemo(() => [], [])  // Disabled mock data
 
     const walletSummary = {
-        credits: 260,
-        vouchers: [
-            { id: "cupom-1", label: "GLOW15", description: "15% OFF em combinações noturnas", expires: "15/03" },
-            { id: "cupom-2", label: "VIPSPA", description: "R$ 80 off na compra de um combo", expires: "30/03" }
-        ]
+        credits: 0,  // Disabled mock data
+        vouchers: []  // Disabled mock data
     }
 
     const containerVariants = {
@@ -202,6 +217,7 @@ export default function CustomerProfilePage() {
     const AppointmentCard = ({ apt }: { apt: typeof appointments[0] }) => {
         const aptTenant = tenants.find(t => t.id === apt.tenantId)
         const aptService = services.find(s => s.id === apt.serviceId)
+        const [isCancelling, setIsCancelling] = useState(false)
 
         // Cancellation Logic: 24h rule
         const appointmentDate = parseISO(apt.date)
@@ -209,10 +225,44 @@ export default function CustomerProfilePage() {
         const fullAptDate = addHours(appointmentDate, hours)
         const canCancel = differenceInHours(fullAptDate, new Date()) >= 24 && apt.status === 'confirmed'
 
-        const handleCancelRequest = () => {
+        const handleCancelRequest = async () => {
             if (canCancel) {
-                alert("Solicitação de cancelamento enviada com sucesso!")
+                // Confirm cancellation
+                const confirmed = window.confirm(
+                    `Tem certeza que deseja cancelar o agendamento de ${aptService?.name} no dia ${format(fullAptDate, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}?`
+                )
+
+                if (!confirmed) return
+
+                setIsCancelling(true)
+
+                try {
+                    // Update appointment status in Supabase
+                    const { error } = await supabase
+                        .from('appointments')
+                        .update({
+                            status: 'cancelled',
+                            cancelled_at: new Date().toISOString(),
+                            cancelled_by: customerEmail
+                        })
+                        .eq('id', apt.id)
+
+                    if (error) {
+                        console.error('Error cancelling appointment:', error)
+                        alert('Erro ao cancelar agendamento. Por favor, tente novamente ou entre em contato pelo WhatsApp.')
+                    } else {
+                        alert('Agendamento cancelado com sucesso!')
+                        // Refresh the page to update the appointments list
+                        window.location.reload()
+                    }
+                } catch (error) {
+                    console.error('Error:', error)
+                    alert('Erro ao cancelar agendamento. Por favor, tente novamente.')
+                } finally {
+                    setIsCancelling(false)
+                }
             } else {
+                // Can't cancel online, redirect to WhatsApp
                 const message = encodeURIComponent(`Olá! Gostaria de cancelar meu agendamento de ${aptService?.name} no dia ${format(fullAptDate, "dd/MM")}.`)
                 window.open(`https://wa.me/${aptTenant?.whatsapp}?text=${message}`, '_blank')
             }
@@ -254,17 +304,31 @@ export default function CustomerProfilePage() {
                         <span className="text-sm font-black text-slate-900 dark:text-white">R$ {aptService?.price},00</span>
                     </div>
                     <div className="flex gap-2">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleCancelRequest}
-                            className={cn(
-                                "h-9 rounded-xl font-bold text-[10px] uppercase tracking-wider px-4",
-                                canCancel ? "text-red-500 hover:text-red-600 hover:bg-red-50" : "text-slate-400 hover:text-primary hover:bg-slate-50"
-                            )}
-                        >
-                            {canCancel ? 'Cancelar' : 'Falar com Salão'}
-                        </Button>
+                        {apt.status === 'completed' ? (
+                            <Button
+                                variant="default"
+                                size="sm"
+                                onClick={() => router.push(`/${tenantSlug}/review?appointment=${apt.id}`)}
+                                className="h-9 rounded-xl font-bold text-[10px] uppercase tracking-wider px-4 bg-amber-500 hover:bg-amber-600"
+                            >
+                                <Star className="w-3 h-3 mr-1" />
+                                Avaliar
+                            </Button>
+                        ) : (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleCancelRequest}
+                                disabled={isCancelling}
+                                className={cn(
+                                    "h-9 rounded-xl font-bold text-[10px] uppercase tracking-wider px-4",
+                                    canCancel ? "text-red-500 hover:text-red-600 hover:bg-red-50" : "text-slate-400 hover:text-primary hover:bg-slate-50",
+                                    isCancelling && "opacity-50 cursor-not-allowed"
+                                )}
+                            >
+                                {isCancelling ? 'Cancelando...' : canCancel ? 'Cancelar' : 'Falar com Salão'}
+                            </Button>
+                        )}
                     </div>
                 </div>
             </Card>
@@ -610,32 +674,17 @@ export default function CustomerProfilePage() {
                                     <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/70">Dependentes e presentes</p>
                                     <h3 className="text-2xl font-black text-slate-900 dark:text-white">Controle quem pode usar seu saldo</h3>
                                 </div>
-                                <Button size="sm" variant="secondary" className="rounded-full h-10 px-4 font-bold text-[10px] uppercase tracking-widest" onClick={() => alert("Em breve: fluxo completo de dependentes")}>
-                                    Adicionar dependente
-                                </Button>
+                                <Badge className="bg-amber-500/10 text-amber-600 border-none rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest">
+                                    Em breve
+                                </Badge>
                             </div>
-                            <div className="grid gap-3">
-                                {dependentProfiles.map(dep => (
-                                    <div key={dep.id} className="flex items-center justify-between rounded-2xl bg-white/70 dark:bg-zinc-900/80 px-4 py-3">
-                                        <div>
-                                            <p className="text-sm font-bold text-slate-900 dark:text-white">{dep.name}</p>
-                                            <p className="text-xs text-slate-500">{dep.relation}</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Saldo</p>
-                                            <p className="text-lg font-black text-primary">R$ {dep.credits}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="rounded-2xl border border-dashed border-primary/40 px-4 py-3 flex items-center justify-between">
-                                <div>
-                                    <p className="text-xs font-bold uppercase tracking-[0.3em] text-primary/80">Vale presente ativo</p>
-                                    <p className="text-sm text-slate-600 dark:text-zinc-300">Envie créditos para alguém especial</p>
-                                </div>
-                                <Button variant="ghost" className="rounded-full text-primary font-bold" onClick={() => router.push(`/${tenantSlug}/shop`)}>
-                                    Comprar gift card
-                                </Button>
+                            <div className="rounded-2xl border-2 border-dashed border-slate-200 dark:border-zinc-800 px-6 py-12 text-center">
+                                <p className="text-sm text-muted-foreground mb-2">
+                                    Funcionalidade em desenvolvimento
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    Em breve você poderá adicionar dependentes e comprar gift cards
+                                </p>
                             </div>
                         </Card>
 
@@ -645,55 +694,30 @@ export default function CustomerProfilePage() {
                                     <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/60">Carteira & Cupons</p>
                                     <h3 className="text-2xl font-black text-slate-900 dark:text-white">Ative benefícios antes de pagar</h3>
                                 </div>
-                                <Badge variant="outline" className="rounded-full text-[10px] uppercase tracking-widest flex items-center gap-1">
-                                    <Tag className="w-3 h-3" /> 2 cupons
+                                <Badge className="bg-amber-500/10 text-amber-600 border-none rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest">
+                                    Em breve
                                 </Badge>
                             </div>
-                            <div className="rounded-2xl border border-slate-100 dark:border-zinc-800 p-4 flex items-center justify-between">
-                                <div>
-                                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Saldo BeautyCash</p>
-                                    <p className="text-3xl font-black text-slate-900 dark:text-white">R$ {walletSummary.credits}</p>
-                                </div>
-                                <Button variant="outline" className="rounded-full font-bold" onClick={() => alert("Integração com pagamento em andamento")}>
-                                    Adicionar saldo
-                                </Button>
-                            </div>
-                            <div className="space-y-3">
-                                {walletSummary.vouchers.map(voucher => (
-                                    <div key={voucher.id} className="rounded-2xl border border-dashed border-slate-200 dark:border-zinc-800 px-4 py-3 flex items-center justify-between">
-                                        <div>
-                                            <p className="text-sm font-black text-slate-900 dark:text-white">{voucher.label}</p>
-                                            <p className="text-xs text-slate-400">{voucher.description}</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Expira</p>
-                                            <p className="text-sm font-black text-primary">{voucher.expires}</p>
-                                        </div>
-                                    </div>
-                                ))}
+                            <div className="rounded-2xl border-2 border-dashed border-slate-200 dark:border-zinc-800 px-6 py-12 text-center">
+                                <Tag className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                                <p className="text-sm text-muted-foreground mb-2">
+                                    Carteira digital em desenvolvimento
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    Em breve você poderá gerenciar saldo BeautyCash e cupons de desconto
+                                </p>
                             </div>
                         </Card>
 
                         <Card className="p-6 rounded-[2.5rem] border-none shadow-xl bg-white dark:bg-zinc-900 space-y-5">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/60">Minhas compras e vitrine</p>
-                                    <h3 className="text-2xl font-black text-slate-900 dark:text-white">Continue aproveitando seus favoritos</h3>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/60">Loja integrada</p>
+                                    <h3 className="text-2xl font-black text-slate-900 dark:text-white">Compre produtos do salão</h3>
                                 </div>
                                 <Button variant="outline" className="rounded-full font-bold" onClick={() => router.push(`/${tenantSlug}/shop`)}>
                                     Ver loja
                                 </Button>
-                            </div>
-                            <div className="space-y-3">
-                                {purchaseHistory.map(order => (
-                                    <div key={order.id} className="rounded-2xl border border-slate-100 dark:border-zinc-800 px-4 py-3 flex items-center justify-between">
-                                        <div>
-                                            <p className="text-sm font-bold text-slate-900 dark:text-white">{order.title}</p>
-                                            <p className="text-xs text-slate-400">{format(parseISO(order.date), "dd MMM", { locale: ptBR })} • {order.status}</p>
-                                        </div>
-                                        <p className="text-lg font-black text-slate-900 dark:text-white">R$ {order.amount.toFixed(2)}</p>
-                                    </div>
-                                ))}
                             </div>
                             {tenantCombos.length > 0 && (
                                 <div className="space-y-3">
