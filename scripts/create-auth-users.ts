@@ -51,11 +51,11 @@ const TEST_USERS = [
   {
     email: 'oseias01fab@gmail.com',
     password: 'Oseias01$',
-    full_name: 'Oseias Fabricio',
+    full_name: 'Oseias Santos',
     role: 'super_admin',
     user_metadata: {
       role: 'super_admin',
-      full_name: 'Oseias Fabricio'
+      full_name: 'Oseias Santos'
     }
   },
   {

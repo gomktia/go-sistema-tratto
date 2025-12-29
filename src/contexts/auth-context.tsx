@@ -33,6 +33,12 @@ const MOCK_USERS: User[] = [
     },
     {
         id: 'super-2',
+        name: 'Oseias Santos',
+        email: 'oseias01fab@gmail.com',
+        role: 'super_admin'
+    },
+    {
+        id: 'super-3',
         name: 'Admin Master',
         email: 'admin@beautyflow.com',
         role: 'super_admin'
@@ -56,6 +62,7 @@ const MOCK_USERS: User[] = [
 // Mock passwords for development (in production, use proper hashing)
 const MOCK_PASSWORDS: Record<string, string> = {
     'geisonhoehr@gmail.com': '123456',
+    'oseias01fab@gmail.com': 'Oseias01$',
     'admin@beautyflow.com': 'admin',
     'gerente@belezapura.com': 'senha',
     'gerente@studioglamour.com': 'senha'
