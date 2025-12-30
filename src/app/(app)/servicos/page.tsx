@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/table"
 import { useTenant } from "@/contexts/tenant-context"
 import { employees as initialEmployees, services as initialServices, type Service, type Employee } from "@/mocks/services"
+import { useTenantEmployees } from "@/hooks/useTenantRecords"
 
 const categories = ["Cabelo", "Unhas", "Maquiagem", "Estética", "Massagem", "Depilação", "Sobrancelha"]
 
@@ -59,6 +60,32 @@ export default function ServicosPage() {
     const [selectedService, setSelectedService] = useState<Service | null>(null)
     const [employees, setEmployees] = useState<Employee[]>(initialEmployees)
     const { currentTenant } = useTenant()
+
+    // Buscar profissionais do Supabase
+    const { data: employeeRecords, loading: employeesLoading } = useTenantEmployees(currentTenant.id)
+
+    // Atualizar employees quando os dados do Supabase chegarem
+    useEffect(() => {
+        if (employeeRecords.length > 0) {
+            // Mapear employeeRecords para o formato Employee
+            const mappedEmployees: Employee[] = employeeRecords.map(record => ({
+                id: record.id,
+                tenantId: record.tenantId,
+                name: record.fullName,
+                email: record.email || '',
+                phone: record.phone || '',
+                specialties: record.specialties || [],
+                workingHours: {}, // Será preenchido se necessário
+                commission: 0,
+                acceptsOnlineBooking: true,
+                roundRobinEnabled: true,
+                active: true,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            }))
+            setEmployees(mappedEmployees)
+        }
+    }, [employeeRecords])
 
     const [formData, setFormData] = useState({
         name: "",
