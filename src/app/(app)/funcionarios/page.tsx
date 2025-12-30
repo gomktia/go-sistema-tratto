@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import {
     Plus,
@@ -55,6 +56,7 @@ const weekDays = [
 ]
 
 export default function FuncionariosPage() {
+    const router = useRouter()
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
     const [employees, setEmployees] = useState(initialEmployees)
     const [searchTerm, setSearchTerm] = useState("")
@@ -307,9 +309,14 @@ export default function FuncionariosPage() {
                                                     </Badge>
                                                 )}
                                             </div>
-                                            <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase">
-                                                Agenda <ChevronRight className="w-3 h-3" />
-                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => router.push(`/agenda?employee=${employee.id}`)}
+                                                className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase hover:text-primary transition-colors h-auto p-0 underline-none"
+                                            >
+                                                Ver Agenda <ChevronRight className="w-3 h-3" />
+                                            </Button>
                                         </div>
                                     </div>
                                 </Card>

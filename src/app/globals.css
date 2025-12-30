@@ -81,4 +81,42 @@
     font-feature-settings: "rlig" 1, "calt" 1;
     /* Optimize font rendering */
   }
+
+  /* Prevent text selection on UI elements */
+  h1, h2, h3, h4, h5, h6,
+  button,
+  label,
+  nav,
+  header,
+  aside,
+  .select-none,
+  [role="button"],
+  [role="tab"],
+  [role="menuitem"],
+  [data-radix-collection-item],
+  [data-state] {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
+  /* Prevent cursor change on non-interactive text */
+  h1, h2, h3, h4, h5, h6,
+  label,
+  nav,
+  header {
+    cursor: default;
+  }
+
+  /* Allow text selection only in content areas */
+  textarea, input,
+  [role="textbox"],
+  [contenteditable="true"],
+  .select-text {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
 }
