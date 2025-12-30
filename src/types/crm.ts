@@ -4,6 +4,7 @@ export type ClientRecord = {
     name: string
     email: string
     phone: string
+    cpf?: string
     lastVisit: string
     totalSpent: number
     status: "active" | "inactive" | "churned"

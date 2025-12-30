@@ -64,6 +64,7 @@ export default function EmpresasPage() {
         email: "",
         phone: "",
         address: "",
+        cpfCnpj: "",
         planId: "starter",
     })
 
@@ -98,6 +99,7 @@ export default function EmpresasPage() {
             email: formData.email,
             phone: formData.phone,
             address: formData.address,
+            cpfCnpj: formData.cpfCnpj,
             logo: generatedLogo,
             primaryColor: '#8B5CF6',
             secondaryColor: '#A78BFA',
@@ -119,7 +121,7 @@ export default function EmpresasPage() {
 
         setCompanies([...companies, newCompany])
         setShowNewCompany(false)
-        setFormData({ name: "", fullName: "", email: "", phone: "", address: "", planId: "starter" })
+        setFormData({ name: "", fullName: "", email: "", phone: "", address: "", cpfCnpj: "", planId: "starter" })
     }
 
     const handleSuspend = (company: Company) => {
@@ -386,6 +388,29 @@ export default function EmpresasPage() {
                             value={formData.address}
                             onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                             placeholder="Rua, número, bairro, cidade"
+                            required
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="cpfCnpj">CPF/CNPJ do Responsável</Label>
+                        <Input
+                            id="cpfCnpj"
+                            value={formData.cpfCnpj}
+                            onChange={(e) => {
+                                const value = e.target.value.replace(/\D/g, '')
+                                let formatted = value
+                                if (value.length <= 11) {
+                                    // CPF: 000.000.000-00
+                                    formatted = value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+                                } else if (value.length <= 14) {
+                                    // CNPJ: 00.000.000/0000-00
+                                    formatted = value.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
+                                }
+                                setFormData({ ...formData, cpfCnpj: formatted })
+                            }}
+                            placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                            maxLength={18}
                             required
                         />
                     </div>

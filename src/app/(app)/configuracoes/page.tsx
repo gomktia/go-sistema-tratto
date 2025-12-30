@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { ColorPicker } from "@/components/ui/color-picker"
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
+import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client"
 
 export default function ConfiguracoesPage() {
     const { currentTenant, setCurrentTenant } = useTenant()
@@ -30,7 +31,39 @@ export default function ConfiguracoesPage() {
         { id: 'dom', label: 'Domingo', open: '00:00', close: '00:00', active: false },
     ]
 
-    const handleSave = () => {
+    const handleSave = async () => {
+        const supabase = getSupabaseBrowserClient()
+
+        if (supabase && isSupabaseConfigured) {
+            try {
+                // Atualiza as cores no Supabase
+                const { error } = await supabase
+                    .from('tenants')
+                    .update({
+                        theme: {
+                            primary: primaryColor,
+                            secondary: secondaryColor
+                        },
+                        logo_url: logoPreview || null,
+                        settings: {
+                            custom_domain: customDomain
+                        }
+                    })
+                    .eq('id', currentTenant.id)
+
+                if (error) {
+                    console.error('Erro ao salvar configurações:', error)
+                    alert('Erro ao salvar configurações. Por favor, tente novamente.')
+                    return
+                }
+            } catch (error) {
+                console.error('Erro ao salvar configurações:', error)
+                alert('Erro ao salvar configurações. Por favor, tente novamente.')
+                return
+            }
+        }
+
+        // Atualiza o contexto local
         const updatedTenant = {
             ...currentTenant,
             customPrimaryColor: primaryColor,
@@ -39,8 +72,11 @@ export default function ConfiguracoesPage() {
             customLogo: logoPreview
         }
         setCurrentTenant(updatedTenant)
+
+        // Aplica as cores localmente
         document.documentElement.style.setProperty('--primary', primaryColor)
         document.documentElement.style.setProperty('--secondary', secondaryColor)
+
         alert('Configurações salvas com sucesso!')
     }
 

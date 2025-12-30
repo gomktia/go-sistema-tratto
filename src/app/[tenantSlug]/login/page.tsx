@@ -200,7 +200,7 @@ export default function CustomerLoginPage() {
     }
 
     return (
-        <div className="fixed inset-0 bg-white dark:bg-zinc-950 flex items-center justify-center p-6 font-sans overflow-auto">
+        <div className="fixed inset-0 bg-white dark:bg-zinc-950 flex items-center justify-center p-4 sm:p-6 font-sans overflow-auto">
             {/* Background decorations */}
             <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 opacity-40" />
             <div className="absolute top-20 left-10 w-72 h-72 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob" />
@@ -210,15 +210,15 @@ export default function CustomerLoginPage() {
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="max-w-md w-full space-y-8 relative z-10"
+                className="max-w-md w-full space-y-6 sm:space-y-8 relative z-10"
             >
-                <div className="text-center space-y-4">
-                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-600 to-purple-600 mx-auto flex items-center justify-center text-white text-2xl font-black shadow-2xl shadow-blue-500/30">
+                <div className="text-center space-y-3 sm:space-y-4">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-blue-600 to-purple-600 mx-auto flex items-center justify-center text-white text-xl sm:text-2xl font-black shadow-2xl shadow-blue-500/30">
                         {tenantBadge}
                     </div>
                     <div>
-                        <h1 className="text-3xl font-black tracking-tight text-gray-900 dark:text-white">Área de Login</h1>
-                        <p className="text-gray-600 dark:text-zinc-400 font-medium">
+                        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 dark:text-white">Área de Login</h1>
+                        <p className="text-sm sm:text-base text-gray-600 dark:text-zinc-400 font-medium">
                             {tenant.business_name || tenant.name} - Clientes e Profissionais
                         </p>
                     </div>
@@ -236,7 +236,7 @@ export default function CustomerLoginPage() {
                     ))}
                 </div>
 
-                <Card className="p-8 rounded-2xl bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-gray-100 dark:border-zinc-800 shadow-2xl space-y-8">
+                <Card className="p-6 sm:p-8 rounded-2xl bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-gray-100 dark:border-zinc-800 shadow-2xl space-y-6 sm:space-y-8">
                     {stage === 'identify' && (
                         <form onSubmit={handleIdentify} className="space-y-6">
                             <div className="space-y-2">
@@ -291,7 +291,16 @@ export default function CustomerLoginPage() {
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">Senha</label>
+                                <div className="flex items-center justify-between">
+                                    <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">Senha</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => router.push(`/${tenantSlug}/forgot-password`)}
+                                        className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                                    >
+                                        Esqueceu sua senha?
+                                    </button>
+                                </div>
                                 <div className="relative group">
                                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors">
                                         <Lock className="w-5 h-5" />

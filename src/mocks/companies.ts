@@ -5,6 +5,7 @@ export interface Company {
     email: string
     phone: string
     address: string
+    cpfCnpj?: string
 
     // Branding
     logo?: string

@@ -173,7 +173,8 @@ export default function ClientsPage() {
     const [formData, setFormData] = useState({
         name: "",
         email: "",
-        phone: ""
+        phone: "",
+        cpf: ""
     })
 
     useEffect(() => {
@@ -339,7 +340,8 @@ export default function ClientsPage() {
         setFormData({
             name: client.name,
             email: client.email,
-            phone: client.phone
+            phone: client.phone,
+            cpf: client.cpf || ""
         })
         setShowEditClient(true)
     }
@@ -350,7 +352,7 @@ export default function ClientsPage() {
     }
 
     const resetForm = () => {
-        setFormData({ name: "", email: "", phone: "" })
+        setFormData({ name: "", email: "", phone: "", cpf: "" })
         setSelectedClient(null)
     }
 
@@ -417,6 +419,21 @@ export default function ClientsPage() {
                                 value={formData.phone}
                                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                 placeholder="(11) 99999-9999"
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="cpf">CPF</Label>
+                            <Input
+                                id="cpf"
+                                value={formData.cpf}
+                                onChange={(e) => {
+                                    const value = e.target.value.replace(/\D/g, '')
+                                    const formatted = value.length <= 11 ? value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : formData.cpf
+                                    setFormData({ ...formData, cpf: formatted })
+                                }}
+                                placeholder="000.000.000-00"
+                                maxLength={14}
                                 required
                             />
                         </div>
@@ -516,6 +533,21 @@ export default function ClientsPage() {
                             id="edit-phone"
                             value={formData.phone}
                             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                            required
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="edit-cpf">CPF</Label>
+                        <Input
+                            id="edit-cpf"
+                            value={formData.cpf}
+                            onChange={(e) => {
+                                const value = e.target.value.replace(/\D/g, '')
+                                const formatted = value.length <= 11 ? value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : formData.cpf
+                                setFormData({ ...formData, cpf: formatted })
+                            }}
+                            placeholder="000.000.000-00"
+                            maxLength={14}
                             required
                         />
                     </div>
