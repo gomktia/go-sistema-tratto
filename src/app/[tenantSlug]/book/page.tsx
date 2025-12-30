@@ -474,6 +474,19 @@ export default function BookingPage() {
         return employeesWithSchedules.filter(employee => employee.tenantId === tenant.id)
     }, [employeesWithSchedules, tenant])
 
+    // Filtrar profissionais disponíveis para o serviço selecionado
+    const availableProfessionalsForService = useMemo(() => {
+        if (!selectedService) return tenantEmployees
+
+        // Filtrar profissionais que têm o serviço nas suas specialties
+        const filtered = tenantEmployees.filter(employee =>
+            employee.specialties && employee.specialties.includes(selectedService.id)
+        )
+
+        // Se nenhum profissional está vinculado, mostrar todos (fallback)
+        return filtered.length > 0 ? filtered : tenantEmployees
+    }, [selectedService, tenantEmployees])
+
     const suggestedCombos = useMemo(() => {
         if (!tenant) return comboRecords.slice(0, 2)
         return comboRecords.filter(combo => combo.tenantId === tenant.id).slice(0, 2)
@@ -979,11 +992,15 @@ export default function BookingPage() {
                             </div>
                             <div className="space-y-1">
                                 <h2 className="text-3xl font-black tracking-tight text-gray-900 dark:text-white">Escolha um especialista</h2>
-                                <p className="text-gray-600 dark:text-zinc-400">Quem você gostaria que realizasse seu atendimento?</p>
+                                <p className="text-gray-600 dark:text-zinc-400">
+                                    {availableProfessionalsForService.length > 0
+                                        ? "Quem você gostaria que realizasse seu atendimento?"
+                                        : "Nenhum profissional disponível para este serviço. Tente outro horário ou serviço."}
+                                </p>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                {tenantEmployees.map(emp => (
+                                {availableProfessionalsForService.map(emp => (
                                     <Card
                                         key={emp.id}
                                         onClick={() => {
