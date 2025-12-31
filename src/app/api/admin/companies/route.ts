@@ -22,12 +22,10 @@ const getAdminClient = () => {
 export async function GET() {
     const supabase = getAdminClient()
     if (!supabase) {
-        // Fallback to mock data if no DB connection for dev experience
         return NextResponse.json({ error: "Supabase not configured" }, { status: 500 })
     }
 
-    // Fetch tenants with revenue snapshots/stats simulation if needed
-    // For now simple fetch
+    // 1. Fetch all tenants
     const { data: tenants, error } = await supabase
         .from('tenants')
         .select('*')
@@ -37,23 +35,32 @@ export async function GET() {
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Transform to match Company interface if needed. 
-    // The Company interface in mocks has logic like 'currentEmployees', 'monthlyRevenue'.
-    // We can do joins or purely return what we have. 
-    // For the UI to work seamlessly with replaced mocks, we might need to map or enrich.
-    // Let's return raw for now and see if UI adapts or if we need to mock the extra fields.
+    // 2. Fetch customer counts for each tenant
+    // Ideally we would use .select('*, customers(count)') but strict FKs are needed.
+    // For MVP, we will do a Promise.all to count customers for each tenant.
+    const enrichedData = await Promise.all(tenants.map(async (t) => {
+        const { count } = await supabase
+            .from('customers')
+            .select('*', { count: 'exact', head: true })
+            .eq('tenant_id', t.id)
 
-    // Simplistic mapping to match UI expectations where columns might be missing
-    const enrichedData = tenants.map(t => ({
-        ...t,
-        planId: t.plan_id || 'starter',
-        status: t.status || 'active',
-        // Mocking stats for now as calculating them dynamically is heavy for this step
-        currentEmployees: 0,
-        maxEmployees: 10,
-        monthlyRevenue: 0,
-        subscriptionStartDate: t.subscription_start_date || new Date().toISOString(),
-        subscriptionEndDate: t.subscription_end_date || new Date().toISOString(),
+        // Fetch employees count
+        const { count: employeesCount } = await supabase
+            .from('employees')
+            .select('*', { count: 'exact', head: true })
+            .eq('tenant_id', t.id)
+
+        return {
+            ...t,
+            planId: t.plan_id || 'starter',
+            status: t.status || 'active',
+            currentEmployees: employeesCount || 0,
+            maxEmployees: 10, // Mock limit
+            monthlyRevenue: 0, // Mock revenue calculation for now
+            totalCustomers: count || 0, // Added totalCustomers
+            subscriptionStartDate: t.subscription_start_date || new Date().toISOString(),
+            subscriptionEndDate: t.subscription_end_date || new Date().toISOString(),
+        }
     }))
 
     return NextResponse.json(enrichedData)

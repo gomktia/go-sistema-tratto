@@ -274,6 +274,7 @@ export default function EmpresasPage() {
                                 <TableHead>Plano</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead>Funcionários</TableHead>
+                                <TableHead>Clientes</TableHead>
                                 <TableHead>Ativação</TableHead>
                                 <TableHead>Receita Mensal</TableHead>
                                 <TableHead className="text-right">Ações</TableHead>
@@ -306,6 +307,11 @@ export default function EmpresasPage() {
                                             <span className="text-sm">
                                                 {company.currentEmployees}
                                                 {company.maxEmployees > 0 && ` / ${company.maxEmployees}`}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell>
+                                            <span className="text-sm font-semibold">
+                                                {(company as any).totalCustomers || 0}
                                             </span>
                                         </TableCell>
                                         <TableCell>

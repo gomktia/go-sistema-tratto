@@ -1,12 +1,13 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { differenceInDays } from "date-fns"
 import { useAuth } from "@/contexts/auth-context"
 import { companies, plans, type Company } from "@/mocks/companies"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
+import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import {
     Building2,
     DollarSign,
@@ -79,6 +80,20 @@ export default function SuperAdminDashboard() {
         return company.monthlyRevenue < 500
     })
 
+
+    const [totalClients, setTotalClients] = useState(0)
+
+    useEffect(() => {
+        // Fetch total clients across all tenants (Note: this should be an optimized RPC in production)
+        const fetchStats = async () => {
+            const supabase = getSupabaseBrowserClient()
+            if (!supabase) return
+            const { count } = await supabase.from('customers').select('*', { count: 'exact', head: true })
+            setTotalClients(count || 0)
+        }
+        fetchStats()
+    }, [])
+
     const stats = [
         {
             label: 'Total de Empresas',
@@ -88,8 +103,8 @@ export default function SuperAdminDashboard() {
             bgColor: 'bg-blue-100 dark:bg-blue-900/20'
         },
         {
-            label: 'Empresas Ativas',
-            value: activeCompanies,
+            label: 'Total de Clientes',
+            value: totalClients,
             icon: Users,
             color: 'text-green-600',
             bgColor: 'bg-green-100 dark:bg-green-900/20'
