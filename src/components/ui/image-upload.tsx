@@ -33,6 +33,12 @@ export function ImageUpload({
         setIsUploading(true)
         const supabase = getSupabaseBrowserClient()
 
+        if (!supabase) {
+            alert("Erro de configuração do Supabase")
+            setIsUploading(false)
+            return
+        }
+
         try {
             const fileExt = file.name.split('.').pop()
             const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}` // Simple unique name
