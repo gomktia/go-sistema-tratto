@@ -36,9 +36,9 @@ export function AppLayout({ children }: AppLayoutProps) {
     return (
         <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
             <SidebarComponent />
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col w-full md:w-auto min-w-0">
                 <Header />
-                <main className="flex-1 p-4 md:p-8">
+                <main className="flex-1 p-4 md:p-8 w-full overflow-x-hidden">
                     {children}
                 </main>
             </div>

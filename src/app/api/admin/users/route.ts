@@ -26,46 +26,66 @@ export async function GET() {
     }
 
     try {
-        console.log('[API] Fetching users from app_users table...')
+        console.log('[API] Fetching users from auth.users...')
 
-        // Fetch users from app_users
-        const { data: appUsers, error } = await supabase
+        // Fetch users from auth.users (this is where email is stored)
+        const { data: authData, error: authError } = await supabase.auth.admin.listUsers()
+
+        if (authError) {
+            console.error("[API] Error fetching auth users:", authError)
+            return NextResponse.json({ error: authError.message }, { status: 500 })
+        }
+
+        console.log(`[API] Found ${authData?.users?.length || 0} auth users`)
+
+        if (!authData?.users || authData.users.length === 0) {
+            console.log('[API] No auth users found, returning empty array')
+            return NextResponse.json([])
+        }
+
+        // Fetch app_users data to join
+        const { data: appUsers, error: appError } = await supabase
             .from('app_users')
             .select('*')
-            .order('created_at', { ascending: false })
 
-        if (error) {
-            console.error("[API] Error fetching app_users:", error)
-            return NextResponse.json({ error: error.message }, { status: 500 })
+        if (appError) {
+            console.error("[API] Error fetching app_users:", appError)
         }
 
         console.log(`[API] Found ${appUsers?.length || 0} app_users`)
-
-        if (!appUsers || appUsers.length === 0) {
-            console.log('[API] No app_users found, returning empty array')
-            return NextResponse.json([])
-        }
 
         // List of known super admin emails
         const knownSuperAdmins = [
             'geison@beautyflow.app',
             'oseias@beautyflow.app',
-            'geisonhoehr@gmail.com' // Added user's email
+            'geisonhoehr@gmail.com'
         ]
 
-        const superAdmins = appUsers.map(u => {
-            const isSuperAdmin =
-                knownSuperAdmins.includes(u.email) ||
-                u.email?.includes('admin') ||
-                u.role === 'super_admin'
+        // Merge auth.users with app_users data
+        const users = authData.users.map(authUser => {
+            const appUser = appUsers?.find(au => au.id === authUser.id)
 
-            if (isSuperAdmin) {
-                return { ...u, role: 'super_admin' }
+            const isSuperAdmin =
+                knownSuperAdmins.includes(authUser.email || '') ||
+                authUser.email?.includes('admin') ||
+                (appUser as any)?.role === 'super_admin'
+
+            return {
+                id: authUser.id,
+                email: authUser.email,
+                full_name: appUser?.full_name || authUser.user_metadata?.full_name || authUser.email,
+                avatar_url: appUser?.avatar_url || authUser.user_metadata?.avatar_url,
+                created_at: authUser.created_at,
+                updated_at: appUser?.updated_at || authUser.updated_at,
+                role: isSuperAdmin ? 'super_admin' : ((appUser as any)?.role || 'user')
             }
-            return u
-        }).filter(u => u.role === 'super_admin')
+        })
+
+        const superAdmins = users.filter(u => u.role === 'super_admin')
 
         console.log(`[API] Filtered to ${superAdmins.length} super admins`)
+        console.log('[API] Super admins:', superAdmins.map(u => u.email))
+
         return NextResponse.json(superAdmins)
     } catch (err: any) {
         console.error('[API] Error in users endpoint:', err)
