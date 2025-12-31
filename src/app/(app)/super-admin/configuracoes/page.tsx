@@ -25,7 +25,7 @@ export default function ConfiguracoesPage() {
         twilioAccountSid: "",
         twilioAuthToken: "",
         whatsappBusinessId: "",
-        openAiApiKey: "",
+
         openAiApiKey: "",
         anthropicApiKey: "",
         invoiceProvider: "enotas", // enotas | focus
