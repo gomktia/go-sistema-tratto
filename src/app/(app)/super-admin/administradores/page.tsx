@@ -102,7 +102,7 @@ export default function AdministradoresPage() {
 
             // TODO: Filtrar apenas admins quando tivermos o campo role na tabela
             // Client-side fix: filtrar por role = 'super_admin' ou se o email contém 'admin' para garantia em mocks
-            const superAdmins = (data || []).filter((u: any) => u.role === 'super_admin' || u.email.includes('admin') || u.email === 'geison@beautyflow.app' || u.email === 'oseias@beautyflow.app')
+            const superAdmins = (data || []).filter((u: any) => u.role === 'super_admin' || u.email?.includes('admin') || u.email === 'geison@beautyflow.app' || u.email === 'oseias@beautyflow.app')
             setAdmins(superAdmins)
         } catch (error: any) {
             console.error('Erro ao carregar admins:', error)
