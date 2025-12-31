@@ -520,116 +520,50 @@ CREATE TABLE IF NOT EXISTS services (
     currency text DEFAULT 'BRL'::text NOT NULL,
     requires_confirmation boolean DEFAULT false,
     is_active boolean DEFAULT true,
+    image_url text,
     metadata jsonb DEFAULT '{}'::jsonb,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     PRIMARY KEY (id)
 );
 
-CREATE TABLE IF NOT EXISTS staff_availability (
+CREATE TABLE IF NOT EXISTS gallery_images (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     tenant_id uuid NOT NULL,
-    employee_id uuid NOT NULL,
-    weekday smallint NOT NULL,
-    start_time time without time zone NOT NULL,
-    end_time time without time zone NOT NULL,
+    url text NOT NULL,
+    title text,
+    description text,
+    category text,
+    is_active boolean DEFAULT true,
+    display_order integer DEFAULT 0,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS highlights (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    tenant_id uuid NOT NULL,
+    title text NOT NULL,
+    description text,
+    image_url text,
+    type text NOT NULL, -- 'vip_client', 'promotion', 'award'
     is_active boolean DEFAULT true,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
+    expires_at timestamp with time zone,
     PRIMARY KEY (id)
 );
 
-CREATE TABLE IF NOT EXISTS subscriptions (
+CREATE TABLE IF NOT EXISTS reviews (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
-    tenant_id uuid NOT NULL,
-    plan_id uuid NOT NULL,
-    status text DEFAULT 'trialing'::text NOT NULL,
-    seats integer DEFAULT 1,
-    usage jsonb DEFAULT '{}'::jsonb,
-    started_at timestamp with time zone DEFAULT now() NOT NULL,
-    current_period_start timestamp with time zone DEFAULT now() NOT NULL,
-    current_period_end timestamp with time zone,
-    trial_end timestamp with time zone,
-    cancel_at timestamp with time zone,
-    canceled_at timestamp with time zone,
-    metadata jsonb DEFAULT '{}'::jsonb,
-    PRIMARY KEY (id)
-);
-
-CREATE TABLE IF NOT EXISTS support_messages (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    ticket_id uuid NOT NULL,
-    sender_type text NOT NULL,
-    sender_id uuid,
-    content text NOT NULL,
-    attachments jsonb DEFAULT '[]'::jsonb,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    PRIMARY KEY (id)
-);
-
-CREATE TABLE IF NOT EXISTS support_tickets (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    tenant_id uuid NOT NULL,
-    company_name text,
-    subject text NOT NULL,
-    channel text NOT NULL,
-    priority text DEFAULT 'medium'::text,
-    status text DEFAULT 'open'::text,
-    sla_minutes integer,
-    assigned_to uuid,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    metadata jsonb DEFAULT '{}'::jsonb,
-    PRIMARY KEY (id)
-);
-
-CREATE TABLE IF NOT EXISTS tags (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    tenant_id uuid NOT NULL,
-    name text NOT NULL,
-    color text,
-    icon text,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    PRIMARY KEY (id)
-);
-
-CREATE TABLE IF NOT EXISTS tenant_users (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    tenant_id uuid NOT NULL,
-    user_id uuid NOT NULL,
-    role text DEFAULT 'admin'::text NOT NULL,
-    permissions jsonb DEFAULT '[]'::jsonb,
-    invited_by uuid,
-    invited_at timestamp with time zone,
-    accepted_at timestamp with time zone,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    PRIMARY KEY (id)
-);
-
-CREATE TABLE IF NOT EXISTS tenants (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    name text NOT NULL,
-    slug text NOT NULL,
-    full_name text,
-    document text,
-    timezone text DEFAULT 'America/Sao_Paulo'::text,
-    locale text DEFAULT 'pt-BR'::text,
-    logo_url text,
-    theme jsonb DEFAULT '{}'::jsonb,
-    settings jsonb DEFAULT '{}'::jsonb,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    PRIMARY KEY (id)
-);
-
-CREATE TABLE IF NOT EXISTS upsell_offers (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    tenant_id uuid NOT NULL,
-    appointment_id uuid,
-    offer_type text NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb,
-    shown_at timestamp with time zone,
-    accepted boolean DEFAULT false,
-    accepted_at timestamp with time zone,
+    appointment_id text NOT NULL,
+    customer_email text NOT NULL,
+    professional_id text NOT NULL,
+    service_id text NOT NULL,
+    rating integer NOT NULL,
+    comment text,
+    is_approved boolean DEFAULT false,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
     PRIMARY KEY (id)
 );
 

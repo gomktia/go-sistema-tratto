@@ -24,7 +24,11 @@ import {
     MessageCircle,
     User,
     Users as UsersIcon,
-    Wallet
+    Wallet,
+    Quote,
+    Crown,
+    Trophy,
+    Instagram
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import bcrypt from "bcryptjs"
@@ -32,9 +36,10 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { FloatingWhatsApp } from "@/components/FloatingWhatsApp"
-import { cn, getInitials } from "@/lib/utils"
+import { cn, getInitials, hexToHsl } from "@/lib/utils"
 import { CustomerTrustBar } from "@/components/CustomerTrustBar"
 import { CustomerReviews } from "@/components/CustomerReviews"
+import { galleryImages as fallbackGallery, highlights as fallbackHighlights, testimonials as fallbackTestimonials } from "@/mocks/marketing"
 import {
     useTenantAppointments,
     useTenantBySlug,
@@ -42,7 +47,11 @@ import {
     useTenantCustomers,
     useTenantEmployees,
     useTenantServices,
+
     useTenantStaffAvailability,
+    useTenantGallery,
+    useTenantHighlights,
+    useTenantTestimonials
 } from "@/hooks/useTenantRecords"
 import type { ComboRecord, EmployeeRecord, ServiceRecord, StaffAvailabilityRecord } from "@/types/catalog"
 import type { ClientRecord } from "@/types/crm"
@@ -160,7 +169,12 @@ export default function BookingPage() {
     const { data: appointmentRecords, loading: appointmentsLoading } = useTenantAppointments(tenantId)
     const { data: customerRecords, loading: customersLoading } = useTenantCustomers(tenantId)
     const { data: comboRecords, loading: combosLoading } = useTenantCombos(tenantId)
+
     const { data: availabilityRecords, loading: availabilityLoading } = useTenantStaffAvailability(tenantId)
+    // Marketing Hooks
+    const { data: galleryData, loading: galleryLoading } = useTenantGallery(tenantId)
+    const { data: highlightData, loading: highlightsLoading } = useTenantHighlights(tenantId)
+    const { data: testimonialData, loading: testimonialsLoading } = useTenantTestimonials(tenantId)
 
     const supabase = getSupabaseBrowserClient()
     const supabaseReady = Boolean(isSupabaseConfigured && supabase && tenantId)
@@ -168,6 +182,42 @@ export default function BookingPage() {
 
     const tenantInitials = useMemo(() => getInitials(tenant?.fullName || tenant?.name || ""), [tenant?.fullName, tenant?.name])
     const tenantBadge = tenant?.logo || tenantInitials || "BF"
+    // Convert tenant hex to HSL for dynamic branding
+    const primaryHsl = useMemo(() => {
+        if (!tenant?.primaryColor) return null
+        // Assuming hexToHsl is imported from "@/lib/utils"
+        // If not, we fall back to global default
+        return hexToHsl(tenant.primaryColor)
+    }, [tenant?.primaryColor])
+
+    // Style object for dynamic theme
+    const themeStyle = useMemo(() => {
+        if (!primaryHsl) return undefined
+        return {
+            "--primary": primaryHsl,
+            "--ring": primaryHsl,
+        } as React.CSSProperties
+    }, [primaryHsl])
+
+    // Marketing Data (with Fallback to mocks if Real DB is empty/loading, or strict override)
+    const tenantHighlights = useMemo(() => {
+        if (highlightData && highlightData.length > 0) return highlightData
+        if (!tenant?.id) return []
+        // Fallback to mocks only if tenant ID matches mock ID for demo purposes
+        return fallbackHighlights.filter(h => h.tenantId === tenant.id)
+    }, [highlightData, tenant?.id])
+
+    const tenantGallery = useMemo(() => {
+        if (galleryData && galleryData.length > 0) return galleryData
+        if (!tenant?.id) return []
+        return fallbackGallery.filter(g => g.tenantId === tenant.id).sort((a, b) => a.displayOrder - b.displayOrder)
+    }, [galleryData, tenant?.id])
+
+    const tenantTestimonials = useMemo(() => {
+        if (testimonialData && testimonialData.length > 0) return testimonialData
+        if (!tenant?.id) return []
+        return fallbackTestimonials.filter(t => t.tenantId === tenant.id && t.isApproved)
+    }, [testimonialData, tenant?.id])
 
     const whatsappUrl = useMemo(() => {
         if (!tenant?.whatsapp) return ""
@@ -653,11 +703,31 @@ export default function BookingPage() {
             if (error) {
                 throw error
             }
+            // 5. Success!
+
+            // --- EMAIL NOTIFICATION (ASYNC) ---
+            const appointmentDate = new Date(selectedDate);
+            appointmentDate.setHours(Number(activeTime.split(':')[0]), Number(activeTime.split(':')[1]));
+
+            fetch('/api/send-email/booking-confirmation', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    customerEmail: authenticatedCustomer.email,
+                    customerName: authenticatedCustomer.name,
+                    serviceName: selectedService.name,
+                    professionalName: selectedEmployee.name,
+                    date: appointmentDate.toISOString(),
+                    tenantName: tenant.fullName,
+                    address: tenant.settings?.address
+                })
+            }).catch(console.error); // Log error but don't block UI success
+            // ----------------------------------
 
             setStep('success')
         } catch (error) {
-            console.error("[handleConfirmBooking]", error)
-            setAuthError("Não foi possível confirmar o agendamento. Tente novamente.")
+            console.error(error)
+            alert("Erro ao confirmar agendamento")
         } finally {
             setIsCompletingBooking(false)
         }
@@ -827,7 +897,7 @@ export default function BookingPage() {
     }
 
     return (
-        <div className="min-h-screen bg-white dark:bg-zinc-950 font-sans selection:bg-primary/20">
+        <div style={themeStyle} className="min-h-screen bg-white dark:bg-zinc-950 font-sans selection:bg-primary/20">
             {/* Elegant Header */}
             <header className="sticky top-0 z-40 w-full bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border-b border-gray-100 dark:border-zinc-800 px-6 py-4 shadow-sm">
                 <div className="max-w-4xl mx-auto flex items-center justify-between">
@@ -896,6 +966,46 @@ export default function BookingPage() {
                         Falar pelo WhatsApp
                     </Button>
                 </Card>
+
+                {/* Hero & Highlights Section - Only on first step */}
+                {step === 'service' && (
+                    <div className="mb-8 mt-6">
+                        {/* Welcome Message */}
+                        <div className="mb-8">
+                            <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-2">
+                                Bem-vindo ao <span className="text-primary">{tenant.name}</span>
+                            </h2>
+                            <p className="text-slate-500 dark:text-zinc-400 max-w-lg">
+                                {tenant.description}
+                            </p>
+                        </div>
+
+                        {/* Highlights Carousel (VIPs / Awards) */}
+                        {tenantHighlights.length > 0 && (
+                            <div className="mb-10 overflow-x-auto pb-4 -mx-6 px-6 scrollbar-hide flex gap-4">
+                                {tenantHighlights.map((highlight) => (
+                                    <div key={highlight.id} className="relative min-w-[280px] h-40 rounded-2xl overflow-hidden shadow-lg group">
+                                        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors z-10" />
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img src={highlight.imageUrl} alt={highlight.title} className="w-full h-full object-cover" />
+                                        <div className="absolute bottom-0 left-0 p-4 z-20 text-white">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                {highlight.type === 'vip_client' && <Crown className="w-4 h-4 text-amber-400 fill-amber-400" />}
+                                                {highlight.type === 'award' && <Trophy className="w-4 h-4 text-amber-400 fill-amber-400" />}
+                                                <span className="text-[10px] font-bold uppercase tracking-widest bg-white/20 px-2 py-0.5 rounded-full backdrop-blur-sm">
+                                                    Destaque
+                                                </span>
+                                            </div>
+                                            <h3 className="font-bold text-lg leading-tight">{highlight.title}</h3>
+                                            <p className="text-xs text-white/80 line-clamp-1">{highlight.description}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {/* Progress Tracker */}
                 <div className="mb-10">
                     <div className="mb-4">
@@ -979,6 +1089,12 @@ export default function BookingPage() {
                                                 : "border-transparent bg-white dark:bg-zinc-900 hover:border-gray-200 dark:hover:border-zinc-800 shadow-sm"
                                         )}
                                     >
+                                        {service.imageUrl && (
+                                            <div className="mb-4 -mx-6 -mt-6 h-32 relative overflow-hidden">
+                                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                <img src={service.imageUrl} alt={service.name} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                                            </div>
+                                        )}
                                         <div className="flex items-start justify-between">
                                             <div className="space-y-1">
                                                 <h3 className="font-bold text-lg text-gray-900 dark:text-white">{service.name}</h3>
@@ -1294,15 +1410,13 @@ export default function BookingPage() {
                                                                 Esqueci minha senha
                                                             </button>
                                                         </div>
-                                                        <div className="flex justify-end mt-1">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => window.open(`/${tenantSlug}/forgot-password`, '_blank')}
-                                                                className="text-[10px] font-bold uppercase tracking-widest text-primary hover:underline"
-                                                            >
-                                                                Esqueci minha senha
-                                                            </button>
+
+                                                        <div className="pt-2">
+                                                            <p className="text-xs text-muted-foreground text-center px-4">
+                                                                Ao continuar, você cria uma conta <strong>BeautyFlow</strong> para agilizar seus agendamentos neste e em outros salões parceiros, concordando com nossos Termos de Uso e Política de Privacidade.
+                                                            </p>
                                                         </div>
+
                                                     </div>
                                                 </div>
                                             )}
@@ -1383,213 +1497,301 @@ export default function BookingPage() {
                                                 Precisa de ajuda?
                                             </Button>
                                         </div>
-                                        <p className="text-xs text-gray-500 font-medium">
-                                            Ao se identificar, você aceita receber notificações sobre confirmações, alterações e promoções do seu salão favorito.
-                                        </p>
+                                        <div className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-zinc-800 border border-slate-100 dark:border-zinc-700">
+                                            <div className="mt-1 w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                                                <Smartphone className="w-4 h-4" />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <p className="text-sm font-bold text-gray-900 dark:text-white">Smart Notifications</p>
+                                                <p className="text-xs text-gray-500 leading-relaxed">
+                                                    Você receberá a confirmação e lembretes deste agendamento via <span className="font-bold text-emerald-600 dark:text-emerald-400">WhatsApp</span> e <span className="font-bold text-primary">OnePush</span> no portal do cliente.
+                                                </p>
+                                                <div className="flex items-center gap-2 mt-2">
+                                                    <Badge variant="outline" className="text-[10px] border-emerald-200 bg-emerald-50 text-emerald-700 uppercase tracking-wider">Ativado</Badge>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
                             </Card>
-                        </motion.div>
-                    )}
+                        </motion.div >
+                    )
+                    }
 
                     {/* Step: Confirmation */}
-                    {step === 'confirmation' && (
-                        <motion.div
-                            key="confirmation"
-                            initial="hidden" animate="visible" exit="exit" variants={containerVariants}
-                            className="space-y-8"
-                        >
-                            <div className="flex items-center gap-4 -mb-4">
-                                <Button variant="ghost" size="sm" onClick={handleBack} className="rounded-full">
-                                    <ChevronLeft className="w-4 h-4 mr-2" /> Voltar
-                                </Button>
-                            </div>
-                            <div className="space-y-1">
-                                <h2 className="text-3xl font-black tracking-tight text-gray-900 dark:text-white">Confirme seu agendamento</h2>
-                                <p className="text-gray-600 dark:text-zinc-400">Revise os detalhes antes de finalizar.</p>
-                            </div>
-
-                            <Card className="rounded-[2.5rem] border-none shadow-2xl bg-white dark:bg-zinc-900 p-8 space-y-8">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                                    <div className="space-y-6">
-                                        <div className="space-y-1">
-                                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Serviço</p>
-                                            <p className="text-xl font-extrabold text-gray-900 dark:text-white">{selectedService?.name}</p>
-                                            <p className="text-gray-600 text-sm font-medium">{selectedService?.durationMinutes} minutos • R$ {selectedService?.price}</p>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Profissional</p>
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center font-bold text-gray-500">
-                                                    {selectedEmployee?.name.charAt(0)}
-                                                </div>
-                                                <p className="text-lg font-bold text-gray-900 dark:text-white">{selectedEmployee?.name}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-6">
-                                        <div className="space-y-1">
-                                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Data e Hora</p>
-                                            <div className="flex items-center gap-3">
-                                                <CalendarIcon className="w-5 h-5 text-primary" />
-                                                <p className="text-lg font-bold text-gray-900 dark:text-white">
-                                                    {format(selectedDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}
-                                                </p>
-                                            </div>
-                                            <div className="flex items-center gap-3 mt-2">
-                                                <Clock className="w-5 h-5 text-primary" />
-                                                <p className="text-lg font-bold text-gray-900 dark:text-white">{selectedTime}</p>
-                                            </div>
-                                        </div>
-                                    </div>
+                    {
+                        step === 'confirmation' && (
+                            <motion.div
+                                key="confirmation"
+                                initial="hidden" animate="visible" exit="exit" variants={containerVariants}
+                                className="space-y-8"
+                            >
+                                <div className="flex items-center gap-4 -mb-4">
+                                    <Button variant="ghost" size="sm" onClick={handleBack} className="rounded-full">
+                                        <ChevronLeft className="w-4 h-4 mr-2" /> Voltar
+                                    </Button>
+                                </div>
+                                <div className="space-y-1">
+                                    <h2 className="text-3xl font-black tracking-tight text-gray-900 dark:text-white">Confirme seu agendamento</h2>
+                                    <p className="text-gray-600 dark:text-zinc-400">Revise os detalhes antes de finalizar.</p>
                                 </div>
 
-                                <div className="pt-8 border-t border-gray-100 dark:border-zinc-800">
-                                    <div className="flex justify-between items-end">
-                                        <div className="space-y-1">
-                                            <p className="text-sm font-medium text-gray-600">Valor Total</p>
-                                            <p className="text-3xl font-black text-primary">R$ {selectedService?.price},00</p>
+                                <Card className="rounded-[2.5rem] border-none shadow-2xl bg-white dark:bg-zinc-900 p-8 space-y-8">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                                        <div className="space-y-6">
+                                            <div className="space-y-1">
+                                                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Serviço</p>
+                                                <p className="text-xl font-extrabold text-gray-900 dark:text-white">{selectedService?.name}</p>
+                                                <p className="text-gray-600 text-sm font-medium">{selectedService?.durationMinutes} minutos • R$ {selectedService?.price}</p>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Profissional</p>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center font-bold text-gray-500">
+                                                        {selectedEmployee?.name.charAt(0)}
+                                                    </div>
+                                                    <p className="text-lg font-bold text-gray-900 dark:text-white">{selectedEmployee?.name}</p>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="text-sm font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                                            <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                                            Seguro
+
+                                        <div className="space-y-6">
+                                            <div className="space-y-1">
+                                                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Data e Hora</p>
+                                                <div className="flex items-center gap-3">
+                                                    <CalendarIcon className="w-5 h-5 text-primary" />
+                                                    <p className="text-lg font-bold text-gray-900 dark:text-white">
+                                                        {format(selectedDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-center gap-3 mt-2">
+                                                    <Clock className="w-5 h-5 text-primary" />
+                                                    <p className="text-lg font-bold text-gray-900 dark:text-white">{selectedTime}</p>
+                                                </div>
+                                            </div>
                                         </div>
+                                    </div>
+
+                                    <div className="pt-8 border-t border-gray-100 dark:border-zinc-800">
+                                        <div className="flex justify-between items-end">
+                                            <div className="space-y-1">
+                                                <p className="text-sm font-medium text-gray-600">Valor Total</p>
+                                                <p className="text-3xl font-black text-primary">R$ {selectedService?.price},00</p>
+                                            </div>
+                                            <div className="text-sm font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                                                <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                                                Seguro
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Card>
+                            </motion.div>
+                        )
+                    }
+
+                    {/* Step: Payment */}
+                    {
+                        step === 'payment' && (
+                            <motion.div
+                                key="payment"
+                                initial="hidden" animate="visible" exit="exit" variants={containerVariants}
+                                className="space-y-8"
+                            >
+                                <div className="flex items-center gap-4 -mb-4">
+                                    <Button variant="ghost" size="sm" onClick={handleBack} className="rounded-full">
+                                        <ChevronLeft className="w-4 h-4 mr-2" /> Voltar
+                                    </Button>
+                                </div>
+                                <div className="space-y-1">
+                                    <h2 className="text-3xl font-black tracking-tight text-gray-900 dark:text-white">Forma de pagamento</h2>
+                                    <p className="text-gray-600 dark:text-zinc-400">Como você prefere pagar pelo serviço?</p>
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-4">
+                                    {PAYMENT_METHODS.map((method) => (
+                                        <Card
+                                            key={method.id}
+                                            onClick={() => setSelectedPaymentMethod(method.id)}
+                                            className={cn(
+                                                "p-6 rounded-[2rem] border-2 transition-all cursor-pointer flex items-center justify-between group active:scale-[0.98]",
+                                                selectedPaymentMethod === method.id
+                                                    ? "border-primary bg-primary/[0.03] shadow-lg shadow-primary/5"
+                                                    : "border-transparent bg-white dark:bg-zinc-900 hover:border-gray-200 dark:hover:border-zinc-800 shadow-sm"
+                                            )}
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-14 h-14 rounded-2xl bg-white dark:bg-zinc-800 flex items-center justify-center group-hover:scale-110 transition-transform text-gray-500">
+                                                    <method.icon className={cn(
+                                                        "w-6 h-6",
+                                                        selectedPaymentMethod === method.id ? "text-primary" : "text-gray-500"
+                                                    )} />
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-bold text-gray-900 dark:text-white leading-tight">{method.label}</h4>
+                                                    <p className="text-xs text-gray-600 dark:text-zinc-400">{method.description}</p>
+                                                </div>
+                                            </div>
+                                            <div className={cn(
+                                                "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
+                                                selectedPaymentMethod === method.id ? "border-primary bg-primary" : "border-gray-200"
+                                            )}>
+                                                {selectedPaymentMethod === method.id && <div className="w-2 h-2 bg-white rounded-full" />}
+                                            </div>
+                                        </Card>
+                                    ))}
+                                </div>
+
+                                {selectedPaymentMethod === 'pix' && (
+                                    <Card className="p-6 rounded-[2.5rem] border-none shadow-xl bg-gray-900 text-white space-y-4">
+                                        <div className="flex justify-between items-center">
+                                            <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Total com Desconto</p>
+                                            <p className="text-2xl font-black text-emerald-400">R$ {Math.floor((selectedService?.price || 0) * 0.95)},00</p>
+                                        </div>
+                                        <div className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl">
+                                            <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
+                                                <Sparkles className="w-5 h-5 text-white" />
+                                            </div>
+                                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-300 leading-tight">
+                                                O código Pix expira em 30 minutos após a confirmação.
+                                            </p>
+                                        </div>
+                                    </Card>
+                                )}
+                            </motion.div>
+                        )
+                    }
+                </AnimatePresence >
+            </main >
+
+            {
+                showSummary && (
+                    <section className="max-w-4xl mx-auto px-6 pb-8 space-y-4">
+                        <div className="grid gap-4 md:grid-cols-[2fr_1fr]">
+                            <Card className="rounded-[2.5rem] border-none shadow-xl bg-white dark:bg-zinc-900 p-5">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-500">Resumo</p>
+                                        <h3 className="text-xl font-black text-gray-900 dark:text-white">Quase tudo pronto!</h3>
+                                    </div>
+                                    <Badge variant="outline" className="rounded-full text-[10px] uppercase tracking-widest">
+                                        {STEP_DETAILS[step].label}
+                                    </Badge>
+                                </div>
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Serviço</p>
+                                        <p className="text-sm font-semibold text-gray-900 dark:text-white">{selectedService?.name}</p>
+                                        <p className="text-xs text-gray-600">{selectedService?.durationMinutes} min • R$ {selectedService?.price}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Profissional</p>
+                                        <p className="text-sm font-semibold text-gray-900 dark:text-white">{selectedEmployee?.name}</p>
+                                        <p className="text-xs text-gray-600">
+                                            {selectedEmployee?.specialties?.join(", ") || "Especialidades variadas"}
+                                        </p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Data</p>
+                                        <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                                            {format(selectedDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}
+                                        </p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Horário</p>
+                                        <p className="text-sm font-semibold text-gray-900 dark:text-white">{activeTime}</p>
                                     </div>
                                 </div>
                             </Card>
-                        </motion.div>
-                    )}
+                            <Card className="rounded-[2.5rem] border-none shadow-lg bg-white dark:bg-zinc-900 p-5 space-y-3">
+                                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-500">Ajuda & suporte</p>
+                                <p className="text-sm text-gray-600 dark:text-zinc-400">Precisa ajustar algo? Fale com a equipe em segundos.</p>
+                                <div className="flex flex-col gap-2">
+                                    {tenant.whatsapp && (
+                                        <Button variant="outline" className="rounded-2xl w-full" onClick={handleWhatsAppContact}>
+                                            WhatsApp {tenant.whatsapp.substring(2)}
+                                        </Button>
+                                    )}
+                                    {tenantPhone && (
+                                        <Button variant="ghost" className="rounded-2xl w-full text-gray-600" onClick={() => window.open(`tel:${tenantPhone}`, '_blank')}>
+                                            Ligar para {tenantPhone}
+                                        </Button>
+                                    )}
+                                </div>
+                            </Card>
+                        </div>
+                    </section>
+                )
+            }
 
-                    {/* Step: Payment */}
-                    {step === 'payment' && (
-                        <motion.div
-                            key="payment"
-                            initial="hidden" animate="visible" exit="exit" variants={containerVariants}
-                            className="space-y-8"
-                        >
-                            <div className="flex items-center gap-4 -mb-4">
-                                <Button variant="ghost" size="sm" onClick={handleBack} className="rounded-full">
-                                    <ChevronLeft className="w-4 h-4 mr-2" /> Voltar
-                                </Button>
+            {/* Social Proof / Testimonials */}
+            {
+                step === 'service' && tenantTestimonials.length > 0 && (
+                    <section className="max-w-4xl mx-auto px-6 pb-12 space-y-6">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                                <Quote className="w-5 h-5" />
                             </div>
-                            <div className="space-y-1">
-                                <h2 className="text-3xl font-black tracking-tight text-gray-900 dark:text-white">Forma de pagamento</h2>
-                                <p className="text-gray-600 dark:text-zinc-400">Como você prefere pagar pelo serviço?</p>
+                            <div>
+                                <h3 className="font-black text-xl text-slate-900 dark:text-white">O que dizem sobre nós</h3>
+                                <p className="text-xs text-slate-500 uppercase tracking-widest">Experiências reais</p>
                             </div>
+                        </div>
 
-                            <div className="grid grid-cols-1 gap-4">
-                                {PAYMENT_METHODS.map((method) => (
-                                    <Card
-                                        key={method.id}
-                                        onClick={() => setSelectedPaymentMethod(method.id)}
-                                        className={cn(
-                                            "p-6 rounded-[2rem] border-2 transition-all cursor-pointer flex items-center justify-between group active:scale-[0.98]",
-                                            selectedPaymentMethod === method.id
-                                                ? "border-primary bg-primary/[0.03] shadow-lg shadow-primary/5"
-                                                : "border-transparent bg-white dark:bg-zinc-900 hover:border-gray-200 dark:hover:border-zinc-800 shadow-sm"
-                                        )}
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-14 h-14 rounded-2xl bg-white dark:bg-zinc-800 flex items-center justify-center group-hover:scale-110 transition-transform text-gray-500">
-                                                <method.icon className={cn(
-                                                    "w-6 h-6",
-                                                    selectedPaymentMethod === method.id ? "text-primary" : "text-gray-500"
-                                                )} />
+                        <div className="grid md:grid-cols-2 gap-4">
+                            {tenantTestimonials.map((testimonial) => (
+                                <Card key={testimonial.id} className="p-5 rounded-[2rem] border-none bg-slate-50 dark:bg-zinc-900 shadow-sm hover:shadow-md transition-shadow">
+                                    <div className="flex items-start gap-4">
+                                        <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-200 shrink-0">
+                                            {testimonial.imageUrl ? (
+                                                // eslint-disable-next-line @next/next/no-img-element
+                                                <img src={testimonial.imageUrl} alt={testimonial.customerName} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-slate-400 font-bold">
+                                                    {getInitials(testimonial.customerName)}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <div className="flex items-center gap-1 text-amber-400">
+                                                {[...Array(5)].map((_, i) => (
+                                                    <Star key={i} className={`w-3 h-3 ${i < testimonial.rating ? 'fill-current' : 'text-slate-300 dark:text-zinc-700'}`} />
+                                                ))}
                                             </div>
+                                            <p className="text-sm text-slate-800 dark:text-zinc-300 italic leading-relaxed">
+                                                "{testimonial.testimonial}"
+                                            </p>
                                             <div>
-                                                <h4 className="font-bold text-gray-900 dark:text-white leading-tight">{method.label}</h4>
-                                                <p className="text-xs text-gray-600 dark:text-zinc-400">{method.description}</p>
+                                                <p className="text-xs font-bold text-slate-900 dark:text-white">{testimonial.customerName}</p>
+                                                {testimonial.customerRole && (
+                                                    <p className="text-[10px] text-primary font-medium">{testimonial.customerRole}</p>
+                                                )}
                                             </div>
                                         </div>
-                                        <div className={cn(
-                                            "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
-                                            selectedPaymentMethod === method.id ? "border-primary bg-primary" : "border-gray-200"
-                                        )}>
-                                            {selectedPaymentMethod === method.id && <div className="w-2 h-2 bg-white rounded-full" />}
-                                        </div>
-                                    </Card>
-                                ))}
-                            </div>
-
-                            {selectedPaymentMethod === 'pix' && (
-                                <Card className="p-6 rounded-[2.5rem] border-none shadow-xl bg-gray-900 text-white space-y-4">
-                                    <div className="flex justify-between items-center">
-                                        <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Total com Desconto</p>
-                                        <p className="text-2xl font-black text-emerald-400">R$ {Math.floor((selectedService?.price || 0) * 0.95)},00</p>
-                                    </div>
-                                    <div className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl">
-                                        <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
-                                            <Sparkles className="w-5 h-5 text-white" />
-                                        </div>
-                                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-300 leading-tight">
-                                            O código Pix expira em 30 minutos após a confirmação.
-                                        </p>
                                     </div>
                                 </Card>
-                            )}
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </main>
+                            ))}
+                        </div>
+                    </section>
+                )
+            }
 
-            {showSummary && (
-                <section className="max-w-4xl mx-auto px-6 pb-8 space-y-4">
-                    <div className="grid gap-4 md:grid-cols-[2fr_1fr]">
-                        <Card className="rounded-[2.5rem] border-none shadow-xl bg-white dark:bg-zinc-900 p-5">
-                            <div className="flex items-center justify-between mb-4">
-                                <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-500">Resumo</p>
-                                    <h3 className="text-xl font-black text-gray-900 dark:text-white">Quase tudo pronto!</h3>
+            {/* Gallery Section */}
+            {
+                step === 'service' && tenantGallery.length > 0 && (
+                    <section className="max-w-4xl mx-auto px-6 pb-20">
+                        <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400 mb-4 text-center">Nossa Atmosfera</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 h-64 md:h-80 rounded-[2rem] overflow-hidden">
+                            {tenantGallery.map((img, idx) => (
+                                <div key={img.id} className={`relative group overflow-hidden ${idx === 0 ? 'col-span-2 row-span-2' : ''}`}>
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={img.url} alt={img.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                                    <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors" />
                                 </div>
-                                <Badge variant="outline" className="rounded-full text-[10px] uppercase tracking-widest">
-                                    {STEP_DETAILS[step].label}
-                                </Badge>
-                            </div>
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Serviço</p>
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{selectedService?.name}</p>
-                                    <p className="text-xs text-gray-600">{selectedService?.durationMinutes} min • R$ {selectedService?.price}</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Profissional</p>
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{selectedEmployee?.name}</p>
-                                    <p className="text-xs text-gray-600">
-                                        {selectedEmployee?.specialties?.join(", ") || "Especialidades variadas"}
-                                    </p>
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Data</p>
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                                        {format(selectedDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}
-                                    </p>
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Horário</p>
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{activeTime}</p>
-                                </div>
-                            </div>
-                        </Card>
-                        <Card className="rounded-[2.5rem] border-none shadow-lg bg-white dark:bg-zinc-900 p-5 space-y-3">
-                            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-500">Ajuda & suporte</p>
-                            <p className="text-sm text-gray-600 dark:text-zinc-400">Precisa ajustar algo? Fale com a equipe em segundos.</p>
-                            <div className="flex flex-col gap-2">
-                                {tenant.whatsapp && (
-                                    <Button variant="outline" className="rounded-2xl w-full" onClick={handleWhatsAppContact}>
-                                        WhatsApp {tenant.whatsapp.substring(2)}
-                                    </Button>
-                                )}
-                                {tenantPhone && (
-                                    <Button variant="ghost" className="rounded-2xl w-full text-gray-600" onClick={() => window.open(`tel:${tenantPhone}`, '_blank')}>
-                                        Ligar para {tenantPhone}
-                                    </Button>
-                                )}
-                            </div>
-                        </Card>
-                    </div>
-                </section>
-            )}
+                            ))}
+                        </div>
+                    </section>
+                )
+            }
 
             {/* Confidence Highlights */}
             <section className="max-w-4xl mx-auto px-6 pb-32 space-y-4">
@@ -1642,6 +1844,6 @@ export default function BookingPage() {
                     </Button>
                 </div>
             </div>
-        </div>
+        </div >
     )
 }

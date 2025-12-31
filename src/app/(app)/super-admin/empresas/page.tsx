@@ -135,20 +135,45 @@ export default function EmpresasPage() {
             title: "Suspender Empresa",
             description: `Tem certeza que deseja suspender "${company.fullName}"? A empresa não poderá acessar o sistema até ser reativada.`,
             action: async () => {
-                // Implement API call for update here
-                setCompanies(companies.map(c =>
-                    c.id === company.id ? { ...c, status: 'suspended' as const } : c
-                ))
+                try {
+                    const response = await fetch('/api/admin/companies', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: company.id, status: 'suspended' })
+                    })
+                    if (response.ok) {
+                        setCompanies(companies.map(c =>
+                            c.id === company.id ? { ...c, status: 'suspended' as const } : c
+                        ))
+                    } else {
+                        alert('Erro ao suspender empresa')
+                    }
+                } catch (error) {
+                    console.error('Error suspending company', error)
+                }
                 setShowConfirm(false)
             }
         })
         setShowConfirm(true)
     }
 
-    const handleReactivate = (company: Company) => {
-        setCompanies(companies.map(c =>
-            c.id === company.id ? { ...c, status: 'active' as const } : c
-        ))
+    const handleReactivate = async (company: Company) => {
+        try {
+            const response = await fetch('/api/admin/companies', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: company.id, status: 'active' })
+            })
+            if (response.ok) {
+                setCompanies(companies.map(c =>
+                    c.id === company.id ? { ...c, status: 'active' as const } : c
+                ))
+            } else {
+                alert('Erro ao reativar empresa')
+            }
+        } catch (error) {
+            console.error('Error reactivating company', error)
+        }
     }
 
     const handleDeactivate = (company: Company) => {
@@ -156,10 +181,22 @@ export default function EmpresasPage() {
             title: "Desativar Empresa",
             description: `Tem certeza que deseja desativar "${company.fullName}"? Esta ação pode ser revertida posteriormente.`,
             action: async () => {
-                // Implement API call for update here
-                setCompanies(companies.map(c =>
-                    c.id === company.id ? { ...c, status: 'inactive' as const } : c
-                ))
+                try {
+                    const response = await fetch('/api/admin/companies', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: company.id, status: 'inactive' })
+                    })
+                    if (response.ok) {
+                        setCompanies(companies.map(c =>
+                            c.id === company.id ? { ...c, status: 'inactive' as const } : c
+                        ))
+                    } else {
+                        alert('Erro ao desativar empresa')
+                    }
+                } catch (error) {
+                    console.error('Error deactivating company', error)
+                }
                 setShowConfirm(false)
             }
         })

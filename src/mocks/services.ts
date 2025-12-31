@@ -14,6 +14,7 @@ export interface Service {
     maxClientsPerSlot: number // para serviços em grupo (1 = individual)
     requiredStaff: number // para collective events
     active: boolean
+    imageUrl?: string
     createdAt: string
     updatedAt: string
 }
@@ -40,7 +41,7 @@ export interface Employee {
 export const services: Service[] = [
     {
         id: '1',
-        tenantId: '1',
+        tenantId: '11111111-1111-1111-1111-111111111111',
         name: 'Corte Feminino',
         category: 'Cabelo',
         duration: 60,
@@ -54,12 +55,13 @@ export const services: Service[] = [
         maxClientsPerSlot: 1,
         requiredStaff: 1,
         active: true,
+        imageUrl: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&q=80',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
     },
     {
         id: '2',
-        tenantId: '1',
+        tenantId: '11111111-1111-1111-1111-111111111111',
         name: 'Escova',
         category: 'Cabelo',
         duration: 45,
@@ -73,12 +75,13 @@ export const services: Service[] = [
         maxClientsPerSlot: 1,
         requiredStaff: 1,
         active: true,
+        imageUrl: 'https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&q=80',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
     },
     {
         id: '3',
-        tenantId: '1',
+        tenantId: '11111111-1111-1111-1111-111111111111',
         name: 'Manicure',
         category: 'Unhas',
         duration: 30,
@@ -92,12 +95,13 @@ export const services: Service[] = [
         maxClientsPerSlot: 1,
         requiredStaff: 1,
         active: true,
+        imageUrl: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&q=80',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
     },
     {
         id: '4',
-        tenantId: '1',
+        tenantId: '11111111-1111-1111-1111-111111111111',
         name: 'Maquiagem para Noiva',
         category: 'Maquiagem',
         duration: 120,
@@ -111,6 +115,7 @@ export const services: Service[] = [
         maxClientsPerSlot: 1,
         requiredStaff: 2, // Maquiadora + Auxiliar
         active: true,
+        imageUrl: 'https://images.unsplash.com/photo-1487412947132-28a5d36a9085?auto=format&fit=crop&q=80',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
     }
@@ -120,7 +125,7 @@ export const services: Service[] = [
 export const employees: Employee[] = [
     {
         id: '1',
-        tenantId: '1',
+        tenantId: '11111111-1111-1111-1111-111111111111',
         name: 'Maria Silva',
         email: 'maria@belezapura.com',
         phone: '(11) 98765-4321',
@@ -142,7 +147,7 @@ export const employees: Employee[] = [
     },
     {
         id: '2',
-        tenantId: '1',
+        tenantId: '11111111-1111-1111-1111-111111111111',
         name: 'Ana Costa',
         email: 'ana@belezapura.com',
         phone: '(11) 98765-1234',
@@ -164,7 +169,7 @@ export const employees: Employee[] = [
     },
     {
         id: '3',
-        tenantId: '1',
+        tenantId: '11111111-1111-1111-1111-111111111111',
         name: 'Juliana Santos',
         email: 'juliana@belezapura.com',
         phone: '(11) 98765-5678',

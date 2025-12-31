@@ -24,7 +24,12 @@ export default function ConfiguracoesPage() {
         sendgridApiKey: "",
         twilioAccountSid: "",
         twilioAuthToken: "",
-        whatsappBusinessId: ""
+        whatsappBusinessId: "",
+        openAiApiKey: "",
+        openAiApiKey: "",
+        anthropicApiKey: "",
+        invoiceProvider: "enotas", // enotas | focus
+        invoiceApiKey: ""
     })
 
     const [notifications, setNotifications] = useState({
@@ -210,15 +215,77 @@ export default function ConfiguracoesPage() {
                         </div>
                     </div>
 
+                    <Separator />
+
+                    {/* AI Integrations */}
+                    <div className="space-y-4">
+                        <h4 className="font-semibold">Inteligência Artificial (Agentes)</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="openAiApiKey">OpenAI API Key</Label>
+                                <Input
+                                    id="openAiApiKey"
+                                    type="password"
+                                    value={integrations.openAiApiKey}
+                                    onChange={(e) => setIntegrations({ ...integrations, openAiApiKey: e.target.value })}
+                                    placeholder="sk-..."
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="anthropicApiKey">Anthropic API Key</Label>
+                                <Input
+                                    id="anthropicApiKey"
+                                    type="password"
+                                    value={integrations.anthropicApiKey}
+                                    onChange={(e) => setIntegrations({ ...integrations, anthropicApiKey: e.target.value })}
+                                    placeholder="sk-ant-..."
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <Separator />
+
+                    {/* Nota Fiscal */}
+                    <div className="space-y-4">
+                        <h4 className="font-semibold">Emissão de Notas Fiscais (NFS-e)</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="invoiceProvider">Provedor</Label>
+                                <select
+                                    id="invoiceProvider"
+                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                    value={integrations.invoiceProvider}
+                                    onChange={(e) => setIntegrations({ ...integrations, invoiceProvider: e.target.value })}
+                                >
+                                    <option value="enotas">eNotas</option>
+                                    <option value="focus">Focus NFe</option>
+                                    <option value="asaas">Asaas (NFS-e Integrada)</option>
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="invoiceApiKey">API Key do {integrations.invoiceProvider === 'enotas' ? 'eNotas' : integrations.invoiceProvider === 'focus' ? 'Focus NFe' : 'Asaas'}</Label>
+                                <Input
+                                    id="invoiceApiKey"
+                                    type="password"
+                                    value={integrations.invoiceApiKey}
+                                    onChange={(e) => setIntegrations({ ...integrations, invoiceApiKey: e.target.value })}
+                                    placeholder={integrations.invoiceProvider === 'enotas' ? 'Integração via API Key...' : 'Token de acesso...'}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
                     <Button onClick={handleSaveIntegrations}>
                         <Save className="w-4 h-4 mr-2" />
                         Salvar Integrações
                     </Button>
-                </CardContent>
-            </Card>
+                </CardContent >
+            </Card >
 
             {/* Notificações */}
-            <Card className="rounded-2xl border-none shadow-sm bg-white/60 dark:bg-zinc-900/60 backdrop-blur-md">
+            < Card className="rounded-2xl border-none shadow-sm bg-white/60 dark:bg-zinc-900/60 backdrop-blur-md" >
                 <CardHeader>
                     <div className="flex items-center gap-2">
                         <Bell className="w-5 h-5" />
@@ -307,7 +374,7 @@ export default function ConfiguracoesPage() {
                         Salvar Notificações
                     </Button>
                 </CardContent>
-            </Card>
-        </div>
+            </Card >
+        </div >
     )
 }

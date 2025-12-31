@@ -10,6 +10,7 @@ export type ServiceRecord = {
     isActive: boolean
     categoryId?: string
     metadata?: Record<string, unknown>
+    imageUrl?: string
 }
 
 export type EmployeeRecord = {

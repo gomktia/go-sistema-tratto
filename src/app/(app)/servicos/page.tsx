@@ -46,7 +46,9 @@ import {
 } from "@/components/ui/table"
 import { useTenant } from "@/contexts/tenant-context"
 import { employees as initialEmployees, services as initialServices, type Service, type Employee } from "@/mocks/services"
-import { useTenantEmployees } from "@/hooks/useTenantRecords"
+import { useTenantEmployees, useTenantServices } from "@/hooks/useTenantRecords"
+import { ImageUpload } from "@/components/ui/image-upload"
+import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client"
 
 const categories = ["Cabelo", "Unhas", "Maquiagem", "Estética", "Massagem", "Depilação", "Sobrancelha"]
 
@@ -61,13 +63,13 @@ export default function ServicosPage() {
     const [employees, setEmployees] = useState<Employee[]>(initialEmployees)
     const { currentTenant } = useTenant()
 
-    // Buscar profissionais do Supabase
-    const { data: employeeRecords, loading: employeesLoading } = useTenantEmployees(currentTenant.id)
+    // Buscar dados do Supabase // TODO: Unify hooks
+    const { data: employeeRecords } = useTenantEmployees(currentTenant.id)
+    const { data: serviceRecords } = useTenantServices(currentTenant.id)
 
-    // Atualizar employees quando os dados do Supabase chegarem
+    // Atualizar employees e services quando os dados do Supabase chegarem
     useEffect(() => {
         if (employeeRecords.length > 0) {
-            // Mapear employeeRecords para o formato Employee
             const mappedEmployees: Employee[] = employeeRecords.map(record => ({
                 id: record.id,
                 tenantId: record.tenantId,
@@ -75,7 +77,7 @@ export default function ServicosPage() {
                 email: record.email || '',
                 phone: record.phone || '',
                 specialties: record.specialties || [],
-                workingHours: {}, // Será preenchido se necessário
+                workingHours: {},
                 commission: 0,
                 acceptsOnlineBooking: true,
                 roundRobinEnabled: true,
@@ -86,6 +88,33 @@ export default function ServicosPage() {
             setEmployees(mappedEmployees)
         }
     }, [employeeRecords])
+
+    useEffect(() => {
+        if (serviceRecords.length > 0) {
+            // Map ServiceRecord to Service mock type (temporary bridge)
+            const mappedServices: Service[] = serviceRecords.map(record => ({
+                id: record.id,
+                tenantId: record.tenantId,
+                name: record.name,
+                category: "Diversos", // Default as category is optional ID in DB
+                duration: record.durationMinutes,
+                price: record.price,
+                description: record.description,
+                requiresDeposit: record.requiresConfirmation,
+                depositAmount: 0,
+                allowOnlineBooking: record.isActive,
+                bufferBefore: 0,
+                bufferAfter: 0,
+                maxClientsPerSlot: 1,
+                requiredStaff: 1,
+                active: record.isActive,
+                imageUrl: record.imageUrl,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            }))
+            setServices(mappedServices)
+        }
+    }, [serviceRecords])
 
     const [formData, setFormData] = useState({
         name: "",
@@ -98,7 +127,8 @@ export default function ServicosPage() {
         allowOnlineBooking: true,
         bufferBefore: 5,
         bufferAfter: 10,
-        professionalIds: [] as string[]
+        professionalIds: [] as string[],
+        imageUrl: ""
     })
 
     const filteredServices = services.filter(service =>
@@ -106,7 +136,40 @@ export default function ServicosPage() {
         service.category.toLowerCase().includes(searchTerm.toLowerCase())
     )
 
-    const handleCreateService = () => {
+    const handleCreateService = async () => {
+        const supabase = getSupabaseBrowserClient()
+
+        if (supabase && isSupabaseConfigured) {
+            try {
+                const { data, error } = await supabase.from('services').insert({
+                    tenant_id: currentTenant.id,
+                    name: formData.name,
+                    description: formData.description,
+                    duration_minutes: formData.duration,
+                    price: formData.price,
+                    requires_confirmation: formData.requiresDeposit,
+                    is_active: true,
+                    image_url: formData.imageUrl,
+                    metadata: {
+                        allowOnlineBooking: formData.allowOnlineBooking,
+                        bufferBefore: formData.bufferBefore,
+                        bufferAfter: formData.bufferAfter,
+                        depositAmount: formData.depositAmount
+                    }
+                }).select().single()
+
+                if (error) throw error
+
+                // Optimistic update or wait for re-fetch
+                // const newService = mapRecordToService(data)
+                // setServices([...services, newService])
+            } catch (error) {
+                console.error("Error creating service:", error)
+                alert("Erro ao criar serviço no banco de dados.")
+            }
+        }
+
+        // Local State Fallback (for smooth UI if offline/mock)
         const newServiceId = String(services.length + 1)
         const newService: Service = {
             id: newServiceId,
@@ -119,42 +182,45 @@ export default function ServicosPage() {
             updatedAt: new Date().toISOString()
         }
         setServices([...services, newService])
-
-        // Sync professionals
-        const updatedEmployees = employees.map(emp => {
-            if (formData.professionalIds.includes(emp.id)) {
-                return { ...emp, specialties: Array.from(new Set([...emp.specialties, newServiceId])) }
-            }
-            return emp
-        })
-        setEmployees(updatedEmployees)
-
         setShowNewService(false)
         resetForm()
     }
 
-    const handleEditService = () => {
+    const handleEditService = async () => {
         if (!selectedService) return
+
+        const supabase = getSupabaseBrowserClient()
+        if (supabase && isSupabaseConfigured) {
+            try {
+                const { error } = await supabase
+                    .from('services')
+                    .update({
+                        name: formData.name,
+                        description: formData.description,
+                        duration_minutes: formData.duration,
+                        price: formData.price,
+                        requires_confirmation: formData.requiresDeposit,
+                        image_url: formData.imageUrl,
+                        metadata: {
+                            allowOnlineBooking: formData.allowOnlineBooking,
+                            bufferBefore: formData.bufferBefore,
+                            bufferAfter: formData.bufferAfter,
+                            depositAmount: formData.depositAmount
+                        }
+                    })
+                    .eq('id', selectedService.id)
+
+                if (error) throw error
+            } catch (error) {
+                console.error("Error updating service:", error)
+            }
+        }
 
         setServices(services.map(s =>
             s.id === selectedService.id
                 ? { ...s, ...formData, updatedAt: new Date().toISOString() }
                 : s
         ))
-
-        // Sync professionals
-        const updatedEmployees = employees.map(emp => {
-            const isAssigned = formData.professionalIds.includes(emp.id)
-            const hasSpecialty = emp.specialties.includes(selectedService.id)
-
-            if (isAssigned && !hasSpecialty) {
-                return { ...emp, specialties: [...emp.specialties, selectedService.id] }
-            } else if (!isAssigned && hasSpecialty) {
-                return { ...emp, specialties: emp.specialties.filter(id => id !== selectedService.id) }
-            }
-            return emp
-        })
-        setEmployees(updatedEmployees)
 
         setShowEditService(false)
         resetForm()
@@ -183,7 +249,8 @@ export default function ServicosPage() {
             depositAmount: service.depositAmount,
             bufferBefore: service.bufferBefore,
             bufferAfter: service.bufferAfter,
-            professionalIds: linkedProfessionalIds
+            professionalIds: linkedProfessionalIds,
+            imageUrl: service.imageUrl || ""
         })
         setShowEditService(true)
     }
@@ -205,7 +272,8 @@ export default function ServicosPage() {
             allowOnlineBooking: true,
             bufferBefore: 5,
             bufferAfter: 10,
-            professionalIds: []
+            professionalIds: [],
+            imageUrl: ""
         })
         setSelectedService(null)
     }

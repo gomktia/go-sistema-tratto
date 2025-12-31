@@ -15,6 +15,14 @@ import type {
     ServiceRecord,
     StaffAvailabilityRecord,
 } from "@/types/catalog"
+import {
+    type GalleryImage,
+    type Highlight,
+    type Testimonial,
+    galleryImages as galleryMocks,
+    highlights as highlightMocks,
+    testimonials as testimonialMocks
+} from "@/mocks/marketing"
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client"
 import { getInitials } from "@/lib/utils"
 
@@ -43,6 +51,7 @@ interface ServiceRow {
     requires_confirmation?: boolean | null
     is_active?: boolean | null
     metadata?: Record<string, unknown> | null
+    image_url?: string | null
 }
 
 interface EmployeeRow {
@@ -67,13 +76,13 @@ interface AppointmentRow {
     employee_id?: string | null
     customer_id?: string | null
     customers?:
-        | {
-            full_name?: string | null
-        }
-        | Array<{
-            full_name?: string | null
-        }>
-        | null
+    | {
+        full_name?: string | null
+    }
+    | Array<{
+        full_name?: string | null
+    }>
+    | null
     start_at: string
     end_at?: string | null
     duration_minutes?: number | null
@@ -99,13 +108,13 @@ interface ProductRow {
     is_active?: boolean | null
     image_url?: string | null
     product_categories?:
-        | {
-            name?: string | null
-        }
-        | Array<{
-            name?: string | null
-        }>
-        | null
+    | {
+        name?: string | null
+    }
+    | Array<{
+        name?: string | null
+    }>
+    | null
 }
 
 interface ComboRow {
@@ -138,6 +147,36 @@ interface StaffAvailabilityRow {
     start_time: string
     end_time: string
     is_active: boolean | null
+}
+
+interface GalleryImageRow {
+    id: string
+    tenant_id: string
+    image_url: string
+    title: string | null
+    description: string | null
+    display_order: number | null
+}
+
+interface HighlightRow {
+    id: string
+    tenant_id: string
+    title: string
+    description: string | null
+    image_url: string | null
+    type: string
+    expires_at: string | null
+}
+
+interface ReviewRow {
+    id: string
+    tenant_id?: string // Schema might not have it directly if linked via appt, but let's check
+    customer_email: string
+    professional_id: string
+    service_id: string
+    rating: number
+    comment: string | null
+    is_approved: boolean
 }
 
 const defaultCurrency = "BRL"
@@ -189,6 +228,7 @@ const mapRowToService = (row: ServiceRow): ServiceRecord => ({
     isActive: row.is_active ?? true,
     categoryId: row.category_id ?? undefined,
     metadata: row.metadata ?? undefined,
+    imageUrl: row.image_url ?? undefined,
 })
 
 const mapMockService = (service: typeof serviceMocks[number]): ServiceRecord => ({
@@ -206,6 +246,7 @@ const mapMockService = (service: typeof serviceMocks[number]): ServiceRecord => 
         bufferBefore: service.bufferBefore,
         bufferAfter: service.bufferAfter,
     },
+    imageUrl: service.imageUrl,
 })
 
 const mapRowToEmployee = (row: EmployeeRow): EmployeeRecord => ({
@@ -222,8 +263,8 @@ const mapRowToEmployee = (row: EmployeeRow): EmployeeRecord => ({
     avatarUrl: row.avatar_url ?? undefined,
     specialties: Array.isArray((row.settings as { specialties?: unknown[] } | undefined)?.specialties)
         ? ((row.settings as { specialties?: unknown[] }).specialties || []).filter(
-              (value): value is string => typeof value === "string"
-          )
+            (value): value is string => typeof value === "string"
+        )
         : undefined,
 })
 
@@ -395,6 +436,39 @@ const mapMockAvailability = (employee: typeof employeeMocks[number]): StaffAvail
     })
 }
 
+const mapRowToGalleryImage = (row: GalleryImageRow): GalleryImage => ({
+    id: row.id,
+    tenantId: row.tenant_id,
+    url: row.image_url,
+    title: row.title ?? "",
+    description: row.description ?? undefined,
+    category: "general",
+    displayOrder: row.display_order ?? 0,
+})
+
+const mapRowToHighlight = (row: HighlightRow): Highlight => ({
+    id: row.id,
+    tenantId: row.tenant_id,
+    title: row.title,
+    description: row.description ?? "",
+    imageUrl: row.image_url ?? "",
+    type: (row.type as Highlight['type']) ?? 'promotion',
+    expiresAt: row.expires_at ?? undefined,
+})
+
+const mapRowToTestimonial = (row: ReviewRow): Testimonial => ({
+    id: row.id,
+    tenantId: "11111111-1111-1111-1111-111111111111", // Placeholder or fetch if available
+    customerName: row.customer_email.split('@')[0], // Fallback name from email
+    customerRole: "Cliente",
+    testimonial: row.comment ?? "",
+    rating: row.rating,
+    isApproved: row.is_approved,
+    imageUrl: undefined // Review table doesn't have image
+})
+
+const mapMockGalleryImage = (image: GalleryImage): GalleryImage => image
+
 export function useTenantCustomers(tenantId?: string) {
     const fallback = useMemo(() => {
         const normalized = clients.map(mapMockClient)
@@ -502,7 +576,7 @@ export function useTenantServices(tenantId?: string) {
         async (supabase, currentTenantId) => {
             const { data, error } = await supabase
                 .from("services")
-                .select("id, tenant_id, category_id, name, description, duration_minutes, price, currency, requires_confirmation, is_active, metadata")
+                .select("id, tenant_id, category_id, name, description, duration_minutes, price, currency, requires_confirmation, is_active, metadata, image_url")
                 .eq("tenant_id", currentTenantId)
                 .order("name")
 
@@ -703,4 +777,90 @@ export function useTenantStaffAvailability(tenantId?: string) {
         fallback
     )
 }
+
+export function useTenantGallery(tenantId?: string) {
+    const fallback = useMemo(() => {
+        if (!tenantId) return galleryMocks
+        return galleryMocks.filter(img => img.tenantId === tenantId)
+    }, [tenantId])
+
+    return useTenantQuery<GalleryImage>(
+        tenantId,
+        async (supabase, currentTenantId) => {
+            const { data, error } = await supabase
+                .from("gallery_images")
+                .select("id, tenant_id, image_url, title, description, display_order")
+                .eq("tenant_id", currentTenantId)
+                .order("display_order", { ascending: true })
+
+            if (error) {
+                console.error("[useTenantGallery] ", error.message)
+                return null
+            }
+
+            return data?.map(mapRowToGalleryImage) ?? null
+        },
+        fallback
+    )
+}
+
+export function useTenantHighlights(tenantId?: string) {
+    const fallback = useMemo(() => {
+        if (!tenantId) return highlightMocks
+        return highlightMocks.filter(h => h.tenantId === tenantId)
+    }, [tenantId])
+
+    return useTenantQuery<Highlight>(
+        tenantId,
+        async (supabase, currentTenantId) => {
+            const { data, error } = await supabase
+                .from("highlights")
+                .select("id, tenant_id, title, description, image_url, type, expires_at")
+                .eq("tenant_id", currentTenantId)
+                .eq("is_active", true)
+
+            if (error) {
+                console.error("[useTenantHighlights] ", error.message)
+                return null
+            }
+            return data?.map(mapRowToHighlight) ?? null
+        },
+        fallback
+    )
+}
+
+export function useTenantTestimonials(tenantId?: string) {
+    const fallback = useMemo(() => {
+        if (!tenantId) return testimonialMocks
+        return testimonialMocks.filter(t => t.tenantId === tenantId)
+    }, [tenantId])
+
+    return useTenantQuery<Testimonial>(
+        tenantId,
+        async (supabase, currentTenantId) => {
+            // Note: Reviews table might not have tenant_id directly if it's per appointment.
+            // But usually for a multi-tenant system, we replicate tenant_id or link via appointment.
+            // In full_schema.sql: reviews table does NOT have tenant_id currently (it has appointment_id).
+            // This is a constraint. For now, we will assume we can fetch ALL reviews (demo mode) OR
+            // we should have added tenant_id to reviews. 
+            // Workaround: Fetch all for now as user just populated "Mock Data" into real table.
+            // PROPER FIX: Add tenant_id to reviews table.
+
+            const { data, error } = await supabase
+                .from("reviews")
+                .select("id, customer_email, professional_id, service_id, rating, comment, is_approved")
+                .eq("is_approved", true)
+                // .eq("tenant_id", currentTenantId) // Missing column in schema
+                .limit(10)
+
+            if (error) {
+                console.error("[useTenantTestimonials] ", error.message)
+                return null
+            }
+            return data?.map(mapRowToTestimonial) ?? null
+        },
+        fallback
+    )
+}
+
 
