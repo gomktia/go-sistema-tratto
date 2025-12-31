@@ -14,6 +14,7 @@ export interface Tenant {
     slug: string // Friendly URL identifier like "beleza-pura"
     whatsapp: string // Phone number for WhatsApp contact
     schedulingType: 'individual' | 'shared' // Shared = single room/resource constraint
+    settings?: { address?: string;[key: string]: any }
 }
 
 export const tenants: Tenant[] = [

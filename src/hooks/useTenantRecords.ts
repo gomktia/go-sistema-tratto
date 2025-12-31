@@ -374,6 +374,7 @@ const mapTenantRow = (row: TenantRow): MockTenant => {
         slug: row.slug,
         whatsapp: settings.whatsapp || "",
         schedulingType: settings.scheduling_type === "shared" ? "shared" : "individual",
+        settings: settings
     }
 }
 
