@@ -1,9 +1,10 @@
 
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const apiKey = process.env.RESEND_API_KEY || 're_123456789'; // Fallback preventing build crash if env is missing
+const resend = new Resend(apiKey);
 
-const FROM_EMAIL = 'BeautyFlow <nao-responda@beautyflow.app>'; // Você vai configurar isso no painel do Resend depois
+const FROM_EMAIL = 'BeautyFlow <nao-responda@beautyflow.app>';
 
 export interface EmailPayload {
     to: string;
