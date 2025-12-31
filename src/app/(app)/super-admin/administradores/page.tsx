@@ -87,23 +87,13 @@ export default function AdministradoresPage() {
     const loadAdmins = async () => {
         setIsLoading(true)
         try {
-            const supabase = getSupabaseBrowserClient()
-            if (!supabase) {
-                throw new Error('Supabase não configurado')
+            // Fetch via API Route to use Service Role (bypassing RLS)
+            const response = await fetch('/api/admin/users')
+            if (!response.ok) {
+                throw new Error('Falha ao carregar administradores')
             }
-
-            // Buscar todos os app_users que são admins do sistema
-            const { data, error } = await supabase
-                .from('app_users')
-                .select('*')
-                .order('created_at', { ascending: false })
-
-            if (error) throw error
-
-            // TODO: Filtrar apenas admins quando tivermos o campo role na tabela
-            // Client-side fix: filtrar por role = 'super_admin' ou se o email contém 'admin' para garantia em mocks
-            const superAdmins = (data || []).filter((u: any) => u.role === 'super_admin' || u.email?.includes('admin') || u.email === 'geison@beautyflow.app' || u.email === 'oseias@beautyflow.app')
-            setAdmins(superAdmins)
+            const data = await response.json()
+            setAdmins(data)
         } catch (error: any) {
             console.error('Erro ao carregar admins:', error)
         } finally {
