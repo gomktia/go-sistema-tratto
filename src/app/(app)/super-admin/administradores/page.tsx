@@ -23,6 +23,12 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
     Shield,
     UserPlus,
     Search,
@@ -95,7 +101,9 @@ export default function AdministradoresPage() {
             if (error) throw error
 
             // TODO: Filtrar apenas admins quando tivermos o campo role na tabela
-            setAdmins(data || [])
+            // Client-side fix: filtrar por role = 'super_admin' ou se o email contém 'admin' para garantia em mocks
+            const superAdmins = (data || []).filter((u: any) => u.role === 'super_admin' || u.email.includes('admin') || u.email === 'geison@beautyflow.app' || u.email === 'oseias@beautyflow.app')
+            setAdmins(superAdmins)
         } catch (error: any) {
             console.error('Erro ao carregar admins:', error)
         } finally {
@@ -391,9 +399,29 @@ export default function AdministradoresPage() {
                                         </div>
                                     </div>
 
-                                    <Button variant="ghost" size="icon" className="rounded-full">
-                                        <MoreVertical className="w-4 h-4" />
-                                    </Button>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="rounded-full">
+                                                <MoreVertical className="w-4 h-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onClick={() => {
+                                                setFormData({
+                                                    email: admin.email,
+                                                    full_name: admin.full_name,
+                                                    role: 'super_admin',
+                                                    password: '' // Don't show password
+                                                })
+                                                setIsDialogOpen(true)
+                                            }}>
+                                                Editar
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem className="text-red-600" onClick={() => alert("Funcionalidade de remover admin")}>
+                                                Remover
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </div>
                             </motion.div>
                         ))}
