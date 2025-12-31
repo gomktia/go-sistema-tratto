@@ -49,6 +49,7 @@ import { cn } from "@/lib/utils"
 import { useTenantAppointments, useTenantEmployees, useTenantServices } from "@/hooks/useTenantRecords"
 import type { AppointmentRecord, ServiceRecord } from "@/types/catalog"
 import { motion, AnimatePresence } from "framer-motion"
+import { NewAppointmentModal } from "@/components/agenda/new-appointment-modal"
 
 // Generate time slots from 08:00 to 20:00
 const timeSlots = Array.from({ length: 13 }, (_, i) => i + 8)
@@ -65,11 +66,21 @@ export default function AgendaPage() {
     const searchParams = useSearchParams()
     const employeeFromUrl = searchParams.get('employee')
 
-    const [currentDate, setCurrentDate] = useState(new Date())
+    const [currentDate, setCurrentDate] = useState<Date>(new Date()) // Initialize with server time, will update on mount
     const [selectedEmployee, setSelectedEmployee] = useState<string>(employeeFromUrl || "all")
-    const [currentTime, setCurrentTime] = useState(new Date())
+    const [currentTime, setCurrentTime] = useState<Date>(new Date())
     const [viewType, setViewType] = useState<ViewType>("day")
+    const [isNewAppointmentModalOpen, setIsNewAppointmentModalOpen] = useState(false)
+    const [isMounted, setIsMounted] = useState(false)
     const { currentTenant } = useTenant()
+
+    useEffect(() => {
+        setIsMounted(true)
+        setCurrentDate(new Date())
+        setCurrentTime(new Date())
+    }, [])
+
+
 
     // Update selected employee when URL param changes
     useEffect(() => {
@@ -512,191 +523,206 @@ export default function AgendaPage() {
         return { total, confirmed, pending, completed }
     }, [filteredAppointments])
 
+    if (!isMounted) return <div className="h-screen w-full flex items-center justify-center text-muted-foreground">Carregando agenda...</div>
+
     return (
-        <div className="space-y-8 pb-10">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                <div>
-                    <div className="flex items-center gap-2 mb-2">
-                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <CalendarIcon className="w-4 h-4 text-primary" />
+        <>
+            <NewAppointmentModal
+                isOpen={isNewAppointmentModalOpen}
+                onClose={() => setIsNewAppointmentModalOpen(false)}
+                onSuccess={() => {
+                    window.location.reload()
+                }}
+                tenantId={currentTenant.id}
+            />
+            <div className="space-y-8 pb-10">
+                {/* Header */}
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                                <CalendarIcon className="w-4 h-4 text-primary" />
+                            </div>
+                            <span className="text-sm font-semibold uppercase tracking-wider text-primary">Agenda Global</span>
                         </div>
-                        <span className="text-sm font-semibold uppercase tracking-wider text-primary">Agenda Global</span>
+                        <h2 className="text-4xl font-bold tracking-tight text-foreground">
+                            {viewType === "day" && format(currentDate, "dd 'de' MMMM", { locale: ptBR })}
+                            {viewType === "week" && `Semana de ${format(dateRange.start, "dd/MM")} - ${format(dateRange.end, "dd/MM")}`}
+                            {viewType === "month" && format(currentDate, "MMMM 'de' yyyy", { locale: ptBR })}
+                        </h2>
+                        <p className="text-muted-foreground mt-2">
+                            Gerencie a escala e atendimentos {viewType === "day" ? "de hoje" : viewType === "week" ? "da semana" : "do mês"} em tempo real.
+                        </p>
                     </div>
-                    <h2 className="text-4xl font-bold tracking-tight text-foreground">
-                        {viewType === "day" && format(currentDate, "dd 'de' MMMM", { locale: ptBR })}
-                        {viewType === "week" && `Semana de ${format(dateRange.start, "dd/MM")} - ${format(dateRange.end, "dd/MM")}`}
-                        {viewType === "month" && format(currentDate, "MMMM 'de' yyyy", { locale: ptBR })}
-                    </h2>
-                    <p className="text-muted-foreground mt-2">
-                        Gerencie a escala e atendimentos {viewType === "day" ? "de hoje" : viewType === "week" ? "da semana" : "do mês"} em tempo real.
-                    </p>
+                    <Button
+                        className="rounded-xl bg-primary hover:bg-primary/90 shadow-lg"
+                        onClick={() => setIsNewAppointmentModalOpen(true)}
+                    >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Novo Agendamento
+                    </Button>
                 </div>
-                <Button className="rounded-xl bg-primary hover:bg-primary/90 shadow-lg">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Novo Agendamento
-                </Button>
-            </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Card className="rounded-2xl border-none shadow-sm bg-white dark:bg-zinc-900 p-6">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-xs font-bold uppercase text-muted-foreground">Total</p>
-                            <p className="text-3xl font-bold text-foreground mt-1">{stats.total}</p>
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <Card className="rounded-2xl border-none shadow-sm bg-white dark:bg-zinc-900 p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-xs font-bold uppercase text-muted-foreground">Total</p>
+                                <p className="text-3xl font-bold text-foreground mt-1">{stats.total}</p>
+                            </div>
+                            <CalendarDays className="w-8 h-8 text-slate-400" />
                         </div>
-                        <CalendarDays className="w-8 h-8 text-slate-400" />
-                    </div>
-                </Card>
-                <Card className="rounded-2xl border-none shadow-sm bg-emerald-500/10 p-6">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-xs font-bold uppercase text-emerald-700">Confirmados</p>
-                            <p className="text-3xl font-bold text-emerald-700 mt-1">{stats.confirmed}</p>
+                    </Card>
+                    <Card className="rounded-2xl border-none shadow-sm bg-emerald-500/10 p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-xs font-bold uppercase text-emerald-700">Confirmados</p>
+                                <p className="text-3xl font-bold text-emerald-700 mt-1">{stats.confirmed}</p>
+                            </div>
+                            <CheckCircle2 className="w-8 h-8 text-emerald-500" />
                         </div>
-                        <CheckCircle2 className="w-8 h-8 text-emerald-500" />
-                    </div>
-                </Card>
-                <Card className="rounded-2xl border-none shadow-sm bg-amber-500/10 p-6">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-xs font-bold uppercase text-amber-700">Pendentes</p>
-                            <p className="text-3xl font-bold text-amber-700 mt-1">{stats.pending}</p>
+                    </Card>
+                    <Card className="rounded-2xl border-none shadow-sm bg-amber-500/10 p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-xs font-bold uppercase text-amber-700">Pendentes</p>
+                                <p className="text-3xl font-bold text-amber-700 mt-1">{stats.pending}</p>
+                            </div>
+                            <Clock className="w-8 h-8 text-amber-500" />
                         </div>
-                        <Clock className="w-8 h-8 text-amber-500" />
-                    </div>
-                </Card>
-                <Card className="rounded-2xl border-none shadow-sm bg-slate-500/10 p-6">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-xs font-bold uppercase text-slate-700 dark:text-slate-400">Concluídos</p>
-                            <p className="text-3xl font-bold text-slate-700 dark:text-slate-400 mt-1">{stats.completed}</p>
+                    </Card>
+                    <Card className="rounded-2xl border-none shadow-sm bg-slate-500/10 p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-xs font-bold uppercase text-slate-700 dark:text-slate-400">Concluídos</p>
+                                <p className="text-3xl font-bold text-slate-700 dark:text-slate-400 mt-1">{stats.completed}</p>
+                            </div>
+                            <Sparkles className="w-8 h-8 text-slate-500" />
                         </div>
-                        <Sparkles className="w-8 h-8 text-slate-500" />
-                    </div>
-                </Card>
-            </div>
-
-            {/* Controls Bar */}
-            <Card className="rounded-3xl border-none shadow-sm bg-white dark:bg-zinc-900 p-5">
-                <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
-                    {/* Date Navigation */}
-                    <div className="flex items-center gap-2 bg-slate-100 dark:bg-zinc-800 p-1.5 rounded-2xl">
-                        <Button variant="ghost" size="icon" onClick={() => navigate('prev')} className="h-10 w-10 rounded-xl">
-                            <ChevronLeft className="w-5 h-5" />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => navigate('today')}
-                            className={cn(
-                                "px-6 rounded-xl font-medium transition-all",
-                                isToday ? "bg-white dark:bg-zinc-700 shadow-sm text-primary" : ""
-                            )}
-                        >
-                            Hoje
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => navigate('next')} className="h-10 w-10 rounded-xl">
-                            <ChevronRight className="w-5 h-5" />
-                        </Button>
-                    </div>
-
-                    {/* Center Controls */}
-                    <div className="flex flex-wrap items-center justify-center gap-6">
-                        {/* Employee Filter */}
-                        <div className="flex items-center gap-3 min-w-[240px]">
-                            <UsersIcon className="w-4 h-4 text-muted-foreground" />
-                            <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                                <SelectTrigger className="border-slate-200 dark:border-zinc-800 rounded-xl h-10">
-                                    <SelectValue placeholder="Selecione profissional" />
-                                </SelectTrigger>
-                                <SelectContent className="rounded-2xl">
-                                    <SelectItem value="all" className="rounded-lg">Todos os profissionais ({tenantEmployees.length})</SelectItem>
-                                    {tenantEmployees.length === 0 && (
-                                        <div className="p-4 text-center text-sm text-muted-foreground">
-                                            Nenhum profissional cadastrado
-                                        </div>
-                                    )}
-                                    {tenantEmployees.map(emp => (
-                                        <SelectItem key={emp.id} value={emp.id} className="rounded-lg">
-                                            {emp.fullName}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-
-                    {/* View Type Selector */}
-                    <div className="flex items-center gap-2 bg-slate-100 dark:bg-zinc-800 rounded-2xl p-1">
-                        <Button
-                            size="sm"
-                            variant={viewType === "day" ? "default" : "ghost"}
-                            className="rounded-xl"
-                            onClick={() => setViewType("day")}
-                        >
-                            <Grid3x3 className="w-4 h-4 mr-2" />
-                            Dia
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant={viewType === "week" ? "default" : "ghost"}
-                            className="rounded-xl"
-                            onClick={() => setViewType("week")}
-                        >
-                            <CalendarDays className="w-4 h-4 mr-2" />
-                            Semana
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant={viewType === "month" ? "default" : "ghost"}
-                            className="rounded-xl"
-                            onClick={() => setViewType("month")}
-                        >
-                            <CalendarRange className="w-4 h-4 mr-2" />
-                            Mês
-                        </Button>
-                    </div>
+                    </Card>
                 </div>
-            </Card>
 
-            {/* Calendar View */}
-            <AnimatePresence mode="wait">
-                <motion.div
-                    key={viewType}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                >
-                    {viewType === "day" && dayView}
-                    {viewType === "week" && weekView}
-                    {viewType === "month" && monthView}
-                </motion.div>
-            </AnimatePresence>
+                {/* Controls Bar */}
+                <Card className="rounded-3xl border-none shadow-sm bg-white dark:bg-zinc-900 p-5">
+                    <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
+                        {/* Date Navigation */}
+                        <div className="flex items-center gap-2 bg-slate-100 dark:bg-zinc-800 p-1.5 rounded-2xl">
+                            <Button variant="ghost" size="icon" onClick={() => navigate('prev')} className="h-10 w-10 rounded-xl">
+                                <ChevronLeft className="w-5 h-5" />
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => navigate('today')}
+                                className={cn(
+                                    "px-6 rounded-xl font-medium transition-all",
+                                    isToday ? "bg-white dark:bg-zinc-700 shadow-sm text-primary" : ""
+                                )}
+                            >
+                                Hoje
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => navigate('next')} className="h-10 w-10 rounded-xl">
+                                <ChevronRight className="w-5 h-5" />
+                            </Button>
+                        </div>
 
-            {/* Legend */}
-            <div className="flex items-center justify-center">
-                <div className="flex items-center gap-6 px-8 py-4 rounded-3xl bg-white dark:bg-zinc-900 shadow-lg border border-slate-200 dark:border-zinc-800">
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-amber-500" />
-                        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Pendente</span>
+                        {/* Center Controls */}
+                        <div className="flex flex-wrap items-center justify-center gap-6">
+                            {/* Employee Filter */}
+                            <div className="flex items-center gap-3 min-w-[240px]">
+                                <UsersIcon className="w-4 h-4 text-muted-foreground" />
+                                <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                                    <SelectTrigger className="border-slate-200 dark:border-zinc-800 rounded-xl h-10">
+                                        <SelectValue placeholder="Selecione profissional" />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-2xl">
+                                        <SelectItem value="all" className="rounded-lg">Todos os profissionais ({tenantEmployees.length})</SelectItem>
+                                        {tenantEmployees.length === 0 && (
+                                            <div className="p-4 text-center text-sm text-muted-foreground">
+                                                Nenhum profissional cadastrado
+                                            </div>
+                                        )}
+                                        {tenantEmployees.map(emp => (
+                                            <SelectItem key={emp.id} value={emp.id} className="rounded-lg">
+                                                {emp.fullName}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                        {/* View Type Selector */}
+                        <div className="flex items-center gap-2 bg-slate-100 dark:bg-zinc-800 rounded-2xl p-1">
+                            <Button
+                                size="sm"
+                                variant={viewType === "day" ? "default" : "ghost"}
+                                className="rounded-xl"
+                                onClick={() => setViewType("day")}
+                            >
+                                <Grid3x3 className="w-4 h-4 mr-2" />
+                                Dia
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant={viewType === "week" ? "default" : "ghost"}
+                                className="rounded-xl"
+                                onClick={() => setViewType("week")}
+                            >
+                                <CalendarDays className="w-4 h-4 mr-2" />
+                                Semana
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant={viewType === "month" ? "default" : "ghost"}
+                                className="rounded-xl"
+                                onClick={() => setViewType("month")}
+                            >
+                                <CalendarRange className="w-4 h-4 mr-2" />
+                                Mês
+                            </Button>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Confirmado</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-slate-500" />
-                        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Concluído</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-rose-500" />
-                        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Cancelado</span>
+                </Card>
+
+                {/* Calendar View */}
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={viewType}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        {viewType === "day" && dayView}
+                        {viewType === "week" && weekView}
+                        {viewType === "month" && monthView}
+                    </motion.div>
+                </AnimatePresence>
+
+                {/* Legend */}
+                <div className="flex items-center justify-center">
+                    <div className="flex items-center gap-6 px-8 py-4 rounded-3xl bg-white dark:bg-zinc-900 shadow-lg border border-slate-200 dark:border-zinc-800">
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-amber-500" />
+                            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Pendente</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Confirmado</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-slate-500" />
+                            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Concluído</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-rose-500" />
+                            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Cancelado</span>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </>
     )
 }

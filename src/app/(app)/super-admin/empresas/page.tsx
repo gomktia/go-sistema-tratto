@@ -45,7 +45,8 @@ const activationScore = (company: Company) => {
 }
 
 export default function EmpresasPage() {
-    const [companies, setCompanies] = useState(initialCompanies)
+    const [companies, setCompanies] = useState<Company[]>([])
+    const [isLoading, setIsLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState("")
     const [statusFilter, setStatusFilter] = useState("all")
     const [planFilter, setPlanFilter] = useState("all")
@@ -68,11 +69,30 @@ export default function EmpresasPage() {
         planId: "starter",
     })
 
+    useEffect(() => {
+        fetchCompanies()
+    }, [])
+
+    const fetchCompanies = async () => {
+        setIsLoading(true)
+        try {
+            const response = await fetch('/api/admin/companies')
+            if (response.ok) {
+                const data = await response.json()
+                setCompanies(data)
+            }
+        } catch (error) {
+            console.error('Failed to fetch companies', error)
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
     const filteredCompanies = companies
         .filter(company =>
-        company.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        company.email.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+            company.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            company.email?.toLowerCase().includes(searchTerm.toLowerCase())
+        )
         .filter(company => statusFilter === "all" || company.status === statusFilter)
         .filter(company => planFilter === "all" || company.planId === planFilter)
         .sort((a, b) => activationScore(b) - activationScore(a))
@@ -89,46 +109,33 @@ export default function EmpresasPage() {
         return <Badge className={variant.className}>{variant.label}</Badge>
     }
 
-    const handleCreateCompany = () => {
-        const plan = plans.find(p => p.id === formData.planId)!
-        const generatedLogo = getInitials(formData.name || formData.fullName || "Nova Empresa")
-        const newCompany: Company = {
-            id: String(companies.length + 1),
-            name: formData.name,
-            fullName: formData.fullName,
-            email: formData.email,
-            phone: formData.phone,
-            address: formData.address,
-            cpfCnpj: formData.cpfCnpj,
-            logo: generatedLogo,
-            primaryColor: '#8B5CF6',
-            secondaryColor: '#A78BFA',
-            customDomain: `${formData.name.toLowerCase().replace(/\s/g, '')}.beautyflow.app`,
-            planId: formData.planId,
-            status: 'trial',
-            subscriptionStartDate: new Date().toISOString().split('T')[0],
-            subscriptionEndDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            maxEmployees: plan.maxEmployees,
-            maxAppointmentsPerMonth: plan.maxAppointmentsPerMonth,
-            currentEmployees: 0,
-            currentAppointmentsThisMonth: 0,
-            totalRevenue: 0,
-            monthlyRevenue: 0,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        }
+    const handleCreateCompany = async () => {
+        try {
+            const response = await fetch('/api/admin/companies', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            })
 
-        setCompanies([...companies, newCompany])
-        setShowNewCompany(false)
-        setFormData({ name: "", fullName: "", email: "", phone: "", address: "", cpfCnpj: "", planId: "starter" })
+            if (response.ok) {
+                await fetchCompanies() // Reload list
+                setShowNewCompany(false)
+                setFormData({ name: "", fullName: "", email: "", phone: "", address: "", cpfCnpj: "", planId: "starter" })
+            } else {
+                alert('Erro ao criar empresa')
+            }
+        } catch (error) {
+            console.error('Error creating company', error)
+            alert('Erro ao criar empresa')
+        }
     }
 
     const handleSuspend = (company: Company) => {
         setConfirmAction({
             title: "Suspender Empresa",
             description: `Tem certeza que deseja suspender "${company.fullName}"? A empresa não poderá acessar o sistema até ser reativada.`,
-            action: () => {
+            action: async () => {
+                // Implement API call for update here
                 setCompanies(companies.map(c =>
                     c.id === company.id ? { ...c, status: 'suspended' as const } : c
                 ))
@@ -148,7 +155,8 @@ export default function EmpresasPage() {
         setConfirmAction({
             title: "Desativar Empresa",
             description: `Tem certeza que deseja desativar "${company.fullName}"? Esta ação pode ser revertida posteriormente.`,
-            action: () => {
+            action: async () => {
+                // Implement API call for update here
                 setCompanies(companies.map(c =>
                     c.id === company.id ? { ...c, status: 'inactive' as const } : c
                 ))

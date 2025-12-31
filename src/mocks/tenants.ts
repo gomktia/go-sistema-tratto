@@ -18,22 +18,22 @@ export interface Tenant {
 
 export const tenants: Tenant[] = [
     {
-        id: '1',
-        name: 'Beleza Pura',
-        fullName: 'Salão Beleza Pura',
+        id: '11111111-1111-1111-1111-111111111111',
+        name: 'Beleza Pura Demo',
+        fullName: 'Beleza Pura Demo LTDA',
         logo: 'BP',
         primaryColor: '#8B5CF6', // Purple
         secondaryColor: '#A78BFA',
         description: 'Especializado em tratamentos capilares premium',
         customPrimaryColor: '#8B5CF6',
         customSecondaryColor: '#A78BFA',
-        customDomain: 'belezapura.beautyflow.app',
-        slug: 'beleza-pura',
+        customDomain: 'belezapura-demo.beautyflow.app',
+        slug: 'beleza-pura-demo',
         whatsapp: '5511999999999',
         schedulingType: 'individual'
     },
     {
-        id: '2',
+        id: '22222222-2222-2222-2222-222222222222',
         name: 'Studio Glamour',
         fullName: 'Studio Glamour Beauty',
         logo: 'SG',

@@ -1,10 +1,11 @@
 export const services = [
     // Beleza Pura (tenant 1)
-    { id: '1', tenantId: '1', name: 'Corte Feminino', duration: 60, price: 120, category: 'Cabelo' },
-    { id: '2', tenantId: '1', name: 'Coloração', duration: 120, price: 250, category: 'Cabelo' },
-    { id: '3', tenantId: '1', name: 'Manicure', duration: 45, price: 40, category: 'Unhas' },
-    { id: '4', tenantId: '1', name: 'Pedicure', duration: 45, price: 45, category: 'Unhas' },
-    { id: '5', tenantId: '1', name: 'Hidratação Profunda', duration: 45, price: 150, category: 'Cabelo' },
+    // Beleza Pura (tenant 1)
+    { id: 'a1111111-1111-1111-1111-111111111111', tenantId: '11111111-1111-1111-1111-111111111111', name: 'Corte Feminino', duration: 60, price: 120, category: 'Cabelo' },
+    { id: 'a1111111-1111-1111-1111-111111111112', tenantId: '11111111-1111-1111-1111-111111111111', name: 'Coloração', duration: 120, price: 250, category: 'Cabelo' },
+    { id: 'a1111111-1111-1111-1111-111111111113', tenantId: '11111111-1111-1111-1111-111111111111', name: 'Manicure', duration: 45, price: 40, category: 'Unhas' },
+    { id: 'a1111111-1111-1111-1111-111111111114', tenantId: '11111111-1111-1111-1111-111111111111', name: 'Design de Sobrancelhas', duration: 30, price: 45, category: 'Sobrancelhas' },
+    { id: 'a1111111-1111-1111-1111-111111111115', tenantId: '11111111-1111-1111-1111-111111111111', name: 'Mechas', duration: 240, price: 450, category: 'Cabelo' },
 
     // Studio Glamour (tenant 2)
     { id: '6', tenantId: '2', name: 'Corte Feminino Premium', duration: 60, price: 150, category: 'Cabelo' },
@@ -35,37 +36,38 @@ export const staff = [
 
 export const appointments = [
     // Beleza Pura (tenant 1)
+    // Beleza Pura (tenant 1)
     {
         id: '1',
-        tenantId: '1',
+        tenantId: '11111111-1111-1111-1111-111111111111',
         customer: 'Fernanda Lima',
-        serviceId: '1',
-        staffId: '1',
-        date: new Date().toISOString(),
+        serviceId: 'a1111111-1111-1111-1111-111111111111', // Corte Feminino
+        staffId: 'e1111111-1111-1111-1111-111111111111', // Julia Santos
+        date: new Date().toISOString(), // Today
         time: '09:00',
         status: 'confirmed',
         duration: 60
     },
     {
         id: '2',
-        tenantId: '1',
+        tenantId: '11111111-1111-1111-1111-111111111111',
         customer: 'Beatriz Souza',
-        serviceId: '3',
-        staffId: '2',
+        serviceId: 'a1111111-1111-1111-1111-111111111113', // Manicure
+        staffId: 'e1111111-1111-1111-1111-111111111111', // Julia Santos (helping out?)
         date: new Date().toISOString(),
-        time: '10:30',
-        status: 'completed',
+        time: '14:30',
+        status: 'scheduled',
         duration: 45
     },
     {
         id: '3',
-        tenantId: '1',
+        tenantId: '11111111-1111-1111-1111-111111111111',
         customer: 'Carla Dias',
-        serviceId: '2',
-        staffId: '1',
+        serviceId: 'a1111111-1111-1111-1111-111111111112', // Progressiva
+        staffId: 'e1111111-1111-1111-1111-111111111111', // Julia Santos
         date: new Date().toISOString(),
-        time: '14:00',
-        status: 'scheduled',
+        time: '16:00',
+        status: 'confirmed',
         duration: 120
     },
 
@@ -117,8 +119,8 @@ export const stats = [
 export const clients = [
     // Beleza Pura (tenant 1)
     {
-        id: '1',
-        tenantId: '1',
+        id: 'c1111111-1111-1111-1111-111111111111',
+        tenantId: '11111111-1111-1111-1111-111111111111',
         name: 'Fernanda Lima',
         email: 'fernanda.lima@email.com',
         phone: '(11) 99999-1234',
@@ -128,8 +130,8 @@ export const clients = [
         avatar: 'https://i.pravatar.cc/150?u=1'
     },
     {
-        id: '2',
-        tenantId: '1',
+        id: 'c1111111-1111-1111-1111-111111111112',
+        tenantId: '11111111-1111-1111-1111-111111111111',
         name: 'Beatriz Souza',
         email: 'bea.souza@email.com',
         phone: '(11) 98888-5678',
@@ -139,8 +141,8 @@ export const clients = [
         avatar: 'https://i.pravatar.cc/150?u=2'
     },
     {
-        id: '3',
-        tenantId: '1',
+        id: 'c1111111-1111-1111-1111-111111111113',
+        tenantId: '11111111-1111-1111-1111-111111111111',
         name: 'Carla Dias',
         email: 'carla.dias@email.com',
         phone: '(11) 97777-9012',

@@ -210,28 +210,7 @@ export default function BookingPage() {
     const showSummary = step === 'confirmation' || step === 'payment' || step === SUCCESS_STEP
     const tenantPhone = tenant?.whatsapp ? `+${tenant.whatsapp}` : null
 
-    if (!tenant && isLoadingData) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-white dark:bg-zinc-950">
-                <div className="text-center space-y-3">
-                    <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-                    <p className="text-gray-600 dark:text-zinc-400 font-medium">Carregando experiência de agendamento...</p>
-                </div>
-            </div>
-        )
-    }
 
-    if (!tenant) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-white dark:bg-zinc-950 p-6 text-center">
-                <div className="space-y-4 max-w-md">
-                    <h1 className="text-3xl font-black text-gray-900 dark:text-white">Ops! Salão não encontrado</h1>
-                    <p className="text-gray-600 dark:text-zinc-400">Verifique se o link do agendamento está correto ou fale com o suporte.</p>
-                    <Button onClick={() => router.push("/")}>Voltar para o início</Button>
-                </div>
-            </div>
-        )
-    }
 
     const voucherCode = useMemo(() => {
         if (!selectedService) {
@@ -283,11 +262,63 @@ export default function BookingPage() {
         ? Boolean(isCpfReady && clientData.password)
         : Boolean(isCpfReady && clientData.name && clientData.email && clientData.phone && clientData.password)
 
+    const customersByDocument = useMemo(() => {
+        const map = new Map<string, ClientRecord>()
+        customerRecords.forEach(customer => {
+            if (customer.document) {
+                map.set(normalizeCpf(customer.document), customer)
+            }
+        })
+        return map
+    }, [customerRecords])
+
+    const customersByEmail = useMemo(() => {
+        const map = new Map<string, ClientRecord>()
+        customerRecords.forEach(customer => {
+            if (customer.email) {
+                map.set(customer.email.toLowerCase(), customer)
+            }
+        })
+        return map
+    }, [customerRecords])
+
+    const tenantEmployees = useMemo(() => {
+        if (!tenant) return employeesWithSchedules
+        return employeesWithSchedules.filter(employee => employee.tenantId === tenant.id)
+    }, [employeesWithSchedules, tenant])
+
+    // Filtrar profissionais disponíveis para o serviço selecionado
+    const availableProfessionalsForService = useMemo(() => {
+        if (!selectedService) return tenantEmployees
+
+        // Filtrar profissionais que têm o serviço nas suas specialties
+        const filtered = tenantEmployees.filter(employee =>
+            employee.specialties && employee.specialties.includes(selectedService.id)
+        )
+
+        // Se nenhum profissional está vinculado, mostrar todos (fallback)
+        return filtered.length > 0 ? filtered : tenantEmployees
+    }, [selectedService, tenantEmployees])
+
     useEffect(() => {
         setIsAuthenticated(false)
         setAuthError("")
         setAuthenticatedCustomer(null)
-    }, [clientData.cpf])
+
+        // Check if customer exists as soon as CPF is ready
+        const digits = normalizeCpf(clientData.cpf)
+        if (digits.length === 11) {
+            const exists = customersByDocument.has(digits)
+            if (exists) {
+                setClientData(prev => ({ ...prev, isExisting: true }))
+            } else {
+                setClientData(prev => ({ ...prev, isExisting: false }))
+            }
+        } else {
+            // Reset to registration mode if CPF is incomplete or being edited
+            setClientData(prev => ({ ...prev, isExisting: false }))
+        }
+    }, [clientData.cpf, customersByDocument])
 
     const handleAuthentication = async () => {
         setIsAuthenticating(true)
@@ -469,48 +500,12 @@ export default function BookingPage() {
         return serviceRecords.filter(service => service.tenantId === tenant.id)
     }, [serviceRecords, tenant])
 
-    const tenantEmployees = useMemo(() => {
-        if (!tenant) return employeesWithSchedules
-        return employeesWithSchedules.filter(employee => employee.tenantId === tenant.id)
-    }, [employeesWithSchedules, tenant])
 
-    // Filtrar profissionais disponíveis para o serviço selecionado
-    const availableProfessionalsForService = useMemo(() => {
-        if (!selectedService) return tenantEmployees
-
-        // Filtrar profissionais que têm o serviço nas suas specialties
-        const filtered = tenantEmployees.filter(employee =>
-            employee.specialties && employee.specialties.includes(selectedService.id)
-        )
-
-        // Se nenhum profissional está vinculado, mostrar todos (fallback)
-        return filtered.length > 0 ? filtered : tenantEmployees
-    }, [selectedService, tenantEmployees])
 
     const suggestedCombos = useMemo(() => {
         if (!tenant) return comboRecords.slice(0, 2)
         return comboRecords.filter(combo => combo.tenantId === tenant.id).slice(0, 2)
     }, [comboRecords, tenant])
-
-    const customersByDocument = useMemo(() => {
-        const map = new Map<string, ClientRecord>()
-        customerRecords.forEach(customer => {
-            if (customer.document) {
-                map.set(normalizeCpf(customer.document), customer)
-            }
-        })
-        return map
-    }, [customerRecords])
-
-    const customersByEmail = useMemo(() => {
-        const map = new Map<string, ClientRecord>()
-        customerRecords.forEach(customer => {
-            if (customer.email) {
-                map.set(customer.email.toLowerCase(), customer)
-            }
-        })
-        return map
-    }, [customerRecords])
 
     useEffect(() => {
         if (selectedService && !tenantServices.some(service => service.id === selectedService.id)) {
@@ -674,6 +669,29 @@ export default function BookingPage() {
         exit: { opacity: 0, y: -20, transition: { duration: 0.4 } }
     }
 
+    if (!tenant && isLoadingData) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-white dark:bg-zinc-950">
+                <div className="text-center space-y-3">
+                    <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+                    <p className="text-gray-600 dark:text-zinc-400 font-medium">Carregando experiência de agendamento...</p>
+                </div>
+            </div>
+        )
+    }
+
+    if (!tenant) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-white dark:bg-zinc-950 p-6 text-center">
+                <div className="space-y-4 max-w-md">
+                    <h1 className="text-3xl font-black text-gray-900 dark:text-white">Ops! Salão não encontrado</h1>
+                    <p className="text-gray-600 dark:text-zinc-400">Verifique se o link do agendamento está correto ou fale com o suporte.</p>
+                    <Button onClick={() => router.push("/")}>Voltar para o início</Button>
+                </div>
+            </div>
+        )
+    }
+
     if (step === 'success') {
         return (
             <div className="min-h-screen bg-white dark:bg-zinc-950 flex items-center justify-center p-6">
@@ -696,8 +714,8 @@ export default function BookingPage() {
                     <Card className="p-6 rounded-[2.5rem] border-none shadow-xl bg-white dark:bg-zinc-900 overflow-hidden relative">
                         <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -translate-y-12 translate-x-12" />
                         <div className="relative z-10 flex flex-col items-center gap-4 text-center">
-                        <div className="w-12 h-12 rounded-2xl bg-white dark:bg-zinc-800 flex items-center justify-center text-lg font-black text-primary">
-                            {tenantBadge}
+                            <div className="w-12 h-12 rounded-2xl bg-white dark:bg-zinc-800 flex items-center justify-center text-lg font-black text-primary">
+                                {tenantBadge}
                             </div>
                             <div className="space-y-1">
                                 <h3 className="font-bold text-gray-900 dark:text-white">{selectedService?.name}</h3>
@@ -777,11 +795,18 @@ export default function BookingPage() {
                     <div className="flex flex-col sm:flex-row gap-3">
                         <Button
                             onClick={() => {
-                                // Store customer email securely in sessionStorage
-                                sessionStorage.setItem('customerEmail', clientData.email)
-                                sessionStorage.setItem('userType', 'customer')
-                                sessionStorage.setItem('tenantSlug', tenantSlug)
-                                router.push(`/${tenantSlug}/profile`)
+                                console.log("Redirecting to profile...", { email: clientData.email, tenantSlug });
+                                if (clientData.email) {
+                                    sessionStorage.setItem('customerEmail', clientData.email)
+                                    sessionStorage.setItem('userType', 'customer')
+                                    sessionStorage.setItem('tenantSlug', tenantSlug)
+                                    // Use window.location.href to ensure a hard redirect, bypassing any router issues
+                                    window.location.href = `/${tenantSlug}/profile`
+                                } else {
+                                    console.error("Missing email for redirection");
+                                    // Fallback if email is missing (shouldn't happen if flow is correct)
+                                    window.location.href = `/${tenantSlug}/profile`
+                                }
                             }}
                             variant="outline"
                             className="flex-1 h-14 rounded-full border-2 border-gray-200 font-semibold text-gray-700 hover:bg-gray-50 transition-all"
@@ -883,9 +908,9 @@ export default function BookingPage() {
                             const isCompleted = index < currentIndex
                             const isCurrent = step === flowStep
                             return (
-                            <div
+                                <div
                                     key={flowStep}
-                                className={cn(
+                                    className={cn(
                                         "rounded-xl border bg-white dark:bg-zinc-900 p-5 transition-all hover:shadow-md",
                                         isCompleted && "border-green-200 bg-green-50/50 dark:bg-green-900/10",
                                         isCurrent && "border-blue-200 bg-blue-50/50 dark:bg-blue-900/10 shadow-lg",
@@ -901,7 +926,7 @@ export default function BookingPage() {
                                                     : isCurrent
                                                         ? "bg-gradient-to-br from-blue-600 to-purple-600 text-white"
                                                         : "bg-gray-100 text-gray-400 dark:bg-zinc-800"
-                                )}
+                                            )}
                                         >
                                             {isCompleted ? (
                                                 <CheckCircle2 className="w-6 h-6" />
@@ -1086,23 +1111,23 @@ export default function BookingPage() {
                                             Nenhum horário disponível neste dia. Escolha outra data ou profissional.
                                         </div>
                                     ) : (
-                                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                                        {timeSlots.map(time => (
-                                            <Button
-                                                key={time}
-                                                variant={activeTime === time ? "default" : "outline"}
-                                                onClick={() => setSelectedTime(time)}
-                                                className={cn(
-                                                    "h-14 rounded-2xl font-bold transition-all",
-                                                    activeTime === time
-                                                        ? "bg-primary text-white shadow-lg shadow-primary/20 scale-[1.05]"
-                                                        : "bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-gray-900 dark:text-white hover:bg-white"
-                                                )}
-                                            >
-                                                {time}
-                                            </Button>
-                                        ))}
-                                    </div>
+                                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                                            {timeSlots.map(time => (
+                                                <Button
+                                                    key={time}
+                                                    variant={activeTime === time ? "default" : "outline"}
+                                                    onClick={() => setSelectedTime(time)}
+                                                    className={cn(
+                                                        "h-14 rounded-2xl font-bold transition-all",
+                                                        activeTime === time
+                                                            ? "bg-primary text-white shadow-lg shadow-primary/20 scale-[1.05]"
+                                                            : "bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-gray-900 dark:text-white hover:bg-white"
+                                                    )}
+                                                >
+                                                    {time}
+                                                </Button>
+                                            ))}
+                                        </div>
                                     )}
                                 </div>
                             </div>
@@ -1146,7 +1171,7 @@ export default function BookingPage() {
                                                     if (existing) {
                                                         return {
                                                             ...prev,
-                                                    cpf: val,
+                                                            cpf: val,
                                                             isExisting: true,
                                                             name: existing.name,
                                                             email: existing.email,
@@ -1260,6 +1285,24 @@ export default function BookingPage() {
                                                             onChange={(e) => setClientData({ ...clientData, password: e.target.value })}
                                                             className="w-full h-16 px-6 rounded-2xl border-2 border-transparent bg-white dark:bg-zinc-900 shadow-sm focus:border-primary focus:ring-0 transition-all font-medium text-gray-900 dark:text-white"
                                                         />
+                                                        <div className="flex justify-end mt-1">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => window.open(`/${tenantSlug}/forgot-password`, '_blank')}
+                                                                className="text-[10px] font-bold uppercase tracking-widest text-primary hover:underline outline-none"
+                                                            >
+                                                                Esqueci minha senha
+                                                            </button>
+                                                        </div>
+                                                        <div className="flex justify-end mt-1">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => window.open(`/${tenantSlug}/forgot-password`, '_blank')}
+                                                                className="text-[10px] font-bold uppercase tracking-widest text-primary hover:underline"
+                                                            >
+                                                                Esqueci minha senha
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             )}
@@ -1436,10 +1479,10 @@ export default function BookingPage() {
                             </div>
 
                             <div className="grid grid-cols-1 gap-4">
-                        {PAYMENT_METHODS.map((method) => (
+                                {PAYMENT_METHODS.map((method) => (
                                     <Card
                                         key={method.id}
-                                onClick={() => setSelectedPaymentMethod(method.id)}
+                                        onClick={() => setSelectedPaymentMethod(method.id)}
                                         className={cn(
                                             "p-6 rounded-[2rem] border-2 transition-all cursor-pointer flex items-center justify-between group active:scale-[0.98]",
                                             selectedPaymentMethod === method.id
@@ -1448,11 +1491,11 @@ export default function BookingPage() {
                                         )}
                                     >
                                         <div className="flex items-center gap-4">
-                                    <div className="w-14 h-14 rounded-2xl bg-white dark:bg-zinc-800 flex items-center justify-center group-hover:scale-110 transition-transform text-gray-500">
-                                        <method.icon className={cn(
-                                            "w-6 h-6",
-                                            selectedPaymentMethod === method.id ? "text-primary" : "text-gray-500"
-                                        )} />
+                                            <div className="w-14 h-14 rounded-2xl bg-white dark:bg-zinc-800 flex items-center justify-center group-hover:scale-110 transition-transform text-gray-500">
+                                                <method.icon className={cn(
+                                                    "w-6 h-6",
+                                                    selectedPaymentMethod === method.id ? "text-primary" : "text-gray-500"
+                                                )} />
                                             </div>
                                             <div>
                                                 <h4 className="font-bold text-gray-900 dark:text-white leading-tight">{method.label}</h4>

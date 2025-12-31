@@ -96,6 +96,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 if (session?.user && isMounted) {
                     const mappedUser = await mapSupabaseUser(session.user)
                     setUser(mappedUser)
+                } else if (isMounted) {
+                    // DEMO FALLBACK: Check for demo session in storage
+                    const demoSession = sessionStorage.getItem('demoSession')
+                    if (demoSession) {
+                        try {
+                            const demoData = JSON.parse(demoSession)
+                            const role = demoData.user?.user_metadata?.role || 'employee'
+                            setUser({
+                                id: demoData.user?.id || 'demo-id',
+                                name: demoData.employee?.full_name || demoData.employee?.name || 'Usuário Demo',
+                                email: demoData.user?.email || '',
+                                role: role,
+                                companyId: demoData.employee?.tenant_id
+                            })
+                        } catch (e) {
+                            console.error('Invalid demo session')
+                        }
+                    }
                 }
             } catch (error) {
                 console.error('Error loading session:', error)
@@ -115,6 +133,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setUser(mappedUser)
             } else if (event === 'SIGNED_OUT' && isMounted) {
                 setUser(null)
+                // Clear demo session on sign out event too
+                sessionStorage.removeItem('demoSession')
             }
         })
 
@@ -152,6 +172,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const logout = async () => {
         try {
             await supabase.auth.signOut()
+            sessionStorage.removeItem('demoSession')
+            sessionStorage.removeItem('userType')
+            sessionStorage.removeItem('tenantSlug')
             setUser(null)
         } catch (error) {
             console.error('Logout error:', error)

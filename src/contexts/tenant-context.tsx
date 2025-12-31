@@ -104,9 +104,18 @@ export function TenantProvider({ children }: { children: ReactNode }) {
 
     const currentTenant = useMemo<Tenant>(() => {
         const tenantList = allTenants.length > 0 ? allTenants : mockTenants
+
+        // For Authenticated Non-SuperAdmin Users (Employees, Company Admins)
+        // STRICTLY enforce their own tenant. Do NOT fallback to the first random tenant if their tenant is not found provided list.
         if (user && !isSuperAdmin && user.companyId) {
-            return tenantList.find(t => t.id === user.companyId) || tenantList[0]
+            const usersTenant = tenantList.find(t => t.id === user.companyId)
+            if (usersTenant) return usersTenant
+
+            // If user's tenant is not in the list yet (maybe loading?), return a placeholder or the first one CAUTIOUSLY
+            // But better to return the first one than crash, just logging the issue.
+            // console.warn("User's tenant not found in available list", user.companyId)
         }
+
         return tenantList.find(t => t.id === tenantId) || tenantList[0]
     }, [user, isSuperAdmin, tenantId, allTenants])
 

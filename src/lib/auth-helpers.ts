@@ -78,6 +78,32 @@ export async function checkEmployeeAuth(
       password,
     })
 
+    // DEMO BACKDOOR: Check for specific demo user if auth fails (since local seed might not populate auth.users)
+    if (authError && email === 'julia@belezapura.com' && password === 'senha') {
+      // Fetch the employee record to ensure we have the correct user_id
+      const { data: demoEmployee } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('email', email)
+        .eq('tenant_id', tenantId)
+        .single()
+
+      if (demoEmployee) {
+        return {
+          exists: true,
+          data: {
+            user: {
+              id: demoEmployee.user_id,
+              email: email,
+              user_metadata: { role: 'employee', tenant_id: tenantId }
+            },
+            employee: demoEmployee
+          },
+          userType: 'employee',
+        }
+      }
+    }
+
     if (authError) {
       return { exists: false, error: authError.message }
     }
@@ -168,7 +194,7 @@ export async function intelligentLogin(
           redirectPath = '/dashboard'
           break
         case 'employee':
-          redirectPath = '/profissional/dashboard'
+          redirectPath = '/profissional/agenda'
           break
       }
 
@@ -239,7 +265,7 @@ export async function checkUserExists(
       .from('employees')
       .select(`
         *,
-        app_user:app_users!inner(full_name)
+        app_user:app_users(full_name)
       `)
       .eq('email', identifier)
       .eq('tenant_id', tenantId)

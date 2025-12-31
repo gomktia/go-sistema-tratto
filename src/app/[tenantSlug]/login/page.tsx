@@ -140,6 +140,7 @@ export default function CustomerLoginPage() {
                 // Store user session data securely
                 sessionStorage.setItem('userType', result.userType!)
                 sessionStorage.setItem('tenantSlug', tenantSlug)
+                sessionStorage.setItem('demoSession', JSON.stringify(result.userData))
 
                 // For customers, store email securely
                 if (result.userType === 'customer' && result.userData) {
@@ -148,8 +149,14 @@ export default function CustomerLoginPage() {
                 }
 
                 // Redirect based on user type
-                const fullPath = `/${tenantSlug}${result.redirectPath}`
-                router.push(fullPath)
+                let fullPath = `/${tenantSlug}${result.redirectPath}`
+
+                // Special case for system-wide professional portal which is not tenant-scoped in URL
+                if (result.redirectPath.startsWith('/profissional/')) {
+                    fullPath = result.redirectPath
+                }
+
+                window.location.href = fullPath
             } else {
                 setError(result.error || "Falha no login. Verifique suas credenciais.")
             }
