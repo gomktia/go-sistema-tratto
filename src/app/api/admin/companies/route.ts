@@ -20,10 +20,15 @@ const getAdminClient = () => {
 }
 
 export async function GET() {
+    console.log('[API] /api/admin/companies - Starting request')
+
     const supabase = getAdminClient()
     if (!supabase) {
+        console.error('[API] Supabase client not configured')
         return NextResponse.json({ error: "Supabase not configured" }, { status: 500 })
     }
+
+    console.log('[API] Fetching tenants from database...')
 
     // 1. Fetch all tenants
     const { data: tenants, error } = await supabase
@@ -32,12 +37,19 @@ export async function GET() {
         .order('name')
 
     if (error) {
+        console.error('[API] Error fetching tenants:', error)
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    console.log(`[API] Found ${tenants?.length || 0} tenants`)
+
+    if (!tenants || tenants.length === 0) {
+        console.log('[API] No tenants found, returning empty array')
+        return NextResponse.json([])
+    }
+
     // 2. Fetch customer counts for each tenant
-    // Ideally we would use .select('*, customers(count)') but strict FKs are needed.
-    // For MVP, we will do a Promise.all to count customers for each tenant.
+    console.log('[API] Enriching tenant data with counts...')
     const enrichedData = await Promise.all(tenants.map(async (t) => {
         const { count } = await supabase
             .from('customers')
@@ -55,14 +67,15 @@ export async function GET() {
             planId: t.plan_id || 'starter',
             status: t.status || 'active',
             currentEmployees: employeesCount || 0,
-            maxEmployees: 10, // Mock limit
-            monthlyRevenue: 0, // Mock revenue calculation for now
-            totalCustomers: count || 0, // Added totalCustomers
+            maxEmployees: 10,
+            monthlyRevenue: 0,
+            totalCustomers: count || 0,
             subscriptionStartDate: t.subscription_start_date || new Date().toISOString(),
             subscriptionEndDate: t.subscription_end_date || new Date().toISOString(),
         }
     }))
 
+    console.log(`[API] Returning ${enrichedData.length} enriched companies`)
     return NextResponse.json(enrichedData)
 }
 

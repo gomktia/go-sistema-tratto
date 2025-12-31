@@ -74,28 +74,45 @@ export default function EmpresasPage() {
     }, [])
 
     const fetchCompanies = async () => {
+        console.log('[FRONTEND] Starting fetchCompanies...')
         setIsLoading(true)
         try {
+            console.log('[FRONTEND] Fetching from /api/admin/companies')
             const response = await fetch('/api/admin/companies')
+            console.log('[FRONTEND] Response status:', response.status, response.ok)
+
             if (response.ok) {
                 const data = await response.json()
+                console.log('[FRONTEND] Received data:', data)
+                console.log('[FRONTEND] Data length:', data?.length)
                 setCompanies(data)
+                console.log('[FRONTEND] Companies state updated')
+            } else {
+                console.error('[FRONTEND] Response not OK:', response.status)
             }
         } catch (error) {
-            console.error('Failed to fetch companies', error)
+            console.error('[FRONTEND] Failed to fetch companies', error)
         } finally {
             setIsLoading(false)
+            console.log('[FRONTEND] fetchCompanies completed')
         }
     }
 
+
+
     const filteredCompanies = companies
-        .filter(company =>
-            company.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            company.email?.toLowerCase().includes(searchTerm.toLowerCase())
-        )
+        .filter(company => {
+            const name = company.fullName || (company as any).full_name || ''
+            const email = company.email || (company as any).settings?.email || ''
+            const searchLower = searchTerm.toLowerCase()
+            return name.toLowerCase().includes(searchLower) || email.toLowerCase().includes(searchLower)
+        })
         .filter(company => statusFilter === "all" || company.status === statusFilter)
-        .filter(company => planFilter === "all" || company.planId === planFilter)
+        .filter(company => planFilter === "all" || company.planId === planFilter || (company as any).plan_id === planFilter)
         .sort((a, b) => activationScore(b) - activationScore(a))
+
+    console.log('[FRONTEND] Filtered companies count:', filteredCompanies.length)
+
 
     const getStatusBadge = (status: string) => {
         const variants = {

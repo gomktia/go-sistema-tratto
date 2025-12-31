@@ -17,12 +17,17 @@ const getAdminClient = () => {
 }
 
 export async function GET() {
+    console.log('[API] /api/admin/users - Starting request')
+
     const supabase = getAdminClient()
     if (!supabase) {
+        console.error('[API] Supabase client not configured')
         return NextResponse.json({ error: "Supabase not configured" }, { status: 500 })
     }
 
     try {
+        console.log('[API] Fetching users from app_users table...')
+
         // Fetch users from app_users
         const { data: appUsers, error } = await supabase
             .from('app_users')
@@ -30,19 +35,29 @@ export async function GET() {
             .order('created_at', { ascending: false })
 
         if (error) {
-            console.error("Error fetching app_users:", error)
+            console.error("[API] Error fetching app_users:", error)
             return NextResponse.json({ error: error.message }, { status: 500 })
         }
 
-        // IMPORTANT: We cannot join with auth.users directly via client. 
-        // We have to rely on role mapping if it exists, or just return app_users for now.
-        // We will mock the role for known admins for now.
+        console.log(`[API] Found ${appUsers?.length || 0} app_users`)
+
+        if (!appUsers || appUsers.length === 0) {
+            console.log('[API] No app_users found, returning empty array')
+            return NextResponse.json([])
+        }
+
+        // List of known super admin emails
+        const knownSuperAdmins = [
+            'geison@beautyflow.app',
+            'oseias@beautyflow.app',
+            'geisonhoehr@gmail.com' // Added user's email
+        ]
 
         const superAdmins = appUsers.map(u => {
-            const isSuperAdmin = u.email === 'geison@beautyflow.app' ||
-                u.email === 'oseias@beautyflow.app' ||
+            const isSuperAdmin =
+                knownSuperAdmins.includes(u.email) ||
                 u.email?.includes('admin') ||
-                u.role === 'super_admin' // If field exists
+                u.role === 'super_admin'
 
             if (isSuperAdmin) {
                 return { ...u, role: 'super_admin' }
@@ -50,8 +65,10 @@ export async function GET() {
             return u
         }).filter(u => u.role === 'super_admin')
 
+        console.log(`[API] Filtered to ${superAdmins.length} super admins`)
         return NextResponse.json(superAdmins)
     } catch (err: any) {
+        console.error('[API] Error in users endpoint:', err)
         return NextResponse.json({ error: err.message }, { status: 500 })
     }
 }
