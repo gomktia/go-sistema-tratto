@@ -40,6 +40,7 @@ export function NewAppointmentModal({ isOpen, onClose, onSuccess, tenantId }: Ne
 
         try {
             const supabase = getSupabaseBrowserClient()
+            if (!supabase) throw new Error("Supabase client failed to initialize")
 
             // Combine date and time
             const startAt = new Date(`${formData.date}T${formData.time}:00`)
