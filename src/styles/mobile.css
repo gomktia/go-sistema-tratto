@@ -1,0 +1,63 @@
+/* Mobile Responsive Table Styles */
+@media (max-width: 768px) {
+  /* Make tables scrollable on mobile */
+  .responsive-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -1rem;
+    padding: 0 1rem;
+  }
+
+  /* Adjust table cell padding for mobile */
+  table td, table th {
+    padding: 0.5rem !important;
+    font-size: 0.875rem;
+  }
+
+  /* Smaller badges on mobile */
+  .badge {
+    font-size: 0.75rem;
+    padding: 0.125rem 0.5rem;
+  }
+
+  /* Adjust card padding on mobile */
+  .card {
+    padding: 1rem;
+  }
+
+  /* Smaller headings on mobile */
+  h1 {
+    font-size: 1.5rem !important;
+  }
+
+  h2 {
+    font-size: 1.25rem !important;
+  }
+
+  h3 {
+    font-size: 1.125rem !important;
+  }
+
+  /* Adjust button sizes on mobile */
+  button {
+    font-size: 0.875rem;
+  }
+
+  /* Stack filters vertically on mobile */
+  .filters-container {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .filters-container > * {
+    width: 100% !important;
+  }
+}
+
+/* Improve touch targets on mobile */
+@media (max-width: 768px) and (hover: none) {
+  button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
