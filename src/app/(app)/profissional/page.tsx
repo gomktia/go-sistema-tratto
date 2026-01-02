@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import {
     ArrowUpRight,
@@ -21,6 +22,8 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/contexts/auth-context"
+import { useTenant } from "@/contexts/tenant-context"
 
 const upcomingClients = [
     { id: 2, customer: "Juliana Silva", service: "Corte + finishing", time: "16:45", status: "aguardando" },
@@ -41,6 +44,10 @@ const notificationPulse = [
 ]
 
 export default function ProfessionalDashboard() {
+    const router = useRouter()
+    const { user } = useAuth()
+    const { currentTenant } = useTenant()
+
     const [timerActive, setTimerActive] = useState(false)
     const [seconds, setSeconds] = useState(0)
     const [focusMode, setFocusMode] = useState(false)
@@ -98,13 +105,18 @@ export default function ProfessionalDashboard() {
         confirmada: "bg-slate-500/10 text-slate-600",
     }
 
+    const handleNavigation = (path: string) => {
+        const tenantPath = currentTenant ? `/${currentTenant.slug}` : '/demo'
+        router.push(`${tenantPath}/profissional${path}`)
+    }
+
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-black p-4 pb-32 md:p-8 flex flex-col items-center">
             <div className="w-full max-w-md space-y-6">
                 <div className="flex items-center justify-between">
                     <div>
                         <div className="flex items-center gap-2">
-                            <h2 className="text-xl font-black text-slate-900 dark:text-white">Olá, Marcos</h2>
+                            <h2 className="text-xl font-black text-slate-900 dark:text-white">Olá, {user?.name || 'Profissional'}</h2>
                             <Hand className="w-4 h-4 text-primary" />
                         </div>
                         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Vista profissional</p>
@@ -251,7 +263,18 @@ export default function ProfessionalDashboard() {
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         {quickShortcuts.map(action => (
-                            <Button key={action.id} variant="outline" className="h-16 rounded-2xl flex flex-col items-start justify-center gap-1">
+                            <Button
+                                key={action.id}
+                                variant="outline"
+                                className="h-16 rounded-2xl flex flex-col items-start justify-center gap-1 hover:border-primary/50 hover:bg-primary/5 transition-all"
+                                onClick={() => {
+                                    if (action.id === 'sale') handleNavigation('/financeiro')
+                                    else if (action.id === 'note') handleNavigation('/clientes')
+                                    else if (action.id === 'pix') handleNavigation('/financeiro')
+                                    else if (action.id === 'review') handleNavigation('/clientes')
+                                    else alert("Funcionalidade em desenvolvimento: " + action.title)
+                                }}
+                            >
                                 <span className="text-sm font-semibold text-slate-900 dark:text-white">{action.title}</span>
                                 <span className="text-[11px] uppercase tracking-widest text-muted-foreground">{action.helper}</span>
                             </Button>
@@ -265,7 +288,7 @@ export default function ProfessionalDashboard() {
                             <p className="text-[10px] uppercase tracking-[0.3em] text-primary/70">Próximos clientes</p>
                             <h3 className="text-lg font-black text-slate-900 dark:text-white">Fila organizada</h3>
                         </div>
-                        <Button variant="ghost" className="text-xs font-bold text-primary p-0">Ver tudo</Button>
+                        <Button variant="ghost" className="text-xs font-bold text-primary p-0" onClick={() => handleNavigation('/agenda')}>Ver tudo</Button>
                     </div>
                     <div className="space-y-3">
                         {upcomingClients.map(item => (

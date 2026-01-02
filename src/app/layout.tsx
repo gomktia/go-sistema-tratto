@@ -4,6 +4,7 @@ import "./globals.css";
 import "@/styles/mobile.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/contexts/auth-context";
+import { Toaster } from "sonner";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -34,6 +35,7 @@ export default function RootLayout({
         >
           <AuthProvider>
             {children}
+            <Toaster richColors closeButton position="top-center" />
           </AuthProvider>
         </ThemeProvider>
       </body>

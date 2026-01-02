@@ -1,26 +1,22 @@
 "use client"
 
 import { useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { stats, appointments } from "@/mocks/data"
+import { motion } from "framer-motion"
 import { useTenant } from "@/contexts/tenant-context"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts'
+import { Card } from "@/components/ui/card"
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import {
     Calendar,
     TrendingUp,
     Users,
     DollarSign,
-    Clock,
     Share2,
     Copy,
     Check,
     Sparkles,
     ArrowUpRight,
-    AlertCircle,
     Zap,
     ChevronRight,
-    Star,
     TrendingDown,
     Heart
 } from "lucide-react"
@@ -32,22 +28,66 @@ import { QuickActions } from "@/components/QuickActions"
 import { DailyGoals } from "@/components/DailyGoals"
 import { OnboardingWizard } from "@/components/OnboardingWizard"
 import { AccountHealthCard } from "@/components/AccountHealthCard"
-
-const chartData = [
-    { name: 'Seg', total: 1200, customers: 12 },
-    { name: 'Ter', total: 1800, customers: 15 },
-    { name: 'Qua', total: 1400, customers: 10 },
-    { name: 'Qui', total: 2200, customers: 18 },
-    { name: 'Sex', total: 2800, customers: 22 },
-    { name: 'Sáb', total: 3200, customers: 25 },
-]
+import { useTenantAppointments } from "@/hooks/useTenantRecords" // Use HOOK instead of mock
 
 export default function DashboardPage() {
     const { currentTenant } = useTenant()
+    const { data: appointmentRecords, loading: isLoading } = useTenantAppointments(currentTenant.id)
     const [copied, setCopied] = useState(false)
     const [isWizardOpen, setIsWizardOpen] = useState(false)
 
-    const tenantAppointments = appointments.filter(apt => apt.tenantId === currentTenant.id)
+    // Calculate Real Stats
+    const today = new Date()
+    const todayStr = today.toDateString()
+
+    // Safety check for empty data
+    const appointments = appointmentRecords || []
+
+    const appointmentsToday = appointments.filter(a => new Date(a.startAt).toDateString() === todayStr)
+    // Basic revenue calc (sum of price for valid appointments)
+    const incomeToday = appointmentsToday
+        .filter(a => a.status === 'confirmed' || a.status === 'completed')
+        .reduce((sum, a) => sum + (a.price || 0), 0)
+
+    const incomeMonth = appointments
+        .filter(a => {
+            const d = new Date(a.startAt)
+            return d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear() && (a.status === 'confirmed' || a.status === 'completed')
+        })
+        .reduce((sum, a) => sum + (a.price || 0), 0)
+
+    // Rough active clients count (unique names)
+    const activeClients = new Set(appointments.map(a => a.customerName)).size
+
+    const realStats = [
+        { label: "Agendamentos Hoje", value: appointmentsToday.length.toString(), trend: "+0%", icon: Calendar },
+        { label: "Faturamento Hoje", value: `R$ ${incomeToday}`, trend: "+0%", icon: DollarSign },
+        { label: "Faturamento Mês", value: `R$ ${incomeMonth}`, trend: "+0%", icon: TrendingUp },
+        { label: "Clientes Ativos", value: activeClients.toString(), trend: "+0%", icon: Users },
+    ]
+
+    // Prepare Chart Data (Last 7 Days)
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date()
+        d.setDate(d.getDate() - (6 - i))
+        return d
+    })
+
+    const chartData = last7Days.map(date => {
+        const dateStr = date.toDateString()
+        const dayApts = appointments.filter(a => new Date(a.startAt).toDateString() === dateStr && (a.status === 'confirmed' || a.status === 'completed'))
+        const total = dayApts.reduce((sum, a) => sum + (a.price || 0), 0)
+        return {
+            name: date.toLocaleDateString('pt-BR', { weekday: 'short' }),
+            total: total,
+            customers: dayApts.length
+        }
+    })
+
+    const topAppointments = [...appointments]
+        .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
+        .filter(a => new Date(a.startAt) >= new Date())
+        .slice(0, 3)
 
     const bookingUrl = typeof window !== 'undefined'
         ? `${window.location.origin}/${currentTenant.slug}/book`
@@ -62,26 +102,30 @@ export default function DashboardPage() {
     const insights = [
         {
             title: "Oportunidade de Manhã",
-            description: "Você tem 3 horários livres amanhã entre 09h e 11h. Que tal um cupom relâmpago?",
+            description: "Você tem horários livres amanhã. Que tal um cupom relâmpago?",
             icon: Zap,
             color: "text-amber-500",
             bg: "bg-amber-500/10"
         },
         {
             title: "Serviço em Alta",
-            description: "'Mechas Loiro Perolado' teve um aumento de 40% na procura esta semana.",
+            description: "Corte e Hidratação teve um aumento na procura esta semana.",
             icon: TrendingUp,
             color: "text-emerald-500",
             bg: "bg-emerald-500/10"
         },
         {
             title: "Lembrete de Recompra",
-            description: "15 clientes completam 30 dias desde a última visita. Hora de enviar um 'saudade'?",
+            description: "5 clientes completam 30 dias desde a última visita.",
             icon: Heart,
             color: "text-pink-500",
             bg: "bg-pink-500/10"
         },
     ]
+
+    if (isLoading) {
+        return <div className="p-10 text-center text-muted-foreground">Carregando dados do painel...</div>
+    }
 
     return (
         <div className="space-y-8 pb-10">
@@ -157,7 +201,7 @@ export default function DashboardPage() {
 
             {/* Stats Grid */}
             <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
-                {stats.map((stat, i) => (
+                {realStats.map((stat, i) => (
                     <Card key={i} className="p-6 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm hover:shadow-lg bg-white dark:bg-zinc-900 transition-all hover:border-gray-200">
                         <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">{stat.label}</p>
                         <div className="flex items-end justify-between">
@@ -180,7 +224,7 @@ export default function DashboardPage() {
                     <div className="flex items-center justify-between">
                         <div>
                             <h3 className="text-xl font-black text-slate-900 dark:text-white">Performance de Vendas</h3>
-                            <p className="text-xs text-slate-500 font-medium">Movimentação financeira da última semana.</p>
+                            <p className="text-xs text-slate-500 font-medium">Movimentação financeira dos últimos 7 dias.</p>
                         </div>
                         <div className="flex items-center gap-4">
                             <div className="flex items-center gap-2">
@@ -255,29 +299,35 @@ export default function DashboardPage() {
                         </div>
 
                         <div className="space-y-6">
-                            {tenantAppointments.slice(0, 3).map((apt, i) => (
-                                <div key={i} className="flex items-center justify-between group cursor-pointer">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-zinc-800 flex items-center justify-center font-black text-slate-400 group-hover:bg-primary/10 group-hover:text-primary transition-all">
-                                            {apt.customer.charAt(0)}
+                            {topAppointments.length === 0 ? (
+                                <p className="text-sm text-muted-foreground text-center py-4">Nenhum agendamento futuro.</p>
+                            ) : (
+                                topAppointments.map((apt, i) => (
+                                    <div key={i} className="flex items-center justify-between group cursor-pointer">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-zinc-800 flex items-center justify-center font-black text-slate-400 group-hover:bg-primary/10 group-hover:text-primary transition-all">
+                                                {apt.customerName?.charAt(0) || "C"}
+                                            </div>
+                                            <div>
+                                                <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate max-w-[120px]">{apt.customerName || "Cliente"}</h4>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate max-w-[120px]">{apt.serviceName ?? "Serviço"}</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h4 className="text-sm font-bold text-slate-900 dark:text-white">{apt.customer}</h4>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{apt.serviceId}</p>
+                                        <div className="text-right">
+                                            <p className="text-xs font-black text-slate-900 dark:text-white">
+                                                {new Date(apt.startAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                            </p>
+                                            <Badge className={cn(
+                                                "mt-1 text-[8px] font-bold uppercase border-none",
+                                                apt.status === 'confirmed' ? "bg-emerald-500/10 text-emerald-500" :
+                                                    apt.status === 'completed' ? "bg-slate-100 text-slate-400" : "bg-primary/10 text-primary"
+                                            )}>
+                                                {apt.status === 'confirmed' ? 'Confirmado' : apt.status === 'completed' ? 'Finalizado' : 'Em breve'}
+                                            </Badge>
                                         </div>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="text-xs font-black text-slate-900 dark:text-white">{apt.time}</p>
-                                        <Badge className={cn(
-                                            "mt-1 text-[8px] font-bold uppercase border-none",
-                                            apt.status === 'confirmed' ? "bg-emerald-500/10 text-emerald-500" :
-                                                apt.status === 'completed' ? "bg-slate-100 text-slate-400" : "bg-primary/10 text-primary"
-                                        )}>
-                                            {apt.status === 'confirmed' ? 'Confirmado' : apt.status === 'completed' ? 'Finalizado' : 'Em breve'}
-                                        </Badge>
-                                    </div>
-                                </div>
-                            ))}
+                                ))
+                            )}
                         </div>
 
                         <Button variant="ghost" className="w-full mt-8 rounded-2xl font-bold text-slate-400 hover:text-primary">
@@ -285,7 +335,7 @@ export default function DashboardPage() {
                         </Button>
                     </Card>
 
-                    {/* Pro Tip */}
+                    {/* Pro Tip - Can remain static for now (global tip) */}
                     <Card className="p-6 sm:p-8 rounded-[2.5rem] bg-slate-900 text-white relative overflow-hidden">
                         <Sparkles className="absolute top-4 right-4 w-6 h-6 text-primary" />
                         <div className="relative z-10 space-y-4">

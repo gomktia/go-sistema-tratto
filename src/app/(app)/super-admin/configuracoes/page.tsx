@@ -1,7 +1,6 @@
-
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -60,6 +59,7 @@ function IntegrationCard({ id, title, description, icon: Icon, color, isActive, 
 }
 
 export default function ConfiguracoesPage() {
+    // --- State Initialization with LocalStorage (Client-Side Only) ---
     const [platformSettings, setPlatformSettings] = useState({
         platformName: "BeautyFlow",
         platformEmail: "suporte@beautyflow.com",
@@ -72,21 +72,15 @@ export default function ConfiguracoesPage() {
         mercadoPagoToken: "",
         asaasApiKey: "",
         korvexApiKey: "",
-
         sendgridApiKey: "",
-
         twilioAccountSid: "",
         twilioAuthToken: "",
         whatsappBusinessId: "",
-
         openAiApiKey: "",
         anthropicApiKey: "",
-
         invoiceProvider: "enotas",
         invoiceApiKey: ""
     })
-
-    const [activeCard, setActiveCard] = useState<string | null>(null)
 
     const [notifications, setNotifications] = useState({
         emailOnNewCompany: true,
@@ -96,11 +90,51 @@ export default function ConfiguracoesPage() {
         smsOnCriticalEvents: false
     })
 
-    const handleSavePlatform = () => alert("Configurações da plataforma salvas!")
-    const handleSaveIntegration = (name: string) => alert(`Integração ${name} salva!`)
-    const handleSaveNotifications = () => alert("Configurações de notificações salvas!")
+    const [isLoaded, setIsLoaded] = useState(false);
+
+    useEffect(() => {
+        // Hydrate from LocalStorage after mount
+        const savedPlatform = localStorage.getItem('bf_platform_settings')
+        if (savedPlatform) setPlatformSettings(JSON.parse(savedPlatform))
+
+        const savedIntegrations = localStorage.getItem('bf_integrations')
+        if (savedIntegrations) setIntegrations(JSON.parse(savedIntegrations))
+
+        const savedNotifications = localStorage.getItem('bf_notifications')
+        if (savedNotifications) setNotifications(JSON.parse(savedNotifications))
+
+        setIsLoaded(true)
+    }, [])
+
+
+    const [activeCard, setActiveCard] = useState<string | null>(null)
+
+    // --- Persistence Handlers ---
+
+    const handleSavePlatform = () => {
+        localStorage.setItem('bf_platform_settings', JSON.stringify(platformSettings))
+        const btn = document.getElementById('save-platform-btn')
+        if (btn) {
+            const originalText = btn.innerText
+            btn.innerText = "Salvo!"
+            setTimeout(() => btn.innerText = originalText, 2000)
+        }
+    }
+
+    const handleSaveIntegration = (name: string) => {
+        localStorage.setItem('bf_integrations', JSON.stringify(integrations))
+        // Could use a toast here
+        alert(`${name} salvo com sucesso!`)
+    }
+
+    const handleSaveNotifications = () => {
+        localStorage.setItem('bf_notifications', JSON.stringify(notifications))
+        alert("Preferências de notificação salvas!")
+    }
 
     const toggleCard = (id: string) => setActiveCard(activeCard === id ? null : id)
+
+    if (!isLoaded) return null // Prevent mismatch
 
     return (
         <div className="space-y-8 pb-10">
@@ -148,7 +182,7 @@ export default function ConfiguracoesPage() {
                                     onChange={(e) => setPlatformSettings({ ...platformSettings, platformDomain: e.target.value })}
                                 />
                             </div>
-                            <Button onClick={handleSavePlatform} className="w-full">Salvar</Button>
+                            <Button id="save-platform-btn" onClick={handleSavePlatform} className="w-full transition-all">Salvar</Button>
                         </CardContent>
                     </Card>
 

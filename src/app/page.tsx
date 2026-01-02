@@ -1,5 +1,8 @@
 "use client"
 
+import { useState, useEffect } from "react"
+import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -349,7 +352,7 @@ const benefits = [
   },
 ]
 
-const plans = [
+const defaultPlans = [
   {
     name: "Starter",
     price: "197",
@@ -463,6 +466,48 @@ const faqs = [
 ]
 
 export default function LandingPage() {
+  const [plans, setPlans] = useState(defaultPlans)
+
+  useEffect(() => {
+    const fetchPlans = async () => {
+      const supabase = getSupabaseBrowserClient()
+      if (!supabase) return
+
+      try {
+        const { data, error } = await supabase
+          .from('plans')
+          .select('*')
+          .eq('is_active', true)
+          .order('price', { ascending: true })
+
+        if (error) throw error
+
+        if (data && data.length > 0) {
+          const mappedPlans = data.map(p => {
+            // Parse JSON fields if they come as strings
+            const meta = typeof p.metadata === 'string' ? JSON.parse(p.metadata) : (p.metadata || {})
+            const features = typeof p.features === 'string' ? JSON.parse(p.features) : (p.features || [])
+
+            return {
+              name: p.name,
+              price: meta.displayPrice || p.price.toString(),
+              period: meta.displayPrice ? "" : "mês",
+              description: p.description || "",
+              features: features,
+              cta: meta.cta || "Começar agora",
+              popular: meta.popular || false
+            }
+          })
+          setPlans(mappedPlans)
+        }
+      } catch (err) {
+        console.error("Error fetching plans for landing page:", err)
+      }
+    }
+
+    fetchPlans()
+  }, [])
+
   return (
     <div className="min-h-screen bg-white">
       <style jsx global>{`

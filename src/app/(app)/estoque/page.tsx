@@ -2,7 +2,10 @@
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { inventory as initialInventory, type Product } from "@/mocks/inventory"
+import { useTenant } from "@/contexts/tenant-context"
+import { useTenantProducts } from "@/hooks/useTenantRecords"
+import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { toast } from "sonner"
 import {
     Package,
     Plus,
@@ -11,14 +14,13 @@ import {
     ShoppingCart,
     Minus,
     Trash2,
-    CheckCircle2,
-    AlertTriangle,
     ArrowRight,
     Barcode,
     Tag,
-    Globe,
+    Edit,
     LayoutGrid,
-    List as ListIcon
+    List as ListIcon,
+    Loader2
 } from "lucide-react"
 import {
     Table,
@@ -34,14 +36,54 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Label } from "@/components/ui/label"
+import { FormDialog } from "@/components/ui/form-dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { cn } from "@/lib/utils"
 
-export default function EstoquePage() {
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-    // Mock inventory data
-    const [products, setProducts] = useState(initialInventory)
+interface ProductForm {
+    name: string
+    category: string
+    price: number
+    stock: number
+    minStock: number
+    showOnline: boolean
+}
 
+export default function EstoquePage() {
+    const { currentTenant } = useTenant()
+    const { data: productRecords, loading, refetch } = useTenantProducts(currentTenant.id)
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+
+    // CRUD State
+    const [showForm, setShowForm] = useState(false)
+    const [showDelete, setShowDelete] = useState(false)
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [editingProduct, setEditingProduct] = useState<any | null>(null)
+    const [formData, setFormData] = useState<ProductForm>({
+        name: "",
+        category: "",
+        price: 0,
+        stock: 0,
+        minStock: 5,
+        showOnline: true
+    })
+
+    // Local state for cart interactions
     const [cart, setCart] = useState<{ productId: string, quantity: number }[]>([])
+
+    // Map records to expected format for the UI
+    const products = (productRecords || []).map(p => ({
+        id: p.id,
+        name: p.name,
+        category: p.categoryName || "Geral",
+        price: p.price,
+        stock: p.stockQuantity,
+        minStock: p.minStock,
+        showOnline: p.isActive,
+        image: p.imageUrl,
+        raw: p // keep raw record for edits
+    }))
 
     const addToCart = (productId: string) => {
         const existing = cart.find(item => item.productId === productId)
@@ -66,6 +108,123 @@ export default function EstoquePage() {
         return acc + (product?.price || 0) * item.quantity
     }, 0)
 
+    // -- CRUD Handlers --
+
+    const resetForm = () => {
+        setFormData({
+            name: "",
+            category: "",
+            price: 0,
+            stock: 0,
+            minStock: 5,
+            showOnline: true
+        })
+        setEditingProduct(null)
+    }
+
+    const openNewProduct = () => {
+        resetForm()
+        setShowForm(true)
+    }
+
+    const openEditProduct = (product: any) => {
+        setEditingProduct(product)
+        setFormData({
+            name: product.name,
+            category: product.category,
+            price: product.price,
+            stock: product.stock,
+            minStock: product.minStock,
+            showOnline: product.showOnline
+        })
+        setShowForm(true)
+    }
+
+    const openDeleteProduct = (product: any) => {
+        setEditingProduct(product)
+        setShowDelete(true)
+    }
+
+    const handleSubmit = async () => {
+        if (!currentTenant?.id) return
+        setIsSubmitting(true)
+
+        const supabase = getSupabaseBrowserClient()
+        if (!supabase) return
+
+        try {
+            const payload = {
+                tenant_id: currentTenant.id,
+                name: formData.name,
+                // store category name in product_categories or just flat for now?
+                // The schema has product_categories table, but let's see if we can simplify or if we need to link.
+                // The `products` table has `category_id`. For now, let's assume simple string category isn't fully supported without creating a category first.
+                // However, `useTenantRecords` mapped `categoryName`.
+                // For MVP, we pass the other fields.
+                price: formData.price,
+                stock_quantity: formData.stock,
+                min_stock: formData.minStock,
+                is_active: formData.showOnline
+            }
+
+            if (editingProduct) {
+                const { error } = await supabase
+                    .from('products')
+                    .update(payload)
+                    .eq('id', editingProduct.id)
+                if (error) throw error
+                toast.success("Produto atualizado!")
+            } else {
+                const { error } = await supabase
+                    .from('products')
+                    .insert(payload)
+                if (error) throw error
+                toast.success("Produto criado!")
+            }
+
+            refetch?.()
+            setShowForm(false)
+            resetForm()
+
+        } catch (error) {
+            console.error("Error saving product:", error)
+            toast.error("Erro ao salvar produto.")
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
+    const handleDelete = async () => {
+        if (!editingProduct) return
+        setIsSubmitting(true)
+        const supabase = getSupabaseBrowserClient()
+        if (!supabase) return
+
+        try {
+            const { error } = await supabase
+                .from('products')
+                .delete()
+                .eq('id', editingProduct.id)
+
+            if (error) throw error
+
+            toast.success("Produto excluído.")
+            refetch?.()
+            setShowDelete(false)
+            setEditingProduct(null)
+        } catch (error) {
+            console.error("Error deleting:", error)
+            toast.error("Erro ao excluir.")
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
+
+    if (loading) {
+        return <div className="flex h-screen items-center justify-center text-muted-foreground gap-2"><Loader2 className="animate-spin" /> Carregando estoque...</div>
+    }
+
     return (
         <div className="p-6 space-y-8 max-w-7xl mx-auto pb-20">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -74,10 +233,10 @@ export default function EstoquePage() {
                     <p className="text-slate-500 dark:text-zinc-400 font-medium">Gestão de produtos e vendas diretas.</p>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" className="rounded-xl border-slate-200">
+                    <Button variant="outline" className="rounded-xl border-slate-200" onClick={() => toast.info("Em breve!")}>
                         <Barcode className="w-4 h-4 mr-2" /> Escanear Código
                     </Button>
-                    <Button className="rounded-xl bg-primary text-white font-bold">
+                    <Button className="rounded-xl bg-primary text-white font-bold" onClick={openNewProduct}>
                         <Plus className="w-4 h-4 mr-2" /> Novo Produto
                     </Button>
                 </div>
@@ -106,34 +265,40 @@ export default function EstoquePage() {
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                {products.map(product => (
-                                    <Card
-                                        key={product.id}
-                                        onClick={() => addToCart(product.id)}
-                                        className="p-4 rounded-3xl border-none shadow-sm bg-white dark:bg-zinc-900 hover:shadow-xl hover:scale-[1.02] transition-all cursor-pointer group"
-                                    >
-                                        <div className="flex items-start justify-between mb-4">
-                                            <div className="w-12 h-12 rounded-2xl bg-primary/5 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                                                <Package className="w-5 h-5 text-primary" />
+                                {products.length === 0 ? (
+                                    <div className="col-span-2 text-center py-10 text-muted-foreground">
+                                        Nenhum produto encontrado. Cadastre itens no inventário.
+                                    </div>
+                                ) : (
+                                    products.map(product => (
+                                        <Card
+                                            key={product.id}
+                                            onClick={() => addToCart(product.id)}
+                                            className="p-4 rounded-3xl border-none shadow-sm bg-white dark:bg-zinc-900 hover:shadow-xl hover:scale-[1.02] transition-all cursor-pointer group"
+                                        >
+                                            <div className="flex items-start justify-between mb-4">
+                                                <div className="w-12 h-12 rounded-2xl bg-primary/5 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                                                    <Package className="w-5 h-5 text-primary" />
+                                                </div>
+                                                <Badge variant="outline" className="rounded-full border-slate-100 dark:border-zinc-800 font-bold text-[10px] uppercase">
+                                                    {product.category}
+                                                </Badge>
                                             </div>
-                                            <Badge variant="outline" className="rounded-full border-slate-100 dark:border-zinc-800 font-bold text-[10px] uppercase">
-                                                {product.category}
-                                            </Badge>
-                                        </div>
-                                        <div>
-                                            <h4 className="font-bold text-slate-900 dark:text-white">{product.name}</h4>
-                                            <div className="flex items-center justify-between mt-2">
-                                                <p className="text-lg font-black text-primary">R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                                                <p className={cn(
-                                                    "text-[10px] font-bold uppercase",
-                                                    product.stock <= product.minStock ? "text-amber-500" : "text-slate-400"
-                                                )}>
-                                                    {product.stock} em estoque
-                                                </p>
+                                            <div>
+                                                <h4 className="font-bold text-slate-900 dark:text-white">{product.name}</h4>
+                                                <div className="flex items-center justify-between mt-2">
+                                                    <p className="text-lg font-black text-primary">R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                                    <p className={cn(
+                                                        "text-[10px] font-bold uppercase",
+                                                        product.stock <= product.minStock ? "text-amber-500" : "text-slate-400"
+                                                    )}>
+                                                        {product.stock} em estoque
+                                                    </p>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </Card>
-                                ))}
+                                        </Card>
+                                    ))
+                                )}
                             </div>
                         </div>
 
@@ -191,6 +356,7 @@ export default function EstoquePage() {
                                     <Button
                                         disabled={cart.length === 0}
                                         className="w-full h-16 rounded-2xl bg-primary text-white font-black text-lg shadow-xl shadow-primary/20 group"
+                                        onClick={() => toast.info("Módulo de pagamento integrado em breve!")}
                                     >
                                         Finalizar Venda
                                         <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -230,10 +396,10 @@ export default function EstoquePage() {
                                     </Button>
                                 </div>
                                 <div className="flex gap-2 border-l border-slate-100 dark:border-zinc-800 pl-4">
-                                    <Button variant="outline" className="rounded-xl border-slate-200">
+                                    <Button variant="outline" className="rounded-xl border-slate-200" onClick={() => toast.info("Filtrar categorias")}>
                                         <Filter className="w-4 h-4 mr-2" /> Categorias
                                     </Button>
-                                    <Button variant="outline" className="rounded-xl border-slate-200">
+                                    <Button variant="outline" className="rounded-xl border-slate-200" onClick={openNewProduct}>
                                         <Plus className="w-4 h-4 mr-2" /> Ajustar Estoque
                                     </Button>
                                 </div>
@@ -280,16 +446,14 @@ export default function EstoquePage() {
                                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Loja Online</p>
                                                 <Switch
                                                     checked={product.showOnline}
-                                                    onCheckedChange={(checked) => {
-                                                        setProducts(products.map(p => p.id === product.id ? { ...p, showOnline: checked } : p))
-                                                    }}
+                                                    disabled
                                                 />
                                             </div>
                                             <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <Button variant="ghost" size="icon" className="rounded-xl bg-slate-50 dark:bg-zinc-800 text-slate-400 hover:text-primary">
-                                                    <Tag className="w-4 h-4" />
+                                                <Button variant="ghost" size="icon" className="rounded-xl bg-slate-50 dark:bg-zinc-800 text-slate-400 hover:text-primary" onClick={() => openEditProduct(product)}>
+                                                    <Edit className="w-4 h-4" />
                                                 </Button>
-                                                <Button variant="ghost" size="icon" className="rounded-xl bg-slate-50 dark:bg-zinc-800 text-slate-400 hover:text-red-500">
+                                                <Button variant="ghost" size="icon" className="rounded-xl bg-slate-50 dark:bg-zinc-800 text-slate-400 hover:text-red-500" onClick={() => openDeleteProduct(product)}>
                                                     <Trash2 className="w-4 h-4" />
                                                 </Button>
                                             </div>
@@ -315,9 +479,9 @@ export default function EstoquePage() {
                                             <TableRow key={product.id} className="border-slate-50 dark:border-zinc-800/50 hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors">
                                                 <TableCell className="pl-8 py-5">
                                                     <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-zinc-800 flex items-center justify-center">
-                                                    <Package className="w-4 h-4 text-primary" />
-                                                </div>
+                                                        <div className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-zinc-800 flex items-center justify-center">
+                                                            <Package className="w-4 h-4 text-primary" />
+                                                        </div>
                                                         <div className="font-bold text-slate-900 dark:text-white uppercase tracking-tight">{product.name}</div>
                                                     </div>
                                                 </TableCell>
@@ -340,18 +504,16 @@ export default function EstoquePage() {
                                                 <TableCell>
                                                     <Switch
                                                         checked={product.showOnline}
-                                                        onCheckedChange={(checked) => {
-                                                            setProducts(products.map(p => p.id === product.id ? { ...p, showOnline: checked } : p))
-                                                        }}
+                                                        disabled
                                                         className="scale-75"
                                                     />
                                                 </TableCell>
                                                 <TableCell className="text-right pr-8">
                                                     <div className="flex justify-end gap-2">
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-primary">
-                                                            <Tag className="w-4 h-4" />
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-primary" onClick={() => openEditProduct(product)}>
+                                                            <Edit className="w-4 h-4" />
                                                         </Button>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-500">
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-500" onClick={() => openDeleteProduct(product)}>
                                                             <Trash2 className="w-4 h-4" />
                                                         </Button>
                                                     </div>
@@ -365,6 +527,87 @@ export default function EstoquePage() {
                     </Card>
                 </TabsContent>
             </Tabs>
+
+            {/* CREATE / EDIT DIALOG */}
+            <FormDialog
+                open={showForm}
+                onOpenChange={setShowForm}
+                title={editingProduct ? "Editar Produto" : "Novo Produto"}
+                description={editingProduct ? "Edite as informações do produto." : "Adicione um novo produto ao estoque."}
+                onSubmit={handleSubmit}
+                submitLabel={isSubmitting ? "Salvando..." : "Salvar"}
+            >
+                <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>Nome do Produto</Label>
+                            <Input
+                                value={formData.name}
+                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                placeholder="Ex: Shampoo Revitalizante"
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Categoria (Opicional)</Label>
+                            <Input
+                                value={formData.category}
+                                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                                placeholder="Geral"
+                            />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>Preço (R$)</Label>
+                            <Input
+                                type="number"
+                                value={formData.price}
+                                onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                                placeholder="0.00"
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Qtd em Estoque</Label>
+                            <Input
+                                type="number"
+                                value={formData.stock}
+                                onChange={(e) => setFormData({ ...formData, stock: Number(e.target.value) })}
+                                placeholder="10"
+                            />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>Estoque Mínimo</Label>
+                            <Input
+                                type="number"
+                                value={formData.minStock}
+                                onChange={(e) => setFormData({ ...formData, minStock: Number(e.target.value) })}
+                                placeholder="5"
+                            />
+                        </div>
+                        <div className="flex flex-col gap-2 pt-8">
+                            <div className="flex items-center space-x-2">
+                                <Switch id="online-mode" checked={formData.showOnline} onCheckedChange={(val) => setFormData({ ...formData, showOnline: val })} />
+                                <Label htmlFor="online-mode">Mostrar na Loja Online</Label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </FormDialog>
+
+            {/* DELETE CONFIRM DIALOG */}
+            <ConfirmDialog
+                open={showDelete}
+                onOpenChange={setShowDelete}
+                title="Excluir Produto"
+                description={`Tem certeza que deseja excluir "${editingProduct?.name}"? Isso não pode ser desfeito.`}
+                onConfirm={handleDelete}
+                confirmLabel={isSubmitting ? "Excluindo..." : "Excluir"}
+                variant="destructive"
+            />
         </div>
     )
 }

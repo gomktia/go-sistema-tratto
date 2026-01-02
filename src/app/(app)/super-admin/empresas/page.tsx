@@ -58,6 +58,10 @@ export default function EmpresasPage() {
     const [selectedCompany, setSelectedCompany] = useState<Company | null>(null)
     const [confirmAction, setConfirmAction] = useState<{ title: string, description: string, action: () => void } | null>(null)
 
+    // Edit State
+    const [isEditing, setIsEditing] = useState(false)
+    const [editingId, setEditingId] = useState<string | null>(null)
+
     // Form state
     const [formData, setFormData] = useState({
         name: "",
@@ -74,19 +78,12 @@ export default function EmpresasPage() {
     }, [])
 
     const fetchCompanies = async () => {
-        console.log('[FRONTEND] Starting fetchCompanies...')
         setIsLoading(true)
         try {
-            console.log('[FRONTEND] Fetching from /api/admin/companies')
             const response = await fetch('/api/admin/companies')
-            console.log('[FRONTEND] Response status:', response.status, response.ok)
-
             if (response.ok) {
                 const data = await response.json()
-                console.log('[FRONTEND] Received data:', data)
-                console.log('[FRONTEND] Data length:', data?.length)
                 setCompanies(data)
-                console.log('[FRONTEND] Companies state updated')
             } else {
                 console.error('[FRONTEND] Response not OK:', response.status)
             }
@@ -94,11 +91,8 @@ export default function EmpresasPage() {
             console.error('[FRONTEND] Failed to fetch companies', error)
         } finally {
             setIsLoading(false)
-            console.log('[FRONTEND] fetchCompanies completed')
         }
     }
-
-
 
     const filteredCompanies = companies
         .filter(company => {
@@ -110,9 +104,6 @@ export default function EmpresasPage() {
         .filter(company => statusFilter === "all" || company.status === statusFilter)
         .filter(company => planFilter === "all" || company.planId === planFilter || (company as any).plan_id === planFilter)
         .sort((a, b) => activationScore(b) - activationScore(a))
-
-    console.log('[FRONTEND] Filtered companies count:', filteredCompanies.length)
-
 
     const getStatusBadge = (status: string) => {
         const variants = {
@@ -126,24 +117,55 @@ export default function EmpresasPage() {
         return <Badge className={variant.className}>{variant.label}</Badge>
     }
 
-    const handleCreateCompany = async () => {
+    const resetForm = () => {
+        setFormData({ name: "", fullName: "", email: "", phone: "", address: "", cpfCnpj: "", planId: "starter" })
+        setIsEditing(false)
+        setEditingId(null)
+    }
+
+    const handleCreateNew = () => {
+        resetForm()
+        setShowNewCompany(true)
+    }
+
+    const handleEditCompany = (company: Company) => {
+        setFormData({
+            name: company.name,
+            fullName: company.fullName,
+            email: company.email,
+            phone: company.phone,
+            address: company.address,
+            cpfCnpj: company.cpfCnpj || "",
+            planId: company.planId
+        })
+        setEditingId(company.id)
+        setIsEditing(true)
+        setShowDetails(false)
+        setShowNewCompany(true)
+    }
+
+    const handleSubmitCompany = async () => {
         try {
-            const response = await fetch('/api/admin/companies', {
-                method: 'POST',
+            const url = '/api/admin/companies'
+            const method = isEditing ? 'PUT' : 'POST'
+            const body = isEditing ? { ...formData, id: editingId } : formData
+
+            const response = await fetch(url, {
+                method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(body)
             })
 
             if (response.ok) {
                 await fetchCompanies() // Reload list
                 setShowNewCompany(false)
-                setFormData({ name: "", fullName: "", email: "", phone: "", address: "", cpfCnpj: "", planId: "starter" })
+                resetForm()
             } else {
-                alert('Erro ao criar empresa')
+                alert(isEditing ? 'Erro ao atualizar empresa' : 'Erro ao criar empresa')
             }
         } catch (error) {
-            console.error('Error creating company', error)
-            alert('Erro ao criar empresa')
+            console.error('Error saving company', error)
+            alert('Erro ao salvar empresa')
         }
     }
 
@@ -235,7 +257,7 @@ export default function EmpresasPage() {
                         Gerencie todas as empresas cadastradas na plataforma
                     </p>
                 </div>
-                <Button onClick={() => setShowNewCompany(true)}>
+                <Button onClick={handleCreateNew}>
                     Nova Empresa
                 </Button>
             </div>
@@ -298,7 +320,19 @@ export default function EmpresasPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredCompanies.map((company) => {
+                            {isLoading ? (
+                                <TableRow>
+                                    <TableCell colSpan={8} className="text-center py-8">
+                                        Carregando empresas...
+                                    </TableCell>
+                                </TableRow>
+                            ) : filteredCompanies.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={8} className="text-center py-8">
+                                        Nenhuma empresa encontrada
+                                    </TableCell>
+                                </TableRow>
+                            ) : filteredCompanies.map((company) => {
                                 const plan = plans.find(p => p.id === company.planId)
                                 return (
                                     <TableRow key={company.id}>
@@ -356,6 +390,10 @@ export default function EmpresasPage() {
                                                         <CheckCircle className="w-4 h-4 mr-2" />
                                                         Ver Detalhes
                                                     </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => handleEditCompany(company)}>
+                                                        <Edit className="w-4 h-4 mr-2" />
+                                                        Editar
+                                                    </DropdownMenuItem>
                                                     {company.status === 'active' && (
                                                         <DropdownMenuItem
                                                             className="text-orange-600"
@@ -392,14 +430,14 @@ export default function EmpresasPage() {
                 </CardContent>
             </Card>
 
-            {/* Modal Nova Empresa */}
+            {/* Modal Nova/Editar Empresa */}
             <FormDialog
                 open={showNewCompany}
                 onOpenChange={setShowNewCompany}
-                title="Nova Empresa"
-                description="Cadastre uma nova empresa na plataforma"
-                onSubmit={handleCreateCompany}
-                submitLabel="Criar Empresa"
+                title={isEditing ? "Editar Empresa" : "Nova Empresa"}
+                description={isEditing ? "Atualize os dados da empresa" : "Cadastre uma nova empresa na plataforma"}
+                onSubmit={handleSubmitCompany}
+                submitLabel={isEditing ? "Salvar Alterações" : "Criar Empresa"}
             >
                 <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
@@ -562,7 +600,7 @@ export default function EmpresasPage() {
                             </div>
                         </div>
 
-                        <Button className="w-full" variant="outline">
+                        <Button className="w-full" variant="outline" onClick={() => handleEditCompany(selectedCompany)}>
                             <Edit className="w-4 h-4 mr-2" />
                             Editar Empresa
                         </Button>

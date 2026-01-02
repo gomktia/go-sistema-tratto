@@ -170,7 +170,7 @@ interface HighlightRow {
 
 interface ReviewRow {
     id: string
-    tenant_id?: string // Schema might not have it directly if linked via appt, but let's check
+    tenant_id?: string
     customer_email: string
     professional_id: string
     service_id: string
@@ -417,8 +417,8 @@ const mapRowToStaffAvailability = (row: StaffAvailabilityRow): StaffAvailability
     tenantId: row.tenant_id,
     employeeId: row.employee_id,
     weekday: row.weekday,
-    startTime: row.start_time,
-    endTime: row.end_time,
+    start_time: row.start_time,
+    end_time: row.end_time,
 })
 
 const mapMockAvailability = (employee: typeof employeeMocks[number]): StaffAvailabilityRecord[] => {
@@ -465,7 +465,7 @@ const mapRowToTestimonial = (row: ReviewRow): Testimonial => ({
     testimonial: row.comment ?? "",
     rating: row.rating,
     isApproved: row.is_approved,
-    imageUrl: undefined // Review table doesn't have image
+    imageUrl: undefined
 })
 
 const mapMockGalleryImage = (image: GalleryImage): GalleryImage => image
@@ -506,7 +506,8 @@ export function useTenantCustomers(tenantId?: string) {
                     return
                 }
 
-                if (!rows || rows.length === 0) {
+                // FIX: Trust empty DB array if no error
+                if (!rows) {
                     setData(fallback)
                 } else {
                     setData(rows.map(mapRowToClient))
@@ -530,7 +531,7 @@ function useTenantQuery<T>(
     const [data, setData] = useState<T[]>(fallbackData)
     const [loading, setLoading] = useState<boolean>(isSupabaseConfigured)
 
-    useEffect(() => {
+    const fetchData = async () => {
         const supabase = getSupabaseBrowserClient()
         if (!tenantId || !isSupabaseConfigured || !supabase) {
             setData(fallbackData)
@@ -538,32 +539,30 @@ function useTenantQuery<T>(
             return
         }
 
-        let isMounted = true
         setLoading(true)
 
-        fetcher(supabase, tenantId)
-            .then(rows => {
-                if (!isMounted) return
-                if (!rows || rows.length === 0) {
-                    setData(fallbackData)
-                } else {
-                    setData(rows)
-                }
-            })
-            .catch(error => {
-                console.error("[useTenantQuery]", error)
-                if (isMounted) setData(fallbackData)
-            })
-            .finally(() => {
-                if (isMounted) setLoading(false)
-            })
-
-        return () => {
-            isMounted = false
+        try {
+            const rows = await fetcher(supabase, tenantId)
+            // PRODUCTION FIX: If rows is [], it means "no data", NOT "use mocks".
+            // We only fallback if fetcher returned null (error) and we want to be safe.
+            if (rows === null) {
+                setData(fallbackData)
+            } else {
+                setData(rows)
+            }
+        } catch (error) {
+            console.error("[useTenantQuery]", error)
+            setData(fallbackData)
+        } finally {
+            setLoading(false)
         }
-    }, [tenantId, fallbackData])
+    }
 
-    return { data, loading }
+    useEffect(() => {
+        fetchData()
+    }, [tenantId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+    return { data, loading, refetch: fetchData }
 }
 
 export function useTenantServices(tenantId?: string) {
@@ -798,7 +797,8 @@ export function useTenantGallery(tenantId?: string) {
                 console.error("[useTenantGallery] ", error.message)
                 return null
             }
-
+            // Supabase returns null if no rows? No, it returns []. 
+            // We return null if error, map if data.
             return data?.map(mapRowToGalleryImage) ?? null
         },
         fallback
@@ -818,10 +818,10 @@ export function useTenantHighlights(tenantId?: string) {
                 .from("highlights")
                 .select("id, tenant_id, title, description, image_url, type, expires_at")
                 .eq("tenant_id", currentTenantId)
-                .eq("is_active", true)
 
             if (error) {
-                console.error("[useTenantHighlights] ", error.message)
+                // Table might not exist yet, so log and return null
+                console.warn("[useTenantHighlights]", error.message)
                 return null
             }
             return data?.map(mapRowToHighlight) ?? null
@@ -839,23 +839,14 @@ export function useTenantTestimonials(tenantId?: string) {
     return useTenantQuery<Testimonial>(
         tenantId,
         async (supabase, currentTenantId) => {
-            // Note: Reviews table might not have tenant_id directly if it's per appointment.
-            // But usually for a multi-tenant system, we replicate tenant_id or link via appointment.
-            // In full_schema.sql: reviews table does NOT have tenant_id currently (it has appointment_id).
-            // This is a constraint. For now, we will assume we can fetch ALL reviews (demo mode) OR
-            // we should have added tenant_id to reviews. 
-            // Workaround: Fetch all for now as user just populated "Mock Data" into real table.
-            // PROPER FIX: Add tenant_id to reviews table.
-
             const { data, error } = await supabase
-                .from("reviews")
-                .select("id, customer_email, professional_id, service_id, rating, comment, is_approved")
+                .from("reviews") // Using 'reviews' table for testimonials
+                .select("id, tenant_id, customer_email, professional_id, service_id, rating, comment, is_approved")
+                .eq("tenant_id", currentTenantId)
                 .eq("is_approved", true)
-                // .eq("tenant_id", currentTenantId) // Missing column in schema
-                .limit(10)
 
             if (error) {
-                console.error("[useTenantTestimonials] ", error.message)
+                console.warn("[useTenantTestimonials]", error.message)
                 return null
             }
             return data?.map(mapRowToTestimonial) ?? null
@@ -863,5 +854,3 @@ export function useTenantTestimonials(tenantId?: string) {
         fallback
     )
 }
-
-
