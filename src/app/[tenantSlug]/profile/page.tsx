@@ -250,7 +250,7 @@ export default function CustomerProfilePage() {
                                 <Avatar className="w-24 h-24 border-4 border-white dark:border-zinc-900 shadow-xl cursor-pointer hover:opacity-90 transition-opacity" onClick={() => avatarInputRef.current?.click()}>
                                     <AvatarImage src={avatarPreview} className="object-cover" />
                                     <AvatarFallback className="text-2xl font-black bg-slate-100 dark:bg-zinc-800 text-slate-400">
-                                        {getInitials(customer.name)}
+                                        {getInitials(customer?.name || "")}
                                     </AvatarFallback>
                                 </Avatar>
                                 <div className="absolute bottom-0 right-0 bg-primary text-white p-1.5 rounded-full border-2 border-white dark:border-zinc-900 shadow-sm pointer-events-none">
@@ -265,13 +265,13 @@ export default function CustomerProfilePage() {
                                 />
                             </div>
 
-                            <h2 className="text-xl font-black text-slate-900 dark:text-white mb-1">{customer.name}</h2>
-                            <p className="text-sm text-slate-500 dark:text-zinc-400 font-medium mb-6">{customer.email}</p>
+                            <h2 className="text-xl font-black text-slate-900 dark:text-white mb-1">{customer?.name}</h2>
+                            <p className="text-sm text-slate-500 dark:text-zinc-400 font-medium mb-6">{customer?.email}</p>
 
                             <div className="grid grid-cols-2 gap-4 w-full">
                                 <div className="bg-slate-50 dark:bg-zinc-800/50 p-3 rounded-2xl border border-slate-100 dark:border-zinc-800">
                                     <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Pontos</p>
-                                    <p className="text-2xl font-black text-primary">{customer.points}</p>
+                                    <p className="text-2xl font-black text-primary">{customer?.points || 0}</p>
                                 </div>
                                 <div className="bg-slate-50 dark:bg-zinc-800/50 p-3 rounded-2xl border border-slate-100 dark:border-zinc-800">
                                     <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Nível</p>
