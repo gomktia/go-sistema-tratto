@@ -1,142 +1,138 @@
+"use client"
+
+import { useMemo, useRef, useState, useEffect, type ChangeEvent } from "react"
+import { useParams, useSearchParams, useRouter } from "next/navigation"
 import { toast } from "sonner"
+// ... other imports will be handled or assumed correct below if not part of this block, but looking at the view, they are at line 13.
+// I need to be careful. The View showed imports STARTING at line 13 inside a function?
+// The file is corrupted.
+// I will replace from line 1 up to line 17 with valid top-level imports.
 
-// ... imports ...
+import { motion, AnimatePresence } from "framer-motion"
+import { format, parseISO, differenceInHours, isAfter, addHours } from "date-fns"
+import { ptBR } from "date-fns/locale"
+import {
+    AlertCircle,
+    Bell,
+    Calendar,
+    ChevronLeft,
+    Clock,
+    CreditCard,
+    Gift,
+    LogOut,
+    MapPin,
+    Settings,
+    ShieldCheck,
+    ShoppingBag,
+    Sparkles,
+    Star,
+    Trash2,
+    TrendingUp,
+    Upload,
+    User,
+    Wallet
+} from "lucide-react"
+import { FloatingWhatsApp } from "@/components/FloatingWhatsApp"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { tenants } from "@/mocks/tenants"
+import { appointments } from "@/mocks/data"
+import { services } from "@/mocks/services"
+import { mockCustomers, type Customer } from "@/mocks/customers"
+import { combos } from "@/mocks/combos"
+import { cn, getInitials } from "@/lib/utils"
+import { supabase } from "@/lib/supabase"
+import { useTenant } from "@/contexts/tenant-context"
 
-// ... inside component ...
+export default function CustomerProfilePage() {
+    const params = useParams()
+    const searchParams = useSearchParams()
+    const router = useRouter()
+    const tenantSlug = params.tenantSlug as string
+    const [isLoading, setIsLoading] = useState(false)
 
-// --- Actions ---
-const [avatarPreview, setAvatarPreview] = useState<string>(customer?.avatar || "")
+    // --- Authentication Logic ---
+    const [customerEmail, setCustomerEmail] = useState<string | null>(null)
 
-const handleCancelAppointment = async (appointmentId: string) => {
-    // ...
+    useEffect(() => {
+        const storedEmail = sessionStorage.getItem('customerEmail')
+        if (storedEmail) {
+            setCustomerEmail(storedEmail)
+            return
+        }
+        const urlEmail = searchParams.get('email')
+        if (urlEmail) {
+            setCustomerEmail(urlEmail)
+            sessionStorage.setItem('customerEmail', urlEmail)
+        } else {
+            // Redirect to login if no auth
+            router.push(`/${tenantSlug}/login`)
+        }
+    }, [searchParams, tenantSlug, router])
 
-    import { useMemo, useRef, useState, useEffect, type ChangeEvent } from "react"
-    import { useParams, useSearchParams, useRouter } from "next/navigation"
-    import { motion, AnimatePresence } from "framer-motion"
-    import { format, parseISO, differenceInHours, isAfter, addHours } from "date-fns"
-    import { ptBR } from "date-fns/locale"
-    import {
-        AlertCircle,
-        Bell,
-        Calendar,
-        ChevronLeft,
-        Clock,
-        CreditCard,
-        Gift,
-        LogOut,
-        MapPin,
-        Settings,
-        ShieldCheck,
-        ShoppingBag,
-        Sparkles,
-        Star,
-        Trash2,
-        TrendingUp,
-        Upload,
-        User,
-        Wallet
-    } from "lucide-react"
-    import { FloatingWhatsApp } from "@/components/FloatingWhatsApp"
-    import { Button } from "@/components/ui/button"
-    import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-    import { Badge } from "@/components/ui/badge"
-    import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-    import {
-        AlertDialog,
-        AlertDialogAction,
-        AlertDialogCancel,
-        AlertDialogContent,
-        AlertDialogDescription,
-        AlertDialogFooter,
-        AlertDialogHeader,
-        AlertDialogTitle,
-        AlertDialogTrigger,
-    } from "@/components/ui/alert-dialog"
-    import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-    import { tenants } from "@/mocks/tenants"
-    import { appointments } from "@/mocks/data"
-    import { services } from "@/mocks/services"
-    import { mockCustomers, type Customer } from "@/mocks/customers"
-    import { combos } from "@/mocks/combos"
-    import { cn, getInitials } from "@/lib/utils"
-    import { supabase } from "@/lib/supabase"
-    import { useTenant } from "@/contexts/tenant-context"
+    // --- Data Fetching ---
+    // 1. Get Tenant Real
+    const { currentTenant, allTenants } = useTenant()
 
-    export default function CustomerProfilePage() {
-        const params = useParams()
-        const searchParams = useSearchParams()
-        const router = useRouter()
-        const tenantSlug = params.tenantSlug as string
-        const [isLoading, setIsLoading] = useState(false)
+    // Fallback if context is not yet loaded or if we are verifying slug
+    const tenant = useMemo(() => {
+        return allTenants.find(t => t.slug === tenantSlug) || currentTenant
+    }, [tenantSlug, allTenants, currentTenant])
 
-        // --- Authentication Logic ---
-        const [customerEmail, setCustomerEmail] = useState<string | null>(null)
+    // 2. State for Real Customer & Appointments
+    const [customer, setCustomer] = useState<Customer | null>(null)
+    const [realAppointments, setRealAppointments] = useState<any[]>([])
 
-        useEffect(() => {
-            const storedEmail = sessionStorage.getItem('customerEmail')
-            if (storedEmail) {
-                setCustomerEmail(storedEmail)
-                return
-            }
-            const urlEmail = searchParams.get('email')
-            if (urlEmail) {
-                setCustomerEmail(urlEmail)
-                sessionStorage.setItem('customerEmail', urlEmail)
-            } else {
-                // Redirect to login if no auth
-                router.push(`/${tenantSlug}/login`)
-            }
-        }, [searchParams, tenantSlug, router])
+    // 3. Fetch Customer Details from Supabase
+    useEffect(() => {
+        // Only fetch if we have an email and a resolved tenant ID
+        if (!customerEmail || !tenant.id) return
 
-        // --- Data Fetching ---
-        // 1. Get Tenant Real
-        const { currentTenant, allTenants } = useTenant()
+        const fetchCustomerData = async () => {
+            setIsLoading(true)
+            try {
+                // Fetch customer by email & tenant
+                // Note: We use .ilike for case-insensitive email match just in case
+                const { data: customerData, error } = await supabase
+                    .from('customers')
+                    .select('*')
+                    .eq('tenant_id', tenant.id)
+                    .ilike('email', customerEmail)
+                    .maybeSingle()
 
-        // Fallback if context is not yet loaded or if we are verifying slug
-        const tenant = useMemo(() => {
-            return allTenants.find(t => t.slug === tenantSlug) || currentTenant
-        }, [tenantSlug, allTenants, currentTenant])
+                if (customerData) {
+                    setCustomer({
+                        id: customerData.id,
+                        tenantId: customerData.tenant_id,
+                        name: customerData.full_name,
+                        email: customerData.email,
+                        phone: customerData.phone || "",
+                        cpf: customerData.document || "",
+                        points: customerData.loyalty_points || 0,
+                        status: customerData.status || 'active',
+                        lastVisit: customerData.last_visit_at || new Date().toISOString(),
+                        totalSpent: customerData.total_spent || 0,
+                        avatar: "", // TODO: Add avatar_url to customers table or storage
+                    })
 
-        // 2. State for Real Customer & Appointments
-        const [customer, setCustomer] = useState<Customer | null>(null)
-        const [realAppointments, setRealAppointments] = useState<any[]>([])
-
-        // 3. Fetch Customer Details from Supabase
-        useEffect(() => {
-            // Only fetch if we have an email and a resolved tenant ID
-            if (!customerEmail || !tenant.id) return
-
-            const fetchCustomerData = async () => {
-                setIsLoading(true)
-                try {
-                    // Fetch customer by email & tenant
-                    // Note: We use .ilike for case-insensitive email match just in case
-                    const { data: customerData, error } = await supabase
-                        .from('customers')
-                        .select('*')
-                        .eq('tenant_id', tenant.id)
-                        .ilike('email', customerEmail)
-                        .maybeSingle()
-
-                    if (customerData) {
-                        setCustomer({
-                            id: customerData.id,
-                            tenantId: customerData.tenant_id,
-                            name: customerData.full_name,
-                            email: customerData.email,
-                            phone: customerData.phone || "",
-                            cpf: customerData.document || "",
-                            points: customerData.loyalty_points || 0,
-                            status: customerData.status || 'active',
-                            lastVisit: customerData.last_visit_at || new Date().toISOString(),
-                            totalSpent: customerData.total_spent || 0,
-                            avatar: "", // TODO: Add avatar_url to customers table or storage
-                        })
-
-                        // Fetch Appointments for this customer with RELATIONS
-                        const { data: apts, error: aptError } = await supabase
-                            .from('appointments')
-                            .select(`
+                    // Fetch Appointments for this customer with RELATIONS
+                    const { data: apts, error: aptError } = await supabase
+                        .from('appointments')
+                        .select(`
                             *,
                             services (
                                 name,
@@ -148,430 +144,431 @@ const handleCancelAppointment = async (appointmentId: string) => {
                                 avatar_url
                             )
                         `)
-                            .eq('customer_id', customerData.id)
-                            .order('start_at', { ascending: false })
+                        .eq('customer_id', customerData.id)
+                        .order('start_at', { ascending: false })
 
-                        if (apts) {
-                            const formattedApts = apts.map(a => ({
-                                id: a.id,
-                                tenantId: a.tenant_id,
-                                customer: customerData.full_name,
-                                serviceId: a.service_id,
-                                serviceName: a.services?.name || "Serviço Personalizado",
-                                staffId: a.employee_id,
-                                staffName: a.employees?.full_name || "Profissional", // Now we have the name!
-                                staffAvatar: a.employees?.avatar_url,
-                                date: a.start_at,
-                                time: format(parseISO(a.start_at), "HH:mm"),
-                                startAt: a.start_at,
-                                status: a.status,
-                                duration: a.services?.duration_minutes || a.duration_minutes || 30,
-                                price: a.price || a.services?.price || 0
-                            }))
-                            setRealAppointments(formattedApts)
-                        }
-                    } else {
-                        console.warn("Cliente não encontrado no banco para o email:", customerEmail)
-                        // Keep customer null to show loading or empty state, or handle creation flow
+                    if (apts) {
+                        const formattedApts = apts.map(a => ({
+                            id: a.id,
+                            tenantId: a.tenant_id,
+                            customer: customerData.full_name,
+                            serviceId: a.service_id,
+                            serviceName: a.services?.name || "Serviço Personalizado",
+                            staffId: a.employee_id,
+                            staffName: a.employees?.full_name || "Profissional", // Now we have the name!
+                            staffAvatar: a.employees?.avatar_url,
+                            date: a.start_at,
+                            time: format(parseISO(a.start_at), "HH:mm"),
+                            startAt: a.start_at,
+                            status: a.status,
+                            duration: a.services?.duration_minutes || a.duration_minutes || 30,
+                            price: a.price || a.services?.price || 0
+                        }))
+                        setRealAppointments(formattedApts)
                     }
-
-                } catch (err) {
-                    console.error("Erro ao carregar perfil:", err)
-                } finally {
-                    setIsLoading(false)
+                } else {
+                    console.warn("Cliente não encontrado no banco para o email:", customerEmail)
+                    // Keep customer null to show loading or empty state, or handle creation flow
                 }
-            }
 
-            fetchCustomerData()
-        }, [customerEmail, tenant.id])
-
-        // 4. Derived State for UI (Upcoming vs History)
-        const upcomingAppointments = realAppointments.filter(a => {
-            const date = parseISO(a.startAt)
-            return isAfter(date, new Date()) && a.status !== 'cancelled'
-        }).reverse()
-
-        const pastAppointments = realAppointments.filter(a => {
-            const date = parseISO(a.startAt)
-            return !isAfter(date, new Date()) || a.status === 'cancelled' || a.status === 'completed'
-        })
-
-        const totalSpent = useMemo(() => {
-            return realAppointments
-                .filter((apt: any) => apt.status === 'completed')
-                .reduce((sum: number, apt: any) => {
-                    return sum + (apt.price || 0)
-                }, 0)
-        }, [realAppointments])
-
-        // --- Actions ---
-        const avatarInputRef = useRef<HTMLInputElement>(null)
-
-        const handleAvatarUpload = async (event: ChangeEvent<HTMLInputElement>) => {
-            const file = event.target.files?.[0]
-            event.target.value = "" // Reset input
-            if (!file) return
-
-            setIsLoading(true)
-            try {
-                const fileName = `avatars/${customerEmail}-${Date.now()}-${file.name}`
-
-                const { data, error } = await supabase.storage
-                    .from('images') // Bucket name fixed via SQL
-                    .upload(fileName, file, {
-                        cacheControl: '3600',
-                        upsert: false
-                    })
-
-                if (error) throw error
-
-                const { data: publicData } = supabase.storage
-                    .from('images')
-                    .getPublicUrl(fileName)
-
-                setAvatarPreview(publicData.publicUrl)
-
-                // Note: In a real app with auth, we would update the user's profile table here:
-                // await supabase.from('profiles').update({ avatar_url: publicData.publicUrl }).eq('email', customerEmail)
-
-            } catch (error) {
-                console.error("Upload error:", error)
-                alert("Erro ao fazer upload da imagem. Tente novamente.")
+            } catch (err) {
+                console.error("Erro ao carregar perfil:", err)
             } finally {
                 setIsLoading(false)
             }
         }
 
-        const handleLogout = () => {
-            sessionStorage.removeItem('customerEmail')
-            router.push(`/${tenantSlug}/login`)
+        fetchCustomerData()
+    }, [customerEmail, tenant.id])
+
+    // 4. Derived State for UI (Upcoming vs History)
+    const upcomingAppointments = realAppointments.filter(a => {
+        const date = parseISO(a.startAt)
+        return isAfter(date, new Date()) && a.status !== 'cancelled'
+    }).reverse()
+
+    const pastAppointments = realAppointments.filter(a => {
+        const date = parseISO(a.startAt)
+        return !isAfter(date, new Date()) || a.status === 'cancelled' || a.status === 'completed'
+    })
+
+    const totalSpent = useMemo(() => {
+        return realAppointments
+            .filter((apt: any) => apt.status === 'completed')
+            .reduce((sum: number, apt: any) => {
+                return sum + (apt.price || 0)
+            }, 0)
+    }, [realAppointments])
+
+    // --- Actions ---
+    const [avatarPreview, setAvatarPreview] = useState<string>(customer?.avatar || "")
+    const avatarInputRef = useRef<HTMLInputElement>(null)
+
+    const handleAvatarUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0]
+        event.target.value = "" // Reset input
+        if (!file) return
+
+        setIsLoading(true)
+        try {
+            const fileName = `avatars/${customerEmail}-${Date.now()}-${file.name}`
+
+            const { data, error } = await supabase.storage
+                .from('images') // Bucket name fixed via SQL
+                .upload(fileName, file, {
+                    cacheControl: '3600',
+                    upsert: false
+                })
+
+            if (error) throw error
+
+            const { data: publicData } = supabase.storage
+                .from('images')
+                .getPublicUrl(fileName)
+
+            setAvatarPreview(publicData.publicUrl)
+
+            // Note: In a real app with auth, we would update the user's profile table here:
+            // await supabase.from('profiles').update({ avatar_url: publicData.publicUrl }).eq('email', customerEmail)
+
+        } catch (error) {
+            console.error("Upload error:", error)
+            alert("Erro ao fazer upload da imagem. Tente novamente.")
+        } finally {
+            setIsLoading(false)
         }
+    }
 
-        const handleCancelAppointment = async (aptId: string) => {
-            setIsLoading(true)
-            try {
-                const { error } = await supabase
-                    .from('appointments')
-                    .update({
-                        status: 'cancelled',
-                        cancelled_at: new Date().toISOString(),
-                        cancelled_by: customerEmail
-                    })
-                    .eq('id', aptId)
+    const handleLogout = () => {
+        sessionStorage.removeItem('customerEmail')
+        router.push(`/${tenantSlug}/login`)
+    }
 
-                if (error) throw error
+    const handleCancelAppointment = async (aptId: string) => {
+        setIsLoading(true)
+        try {
+            const { error } = await supabase
+                .from('appointments')
+                .update({
+                    status: 'cancelled',
+                    cancelled_at: new Date().toISOString(),
+                    cancelled_by: customerEmail
+                })
+                .eq('id', aptId)
 
-                // For demo, force reload to see changes since we don't have real-time sub here
-                window.location.reload()
-            } catch (error) {
-                console.error(error)
-                alert("Erro ao cancelar. Tente novamente.")
-            } finally {
-                setIsLoading(false)
-            }
+            if (error) throw error
+
+            // For demo, force reload to see changes since we don't have real-time sub here
+            window.location.reload()
+        } catch (error) {
+            console.error(error)
+            alert("Erro ao cancelar. Tente novamente.")
+        } finally {
+            setIsLoading(false)
         }
+    }
 
-        if (!customerEmail) return null // Or loading spinner
+    if (!customerEmail) return null // Or loading spinner
 
-        return (
-            <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 font-sans selection:bg-primary/20">
-                {/* Header */}
-                <header className="sticky top-0 z-40 w-full bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-slate-200/50 dark:border-zinc-800/50 px-4 py-3">
-                    <div className="max-w-6xl mx-auto flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <Button variant="ghost" size="icon" onClick={() => router.push(`/${tenantSlug}/book`)} className="rounded-full hover:bg-slate-100 dark:hover:bg-zinc-800">
-                                <ChevronLeft className="w-5 h-5 text-slate-600 dark:text-zinc-400" />
-                            </Button>
-                            <div>
-                                <h1 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                    {tenant.name}
-                                </h1>
+    return (
+        <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 font-sans selection:bg-primary/20">
+            {/* Header */}
+            <header className="sticky top-0 z-40 w-full bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-slate-200/50 dark:border-zinc-800/50 px-4 py-3">
+                <div className="max-w-6xl mx-auto flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <Button variant="ghost" size="icon" onClick={() => router.push(`/${tenantSlug}/book`)} className="rounded-full hover:bg-slate-100 dark:hover:bg-zinc-800">
+                            <ChevronLeft className="w-5 h-5 text-slate-600 dark:text-zinc-400" />
+                        </Button>
+                        <div>
+                            <h1 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                {tenant.name}
+                            </h1>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => router.push(`/${tenantSlug}/shop`)}
+                            className="rounded-full hover:bg-slate-100 dark:hover:bg-zinc-800"
+                        >
+                            <ShoppingBag className="w-5 h-5 text-slate-600 dark:text-zinc-400" />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleLogout}
+                            className="rounded-full hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
+                            title="Sair"
+                        >
+                            <LogOut className="w-5 h-5" />
+                        </Button>
+                    </div>
+                </div>
+            </header>
+
+            <main className="max-w-6xl mx-auto p-4 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+                {/* Left Column: Identity & Stats */}
+                <div className="lg:col-span-4 space-y-6">
+                    <Card className="border-none shadow-xl bg-white dark:bg-zinc-900 overflow-hidden relative group">
+                        <div className="absolute top-0 w-full h-32 bg-gradient-to-br from-primary/20 to-purple-500/20" />
+                        <CardContent className="pt-20 px-6 pb-8 flex flex-col items-center text-center relative z-10">
+                            <div className="relative mb-4">
+                                <Avatar className="w-24 h-24 border-4 border-white dark:border-zinc-900 shadow-xl cursor-pointer hover:opacity-90 transition-opacity" onClick={() => avatarInputRef.current?.click()}>
+                                    <AvatarImage src={avatarPreview} className="object-cover" />
+                                    <AvatarFallback className="text-2xl font-black bg-slate-100 dark:bg-zinc-800 text-slate-400">
+                                        {getInitials(customer?.name || "")}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div className="absolute bottom-0 right-0 bg-primary text-white p-1.5 rounded-full border-2 border-white dark:border-zinc-900 shadow-sm pointer-events-none">
+                                    <Settings className="w-3 h-3" />
+                                </div>
+                                <input
+                                    ref={avatarInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={handleAvatarUpload}
+                                />
                             </div>
-                        </div>
 
-                        <div className="flex items-center gap-2">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => router.push(`/${tenantSlug}/shop`)}
-                                className="rounded-full hover:bg-slate-100 dark:hover:bg-zinc-800"
-                            >
-                                <ShoppingBag className="w-5 h-5 text-slate-600 dark:text-zinc-400" />
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={handleLogout}
-                                className="rounded-full hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
-                                title="Sair"
-                            >
-                                <LogOut className="w-5 h-5" />
-                            </Button>
-                        </div>
-                    </div>
-                </header>
+                            <h2 className="text-xl font-black text-slate-900 dark:text-white mb-1">{customer?.name}</h2>
+                            <p className="text-sm text-slate-500 dark:text-zinc-400 font-medium mb-6">{customer?.email}</p>
 
-                <main className="max-w-6xl mx-auto p-4 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
-
-                    {/* Left Column: Identity & Stats */}
-                    <div className="lg:col-span-4 space-y-6">
-                        <Card className="border-none shadow-xl bg-white dark:bg-zinc-900 overflow-hidden relative group">
-                            <div className="absolute top-0 w-full h-32 bg-gradient-to-br from-primary/20 to-purple-500/20" />
-                            <CardContent className="pt-20 px-6 pb-8 flex flex-col items-center text-center relative z-10">
-                                <div className="relative mb-4">
-                                    <Avatar className="w-24 h-24 border-4 border-white dark:border-zinc-900 shadow-xl cursor-pointer hover:opacity-90 transition-opacity" onClick={() => avatarInputRef.current?.click()}>
-                                        <AvatarImage src={avatarPreview} className="object-cover" />
-                                        <AvatarFallback className="text-2xl font-black bg-slate-100 dark:bg-zinc-800 text-slate-400">
-                                            {getInitials(customer?.name || "")}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                    <div className="absolute bottom-0 right-0 bg-primary text-white p-1.5 rounded-full border-2 border-white dark:border-zinc-900 shadow-sm pointer-events-none">
-                                        <Settings className="w-3 h-3" />
-                                    </div>
-                                    <input
-                                        ref={avatarInputRef}
-                                        type="file"
-                                        accept="image/*"
-                                        className="hidden"
-                                        onChange={handleAvatarUpload}
-                                    />
+                            <div className="grid grid-cols-2 gap-4 w-full">
+                                <div className="bg-slate-50 dark:bg-zinc-800/50 p-3 rounded-2xl border border-slate-100 dark:border-zinc-800">
+                                    <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Pontos</p>
+                                    <p className="text-2xl font-black text-primary">{customer?.points || 0}</p>
                                 </div>
-
-                                <h2 className="text-xl font-black text-slate-900 dark:text-white mb-1">{customer?.name}</h2>
-                                <p className="text-sm text-slate-500 dark:text-zinc-400 font-medium mb-6">{customer?.email}</p>
-
-                                <div className="grid grid-cols-2 gap-4 w-full">
-                                    <div className="bg-slate-50 dark:bg-zinc-800/50 p-3 rounded-2xl border border-slate-100 dark:border-zinc-800">
-                                        <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Pontos</p>
-                                        <p className="text-2xl font-black text-primary">{customer?.points || 0}</p>
-                                    </div>
-                                    <div className="bg-slate-50 dark:bg-zinc-800/50 p-3 rounded-2xl border border-slate-100 dark:border-zinc-800">
-                                        <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Nível</p>
-                                        <p className="text-sm font-black text-slate-900 dark:text-white mt-1.5">Diamante</p>
-                                    </div>
+                                <div className="bg-slate-50 dark:bg-zinc-800/50 p-3 rounded-2xl border border-slate-100 dark:border-zinc-800">
+                                    <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Nível</p>
+                                    <p className="text-sm font-black text-slate-900 dark:text-white mt-1.5">Diamante</p>
                                 </div>
-                            </CardContent>
-                        </Card>
+                            </div>
+                        </CardContent>
+                    </Card>
 
-                        <Card className="border-none shadow-lg bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6 rounded-3xl relative overflow-hidden">
-                            <Sparkles className="absolute top-4 right-4 w-12 h-12 text-white/5" />
-                            <h3 className="font-bold text-lg mb-1">Beauty Prime</h3>
-                            <p className="text-sm text-slate-300 mb-4 opacity-90">Seus benefícios exclusivos</p>
-                            <ul className="space-y-3">
-                                <li className="flex items-center gap-3 text-sm font-medium">
-                                    <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center">
-                                        <ShieldCheck className="w-3 h-3 text-emerald-400" />
-                                    </div>
-                                    5% de Cashback em produtos
-                                </li>
-                                <li className="flex items-center gap-3 text-sm font-medium">
-                                    <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center">
-                                        <Gift className="w-3 h-3 text-pink-400" />
-                                    </div>
-                                    Presente no aniversário
-                                </li>
-                            </ul>
-                        </Card>
-                    </div>
+                    <Card className="border-none shadow-lg bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6 rounded-3xl relative overflow-hidden">
+                        <Sparkles className="absolute top-4 right-4 w-12 h-12 text-white/5" />
+                        <h3 className="font-bold text-lg mb-1">Beauty Prime</h3>
+                        <p className="text-sm text-slate-300 mb-4 opacity-90">Seus benefícios exclusivos</p>
+                        <ul className="space-y-3">
+                            <li className="flex items-center gap-3 text-sm font-medium">
+                                <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center">
+                                    <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                                </div>
+                                5% de Cashback em produtos
+                            </li>
+                            <li className="flex items-center gap-3 text-sm font-medium">
+                                <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center">
+                                    <Gift className="w-3 h-3 text-pink-400" />
+                                </div>
+                                Presente no aniversário
+                            </li>
+                        </ul>
+                    </Card>
+                </div>
 
-                    {/* Main Column */}
-                    <div className="lg:col-span-8 space-y-8">
+                {/* Main Column */}
+                <div className="lg:col-span-8 space-y-8">
 
-                        {/* Welcome / Next Appointment Hero */}
-                        <AnimatePresence mode="wait">
+                    {/* Welcome / Next Appointment Hero */}
+                    <AnimatePresence mode="wait">
+                        {upcomingAppointments.length > 0 ? (
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="w-full"
+                            >
+                                <Card className="border-none shadow-xl bg-white dark:bg-zinc-900 overflow-hidden rounded-[2rem]">
+                                    <div className="h-2 bg-primary w-full" />
+                                    <CardContent className="p-6 md:p-8">
+                                        <div className="flex justify-between items-start mb-6">
+                                            <div>
+                                                <Badge className="mb-3 bg-primary/10 text-primary hover:bg-primary/20 border-none px-3 py-1 text-[10px] uppercase tracking-widest font-bold">
+                                                    Próximo Agendamento
+                                                </Badge>
+                                                <h3 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+                                                    {format(parseISO(upcomingAppointments[0].date), "dd 'de' MMMM", { locale: ptBR })}
+                                                </h3>
+                                                <p className="text-lg text-slate-500 dark:text-zinc-400 font-medium mt-1">
+                                                    às {upcomingAppointments[0].time}
+                                                </p>
+                                            </div>
+                                            <div className="text-right hidden sm:block">
+                                                <p className="text-sm text-slate-400 font-bold uppercase tracking-widest mb-1">Serviço</p>
+                                                <p className="text-xl font-bold text-slate-900 dark:text-white">
+                                                    {services.find(s => s.id === upcomingAppointments[0].serviceId)?.name}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-slate-100 dark:border-zinc-800">
+                                            <Button className="flex-1 h-12 rounded-xl text-base font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20" onClick={() => router.push(`/${tenantSlug}/book`)}>
+                                                Reagendar
+                                            </Button>
+
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="outline" className="flex-1 h-12 rounded-xl text-base font-bold border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:border-zinc-800 dark:hover:bg-red-900/20">
+                                                        Cancelar
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent className="rounded-3xl p-6">
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Cancelar agendamento?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            Esta ação não pode ser desfeita. Se o cancelamento for feito com menos de 24h, uma taxa pode ser aplicada na próxima visita.
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel className="rounded-xl">Voltar</AlertDialogCancel>
+                                                        <AlertDialogAction
+                                                            onClick={() => handleCancelAppointment(upcomingAppointments[0].id)}
+                                                            className="bg-red-500 hover:bg-red-600 rounded-xl"
+                                                        >
+                                                            Confirmar Cancelamento
+                                                        </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </motion.div>
+                        ) : (
+                            <Card className="border-none shadow-xl bg-gradient-to-r from-primary to-purple-600 text-white overflow-hidden rounded-[2rem] p-8 md:p-12 text-center relative">
+                                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 blur-[100px] rounded-full mix-blend-overlay pointer-events-none" />
+                                <div className="relative z-10 space-y-6">
+                                    <h3 className="text-3xl font-black leading-tight">Hora de cuidar de você!</h3>
+                                    <p className="text-white/80 max-w-md mx-auto text-lg">
+                                        Nenhum agendamento futuro. Que tal marcar aquele momento especial essa semana?
+                                    </p>
+                                    <Button
+                                        size="lg"
+                                        onClick={() => router.push(`/${tenantSlug}/book`)}
+                                        className="h-14 px-8 rounded-2xl bg-white text-primary font-black shadow-2xl hover:bg-slate-50 hover:scale-105 transition-all text-lg"
+                                    >
+                                        Agendar Seu Momento
+                                    </Button>
+                                </div>
+                            </Card>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Content Tabs */}
+                    <Tabs defaultValue="appointments" className="w-full">
+                        <TabsList className="w-full bg-transparrent p-0 h-auto gap-4 mb-6 flex flex-wrap justify-start">
+                            <TabsTrigger
+                                value="appointments"
+                                className="rounded-full px-6 py-2.5 bg-white dark:bg-zinc-900 shadow-sm border border-slate-100 dark:border-zinc-800 data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:border-primary transition-all font-bold text-sm"
+                            >
+                                Agendamentos
+                            </TabsTrigger>
+                            <TabsTrigger
+                                value="history"
+                                className="rounded-full px-6 py-2.5 bg-white dark:bg-zinc-900 shadow-sm border border-slate-100 dark:border-zinc-800 data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:border-primary transition-all font-bold text-sm"
+                            >
+                                Histórico
+                            </TabsTrigger>
+                            <TabsTrigger
+                                value="wallet"
+                                className="rounded-full px-6 py-2.5 bg-white dark:bg-zinc-900 shadow-sm border border-slate-100 dark:border-zinc-800 data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:border-primary transition-all font-bold text-sm"
+                            >
+                                Carteira
+                            </TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="appointments" className="space-y-4 focus:outline-none">
                             {upcomingAppointments.length > 0 ? (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="w-full"
-                                >
-                                    <Card className="border-none shadow-xl bg-white dark:bg-zinc-900 overflow-hidden rounded-[2rem]">
-                                        <div className="h-2 bg-primary w-full" />
-                                        <CardContent className="p-6 md:p-8">
-                                            <div className="flex justify-between items-start mb-6">
-                                                <div>
-                                                    <Badge className="mb-3 bg-primary/10 text-primary hover:bg-primary/20 border-none px-3 py-1 text-[10px] uppercase tracking-widest font-bold">
-                                                        Próximo Agendamento
-                                                    </Badge>
-                                                    <h3 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
-                                                        {format(parseISO(upcomingAppointments[0].date), "dd 'de' MMMM", { locale: ptBR })}
-                                                    </h3>
-                                                    <p className="text-lg text-slate-500 dark:text-zinc-400 font-medium mt-1">
-                                                        às {upcomingAppointments[0].time}
-                                                    </p>
-                                                </div>
-                                                <div className="text-right hidden sm:block">
-                                                    <p className="text-sm text-slate-400 font-bold uppercase tracking-widest mb-1">Serviço</p>
-                                                    <p className="text-xl font-bold text-slate-900 dark:text-white">
-                                                        {services.find(s => s.id === upcomingAppointments[0].serviceId)?.name}
-                                                    </p>
+                                upcomingAppointments.map(apt => (
+                                    <Card key={apt.id} className="border-none shadow-sm hover:shadow-md transition-shadow bg-white dark:bg-zinc-900 overflow-hidden">
+                                        <CardContent className="p-4 flex items-center gap-4">
+                                            <div className="flex-shrink-0 w-16 h-16 rounded-2xl bg-primary/10 flex flex-col items-center justify-center text-primary">
+                                                <span className="text-xl font-black leading-none">{format(parseISO(apt.date), "dd")}</span>
+                                                <span className="text-[10px] font-bold uppercase">{format(parseISO(apt.date), "MMM", { locale: ptBR })}</span>
+                                            </div>
+                                            <div className="flex-1">
+                                                <h4 className="font-bold text-slate-900 dark:text-white">
+                                                    {apt.serviceName}
+                                                </h4>
+                                                <div className="flex items-center gap-3 mt-1 text-sm text-slate-500">
+                                                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {apt.time}</span>
+                                                    <span className="flex items-center gap-1"><User className="w-3 h-3" /> {apt.staffName}</span>
                                                 </div>
                                             </div>
-
-                                            <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-slate-100 dark:border-zinc-800">
-                                                <Button className="flex-1 h-12 rounded-xl text-base font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20" onClick={() => router.push(`/${tenantSlug}/book`)}>
-                                                    Reagendar
-                                                </Button>
-
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <Button variant="outline" className="flex-1 h-12 rounded-xl text-base font-bold border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:border-zinc-800 dark:hover:bg-red-900/20">
-                                                            Cancelar
-                                                        </Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent className="rounded-3xl p-6">
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle>Cancelar agendamento?</AlertDialogTitle>
-                                                            <AlertDialogDescription>
-                                                                Esta ação não pode ser desfeita. Se o cancelamento for feito com menos de 24h, uma taxa pode ser aplicada na próxima visita.
-                                                            </AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel className="rounded-xl">Voltar</AlertDialogCancel>
-                                                            <AlertDialogAction
-                                                                onClick={() => handleCancelAppointment(upcomingAppointments[0].id)}
-                                                                className="bg-red-500 hover:bg-red-600 rounded-xl"
-                                                            >
-                                                                Confirmar Cancelamento
-                                                            </AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
-                                            </div>
+                                            <Badge variant="outline" className="border-emerald-200 text-emerald-600 bg-emerald-50 text-[10px] font-bold uppercase px-3 py-1">
+                                                Confirmado
+                                            </Badge>
                                         </CardContent>
                                     </Card>
-                                </motion.div>
+                                ))
                             ) : (
-                                <Card className="border-none shadow-xl bg-gradient-to-r from-primary to-purple-600 text-white overflow-hidden rounded-[2rem] p-8 md:p-12 text-center relative">
-                                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 blur-[100px] rounded-full mix-blend-overlay pointer-events-none" />
-                                    <div className="relative z-10 space-y-6">
-                                        <h3 className="text-3xl font-black leading-tight">Hora de cuidar de você!</h3>
-                                        <p className="text-white/80 max-w-md mx-auto text-lg">
-                                            Nenhum agendamento futuro. Que tal marcar aquele momento especial essa semana?
-                                        </p>
-                                        <Button
-                                            size="lg"
-                                            onClick={() => router.push(`/${tenantSlug}/book`)}
-                                            className="h-14 px-8 rounded-2xl bg-white text-primary font-black shadow-2xl hover:bg-slate-50 hover:scale-105 transition-all text-lg"
-                                        >
-                                            Agendar Seu Momento
-                                        </Button>
-                                    </div>
-                                </Card>
-                            )}
-                        </AnimatePresence>
-
-                        {/* Content Tabs */}
-                        <Tabs defaultValue="appointments" className="w-full">
-                            <TabsList className="w-full bg-transparrent p-0 h-auto gap-4 mb-6 flex flex-wrap justify-start">
-                                <TabsTrigger
-                                    value="appointments"
-                                    className="rounded-full px-6 py-2.5 bg-white dark:bg-zinc-900 shadow-sm border border-slate-100 dark:border-zinc-800 data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:border-primary transition-all font-bold text-sm"
-                                >
-                                    Agendamentos
-                                </TabsTrigger>
-                                <TabsTrigger
-                                    value="history"
-                                    className="rounded-full px-6 py-2.5 bg-white dark:bg-zinc-900 shadow-sm border border-slate-100 dark:border-zinc-800 data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:border-primary transition-all font-bold text-sm"
-                                >
-                                    Histórico
-                                </TabsTrigger>
-                                <TabsTrigger
-                                    value="wallet"
-                                    className="rounded-full px-6 py-2.5 bg-white dark:bg-zinc-900 shadow-sm border border-slate-100 dark:border-zinc-800 data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:border-primary transition-all font-bold text-sm"
-                                >
-                                    Carteira
-                                </TabsTrigger>
-                            </TabsList>
-
-                            <TabsContent value="appointments" className="space-y-4 focus:outline-none">
-                                {upcomingAppointments.length > 0 ? (
-                                    upcomingAppointments.map(apt => (
-                                        <Card key={apt.id} className="border-none shadow-sm hover:shadow-md transition-shadow bg-white dark:bg-zinc-900 overflow-hidden">
-                                            <CardContent className="p-4 flex items-center gap-4">
-                                                <div className="flex-shrink-0 w-16 h-16 rounded-2xl bg-primary/10 flex flex-col items-center justify-center text-primary">
-                                                    <span className="text-xl font-black leading-none">{format(parseISO(apt.date), "dd")}</span>
-                                                    <span className="text-[10px] font-bold uppercase">{format(parseISO(apt.date), "MMM", { locale: ptBR })}</span>
-                                                </div>
-                                                <div className="flex-1">
-                                                    <h4 className="font-bold text-slate-900 dark:text-white">
-                                                        {apt.serviceName}
-                                                    </h4>
-                                                    <div className="flex items-center gap-3 mt-1 text-sm text-slate-500">
-                                                        <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {apt.time}</span>
-                                                        <span className="flex items-center gap-1"><User className="w-3 h-3" /> {apt.staffName}</span>
-                                                    </div>
-                                                </div>
-                                                <Badge variant="outline" className="border-emerald-200 text-emerald-600 bg-emerald-50 text-[10px] font-bold uppercase px-3 py-1">
-                                                    Confirmado
-                                                </Badge>
-                                            </CardContent>
-                                        </Card>
-                                    ))
-                                ) : (
-                                    <div className="text-center py-12 text-slate-400">
-                                        <Calendar className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                                        <p>Nenhum outro agendamento futuro.</p>
-                                    </div>
-                                )}
-                            </TabsContent>
-
-                            <TabsContent value="history" className="space-y-4 focus:outline-none">
-                                {pastAppointments.length > 0 ? (
-                                    pastAppointments.map(apt => (
-                                        <div key={apt.id} className="flex items-center justify-between p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center text-slate-400">
-                                                    {apt.status === 'completed' ? <ShieldCheck className="w-5 h-5 text-emerald-500" /> : <Trash2 className="w-5 h-5 text-red-400" />}
-                                                </div>
-                                                <div>
-                                                    <h4 className="font-bold text-sm text-slate-900 dark:text-white line-through opacity-60">
-                                                        {services.find(s => s.id === apt.serviceId)?.name || "Serviço"}
-                                                    </h4>
-                                                    <p className="text-xs text-slate-400">
-                                                        {format(parseISO(apt.date), "dd/MM/yyyy")} • R$ {services.find(s => s.id === apt.serviceId)?.price}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <Badge variant="secondary" className="text-[10px] uppercase font-bold text-slate-500 bg-slate-100 dark:bg-zinc-800">
-                                                {apt.status === 'completed' ? 'Concluído' : 'Cancelado'}
-                                            </Badge>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="text-center py-12 text-slate-400">
-                                        <p>Histórico vazio.</p>
-                                    </div>
-                                )}
-                            </TabsContent>
-
-                            <TabsContent value="wallet" className="focus:outline-none">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <Card className="p-6 bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-none shadow-lg">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <CreditCard className="w-6 h-6 text-white/80" />
-                                            <span className="text-xs font-bold bg-white/20 px-2 py-1 rounded-lg">Cashback</span>
-                                        </div>
-                                        <p className="text-3xl font-black mt-2">R$ 0,00</p>
-                                        <p className="text-xs text-indigo-100 mt-1">Saldo disponível para uso</p>
-                                    </Card>
-                                    <Card className="p-6 bg-white dark:bg-zinc-900 border-dashed border-2 border-slate-200 dark:border-zinc-800 shadow-none flex flex-col justify-center items-center text-center">
-                                        <Gift className="w-8 h-8 text-slate-300 mb-2" />
-                                        <p className="font-bold text-slate-900 dark:text-white">Adicionar Voucher</p>
-                                        <p className="text-xs text-slate-400 mb-3">Tem um código promocional?</p>
-                                        <Button size="sm" variant="secondary" className="rounded-full text-xs font-bold" onClick={() => alert("Funcionalidade de vouchers em breve!")}>
-                                            Inserir Código
-                                        </Button>
-                                    </Card>
+                                <div className="text-center py-12 text-slate-400">
+                                    <Calendar className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                                    <p>Nenhum outro agendamento futuro.</p>
                                 </div>
-                            </TabsContent>
-                        </Tabs>
+                            )}
+                        </TabsContent>
 
-                    </div>
-                </main>
+                        <TabsContent value="history" className="space-y-4 focus:outline-none">
+                            {pastAppointments.length > 0 ? (
+                                pastAppointments.map(apt => (
+                                    <div key={apt.id} className="flex items-center justify-between p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center text-slate-400">
+                                                {apt.status === 'completed' ? <ShieldCheck className="w-5 h-5 text-emerald-500" /> : <Trash2 className="w-5 h-5 text-red-400" />}
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-sm text-slate-900 dark:text-white line-through opacity-60">
+                                                    {services.find(s => s.id === apt.serviceId)?.name || "Serviço"}
+                                                </h4>
+                                                <p className="text-xs text-slate-400">
+                                                    {format(parseISO(apt.date), "dd/MM/yyyy")} • R$ {services.find(s => s.id === apt.serviceId)?.price}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <Badge variant="secondary" className="text-[10px] uppercase font-bold text-slate-500 bg-slate-100 dark:bg-zinc-800">
+                                            {apt.status === 'completed' ? 'Concluído' : 'Cancelado'}
+                                        </Badge>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-center py-12 text-slate-400">
+                                    <p>Histórico vazio.</p>
+                                </div>
+                            )}
+                        </TabsContent>
 
-                <FloatingWhatsApp phone={tenant.whatsapp} tenantName={tenant.name} />
-            </div>
-        )
-    }
+                        <TabsContent value="wallet" className="focus:outline-none">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <Card className="p-6 bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-none shadow-lg">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <CreditCard className="w-6 h-6 text-white/80" />
+                                        <span className="text-xs font-bold bg-white/20 px-2 py-1 rounded-lg">Cashback</span>
+                                    </div>
+                                    <p className="text-3xl font-black mt-2">R$ 0,00</p>
+                                    <p className="text-xs text-indigo-100 mt-1">Saldo disponível para uso</p>
+                                </Card>
+                                <Card className="p-6 bg-white dark:bg-zinc-900 border-dashed border-2 border-slate-200 dark:border-zinc-800 shadow-none flex flex-col justify-center items-center text-center">
+                                    <Gift className="w-8 h-8 text-slate-300 mb-2" />
+                                    <p className="font-bold text-slate-900 dark:text-white">Adicionar Voucher</p>
+                                    <p className="text-xs text-slate-400 mb-3">Tem um código promocional?</p>
+                                    <Button size="sm" variant="secondary" className="rounded-full text-xs font-bold" onClick={() => alert("Funcionalidade de vouchers em breve!")}>
+                                        Inserir Código
+                                    </Button>
+                                </Card>
+                            </div>
+                        </TabsContent>
+                    </Tabs>
+
+                </div>
+            </main>
+
+            <FloatingWhatsApp phone={tenant.whatsapp} tenantName={tenant.name} />
+        </div>
+    )
+}
