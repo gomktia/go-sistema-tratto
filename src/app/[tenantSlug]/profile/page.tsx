@@ -427,7 +427,7 @@ export default function CustomerProfilePage() {
                                                 </h4>
                                                 <div className="flex items-center gap-3 mt-1 text-sm text-slate-500">
                                                     <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {apt.time}</span>
-                                                    <span className="flex items-center gap-1"><User className="w-3 h-3" /> {apt.professionalId || "Profissional"}</span>
+                                                    <span className="flex items-center gap-1"><User className="w-3 h-3" /> {apt.staffId || "Profissional"}</span>
                                                 </div>
                                             </div>
                                             <Badge variant="outline" className="border-emerald-200 text-emerald-600 bg-emerald-50 text-[10px] font-bold uppercase px-3 py-1">
