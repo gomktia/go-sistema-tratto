@@ -30,7 +30,7 @@ const getInitialTenantId = () => {
     return localStorage.getItem('currentTenantId') || fallbackId
 }
 
-export function TenantProvider({ children }: { children: ReactNode }) {
+export function TenantProvider({ children, forcedSlug }: { children: ReactNode, forcedSlug?: string }) {
     const { user, isSuperAdmin } = useAuth()
     const [tenantId, setTenantId] = useState<string>(() => getInitialTenantId())
     const [allTenants, setAllTenants] = useState<Tenant[]>(mockTenants)
@@ -81,8 +81,18 @@ export function TenantProvider({ children }: { children: ReactNode }) {
                 if (mapped.length > 0) {
                     setAllTenants(mapped)
 
+                    // Priority 1: Force by URL Slug (Public Routes)
+                    if (forcedSlug) {
+                        const target = mapped.find(t => t.slug === forcedSlug)
+                        if (target && target.id !== tenantId) {
+                            setTenantId(target.id)
+                            return // Done
+                        }
+                    }
+
+                    // Priority 2: Keep current selection if valid
                     const hasCurrent = mapped.some((tenant) => tenant.id === tenantId)
-                    if (!hasCurrent) {
+                    if (!hasCurrent && !forcedSlug) {
                         const fallback = mapped[0]
                         if (fallback) {
                             setTenantId(fallback.id)
@@ -100,7 +110,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         return () => {
             isMounted = false
         }
-    }, [tenantId])
+    }, [tenantId, forcedSlug])
 
     const currentTenant = useMemo<Tenant>(() => {
         const tenantList = allTenants.length > 0 ? allTenants : mockTenants
