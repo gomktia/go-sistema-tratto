@@ -248,7 +248,7 @@ export default function CustomerProfilePage() {
                         <CardContent className="pt-20 px-6 pb-8 flex flex-col items-center text-center relative z-10">
                             <div className="relative mb-4">
                                 <Avatar className="w-24 h-24 border-4 border-white dark:border-zinc-900 shadow-xl cursor-pointer hover:opacity-90 transition-opacity" onClick={() => avatarInputRef.current?.click()}>
-                                    <AvatarImage src={avatarPreview} objectFit="cover" />
+                                    <AvatarImage src={avatarPreview} className="object-cover" />
                                     <AvatarFallback className="text-2xl font-black bg-slate-100 dark:bg-zinc-800 text-slate-400">
                                         {getInitials(customer.name)}
                                     </AvatarFallback>
