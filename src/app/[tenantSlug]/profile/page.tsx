@@ -50,6 +50,7 @@ import { mockCustomers, type Customer } from "@/mocks/customers"
 import { combos } from "@/mocks/combos"
 import { cn, getInitials } from "@/lib/utils"
 import { supabase } from "@/lib/supabase"
+import { useTenant } from "@/contexts/tenant-context"
 
 export default function CustomerProfilePage() {
     const params = useParams()
@@ -77,58 +78,108 @@ export default function CustomerProfilePage() {
         }
     }, [searchParams, tenantSlug, router])
 
-    // --- Data Fetching & Memos ---
-    const tenant = useMemo(() => {
-        return tenants.find(t => t.slug === tenantSlug) || tenants[0]
-    }, [tenantSlug])
+    // --- Data Fetching ---
+    // 1. Get Tenant Real
+    const { currentTenant, allTenants } = useTenant()
 
-    const customer = useMemo<Customer | null>(() => {
-        if (!customerEmail) return null
-        const existing = mockCustomers.find(c => c.email === customerEmail)
-        if (existing) return existing
-        return {
-            id: `generated-${customerEmail}`,
-            tenantId: tenant.id,
-            name: customerEmail.split('@')[0],
-            email: customerEmail,
-            phone: "",
-            cpf: "",
-            points: 150,
-            status: 'active',
-            lastVisit: new Date().toISOString(),
-            totalSpent: 0,
-            avatar: "",
+    // Fallback if context is not yet loaded or if we are verifying slug
+    const tenant = useMemo(() => {
+        return allTenants.find(t => t.slug === tenantSlug) || currentTenant
+    }, [tenantSlug, allTenants, currentTenant])
+
+    // 2. State for Real Customer & Appointments
+    const [customer, setCustomer] = useState<Customer | null>(null)
+    const [realAppointments, setRealAppointments] = useState<any[]>([])
+
+    // 3. Fetch Customer Details from Supabase
+    useEffect(() => {
+        // Only fetch if we have an email and a resolved tenant ID
+        if (!customerEmail || !tenant.id) return
+
+        const fetchCustomerData = async () => {
+            setIsLoading(true)
+            try {
+                // Fetch customer by email & tenant
+                // Note: We use .ilike for case-insensitive email match just in case
+                const { data: customerData, error } = await supabase
+                    .from('customers')
+                    .select('*')
+                    .eq('tenant_id', tenant.id)
+                    .ilike('email', customerEmail)
+                    .maybeSingle()
+
+                if (customerData) {
+                    setCustomer({
+                        id: customerData.id,
+                        tenantId: customerData.tenant_id,
+                        name: customerData.full_name,
+                        email: customerData.email,
+                        phone: customerData.phone || "",
+                        cpf: customerData.document || "",
+                        points: customerData.loyalty_points || 0,
+                        status: customerData.status || 'active',
+                        lastVisit: customerData.last_visit_at || new Date().toISOString(),
+                        totalSpent: customerData.total_spent || 0,
+                        avatar: "", // TODO: Add avatar_url to customers table or storage
+                    })
+
+                    // Fetch Appointments for this customer
+                    const { data: apts, error: aptError } = await supabase
+                        .from('appointments')
+                        .select('*, services(name, price)')
+                        .eq('customer_id', customerData.id)
+                        .order('start_at', { ascending: false })
+
+                    if (apts) {
+                        const formattedApts = apts.map(a => ({
+                            id: a.id,
+                            tenantId: a.tenant_id,
+                            customer: customerData.full_name,
+                            serviceId: a.service_id,
+                            serviceName: a.services?.name,
+                            staffId: a.employee_id,
+                            date: a.start_at,
+                            time: format(parseISO(a.start_at), "HH:mm"),
+                            startAt: a.start_at,
+                            status: a.status,
+                            duration: a.duration_minutes || 30,
+                            price: a.services?.price || 0
+                        }))
+                        setRealAppointments(formattedApts)
+                    }
+                } else {
+                    console.warn("Cliente não encontrado no banco para o email:", customerEmail)
+                    // Keep customer null to show loading or empty state, or handle creation flow
+                }
+
+            } catch (err) {
+                console.error("Erro ao carregar perfil:", err)
+            } finally {
+                setIsLoading(false)
+            }
         }
+
+        fetchCustomerData()
     }, [customerEmail, tenant.id])
 
-    const allAppointments = useMemo(() => {
-        if (!customerEmail) return []
-        return appointments.filter(apt => apt.customer.toLowerCase().includes(customerEmail.split('@')[0].toLowerCase()))
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    }, [customerEmail])
+    // 4. Derived State for UI (Upcoming vs History)
+    const upcomingAppointments = realAppointments.filter(a => {
+        const date = parseISO(a.startAt)
+        return isAfter(date, new Date()) && a.status !== 'cancelled'
+    }).reverse()
 
-    const upcomingAppointments = useMemo(() => {
-        return allAppointments.filter(apt => {
-            const date = parseISO(apt.date)
-            return isAfter(date, new Date()) && apt.status !== 'cancelled'
-        }).reverse() // Closest first
-    }, [allAppointments])
-
-    const pastAppointments = useMemo(() => {
-        return allAppointments.filter(apt => {
-            const date = parseISO(apt.date)
-            return !isAfter(date, new Date()) || apt.status === 'completed' || apt.status === 'cancelled'
-        })
-    }, [allAppointments])
+    const pastAppointments = realAppointments.filter(a => {
+        const date = parseISO(a.startAt)
+        return !isAfter(date, new Date()) || a.status === 'cancelled' || a.status === 'completed'
+    })
 
     const totalSpent = useMemo(() => {
-        return allAppointments
-            .filter(apt => apt.status === 'completed')
-            .reduce((sum, apt) => {
-                const serviceInfo = services.find(service => service.id === apt.serviceId)
-                return sum + (serviceInfo?.price ?? 0)
+        return realAppointments
+            .filter((apt: any) => apt.status === 'completed')
+            .reduce((sum: number, apt: any) => {
+                return sum + (apt.price || 0)
             }, 0)
-    }, [allAppointments])
+    }, [realAppointments])
 
     // --- Actions ---
     const [avatarPreview, setAvatarPreview] = useState<string>(customer?.avatar || "")
