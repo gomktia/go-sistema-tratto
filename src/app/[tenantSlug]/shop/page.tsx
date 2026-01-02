@@ -1,6 +1,8 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { toast } from "sonner"
+
+import { useState, useMemo, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import {
@@ -76,6 +78,23 @@ export default function ShopPage() {
     const [showCheckout, setShowCheckout] = useState(false)
     const [purchaseSuccess, setPurchaseSuccess] = useState(false)
     const [activeCombo, setActiveCombo] = useState<string | null>(null)
+    const [customer, setCustomer] = useState<{ name: string, email: string } | null>(null)
+
+    // Check for logged user
+    useEffect(() => {
+        const email = sessionStorage.getItem('customerEmail')
+        if (email) {
+            // In a real app we might fetch the name, for now let's try to get from session or default
+            // But better, let's fetch quickly
+            import("@/lib/supabase/client").then(({ getSupabaseBrowserClient }) => {
+                const supabase = getSupabaseBrowserClient()
+                supabase.from('customers').select('full_name, email').eq('email', email).maybeSingle()
+                    .then(({ data }) => {
+                        if (data) setCustomer({ name: data.full_name, email: data.email })
+                    })
+            })
+        }
+    }, [])
 
     const categories = useMemo(() => {
         const unique = new Set<string>()
@@ -135,6 +154,11 @@ export default function ShopPage() {
     const handlePurchase = () => {
         setPurchaseSuccess(true)
         setCart([])
+        if (customer) {
+            toast.success(`Pedido confirmado para ${customer.name}!`)
+        } else {
+            toast.success("Pedido realizado com sucesso!")
+        }
     }
 
     const containerVariants = {
@@ -171,14 +195,16 @@ export default function ShopPage() {
                         </div>
                     </div>
                     <div className="space-y-2">
-                        <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">Pedido Realizado!</h1>
+                        <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">
+                            {customer ? `Pedido Confirmado, ${customer.name.split(' ')[0]}!` : "Pedido Realizado!"}
+                        </h1>
                         <p className="text-slate-500 dark:text-zinc-400 font-medium">Seus produtos estarão prontos para retirada no salão.</p>
                     </div>
                     <Button
-                        onClick={() => router.push(`/${tenantSlug}/book`)}
+                        onClick={() => router.push(`/${tenantSlug}/profile`)} // To profile!
                         className="w-full h-16 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-lg"
                     >
-                        Voltar ao Início
+                        Ver detalhes no Perfil
                     </Button>
                 </motion.div>
             </div>
@@ -198,8 +224,12 @@ export default function ShopPage() {
                             {tenantBadge}
                         </div>
                         <div>
-                            <h1 className="text-lg font-black tracking-tight text-slate-900 dark:text-white">Shop • {tenant.name}</h1>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-0.5">Produtos Exclusivos</p>
+                            <h1 className="text-lg font-black tracking-tight text-slate-900 dark:text-white">
+                                {customer ? `Olá, ${customer.name.split(' ')[0]}` : `Shop • ${tenant.name}`}
+                            </h1>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-0.5">
+                                {customer ? "Seus produtos exclusivos" : "Produtos Exclusivos"}
+                            </p>
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
@@ -394,7 +424,7 @@ export default function ShopPage() {
                                         "rounded-full h-10 px-6 font-bold text-xs uppercase tracking-widest transition-all",
                                         selectedCategory === cat
                                             ? "bg-primary text-white shadow-lg shadow-primary/20"
-                                            : "border-slate-200 dark:border-zinc-800 text-slate-500"
+                                            : "border-slate-200 dark:border-zinc-800 text-slate-500 hover:text-slate-900 dark:hover:text-white"
                                     )}
                                 >
                                     {cat}

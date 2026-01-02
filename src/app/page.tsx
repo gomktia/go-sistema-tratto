@@ -541,7 +541,7 @@ export default function LandingPage() {
               Cases
             </a>
             <Link href="/login">
-              <Button variant="ghost" size="sm" className="text-sm font-medium">
+              <Button variant="ghost" size="sm" className="text-sm font-medium text-gray-900 hover:bg-gray-100">
                 Entrar
               </Button>
             </Link>
