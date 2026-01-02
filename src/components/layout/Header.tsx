@@ -18,7 +18,24 @@ import Link from "next/link"
 export function Header() {
     const pathname = usePathname()
     const pathSegments = pathname.split('/').filter(Boolean)
-    const pageTitle = pathSegments[0]?.charAt(0).toUpperCase() + pathSegments[0]?.slice(1) || "Dashboard"
+    const pageTitleMap: Record<string, string> = {
+        dashboard: "Visão Geral",
+        agenda: "Agenda",
+        clientes: "Clientes",
+        servicos: "Serviços",
+        galeria: "Galeria",
+        funcionarios: "Funcionários",
+        financeiro: "Financeiro",
+        estoque: "Estoque",
+        crm: "Marketing & CRM",
+        profissional: "Área do Profissional",
+        perfil: "Perfil",
+        configuracoes: "Configurações",
+        integracoes: "Integrações"
+    }
+
+    const currentPath = pathSegments[0] || "dashboard"
+    const pageTitle = pageTitleMap[currentPath] || currentPath.charAt(0).toUpperCase() + currentPath.slice(1)
 
     const { currentTenant, setCurrentTenant, allTenants } = useTenant()
     const { isSuperAdmin } = useAuth()
@@ -130,12 +147,12 @@ export function Header() {
                                                             !n.read ? "bg-primary/5 hover:bg-primary/10" : "hover:bg-slate-50 dark:hover:bg-zinc-800/50"
                                                         )}
                                                     >
-                                                    <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-zinc-800 flex items-center justify-center">
-                                                        {(() => {
-                                                            const Icon = getNotificationIcon(n.type)
-                                                            return <Icon className="w-5 h-5 text-primary" />
-                                                        })()}
-                                                    </div>
+                                                        <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-zinc-800 flex items-center justify-center">
+                                                            {(() => {
+                                                                const Icon = getNotificationIcon(n.type)
+                                                                return <Icon className="w-5 h-5 text-primary" />
+                                                            })()}
+                                                        </div>
                                                         <div className="flex-1 space-y-1">
                                                             <div className="flex items-center justify-between">
                                                                 <p className="font-bold text-sm text-slate-900 dark:text-white leading-none">{n.title}</p>
@@ -159,19 +176,19 @@ export function Header() {
 
                 {/* Tenant & User Profile */}
                 <div className="relative">
-                <button
-                    onClick={() => isSuperAdmin && setIsTenantMenuOpen(!isTenantMenuOpen)}
-                    className="flex items-center gap-3 p-1 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 hover:shadow-md transition-all group"
-                >
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white text-xs font-black shadow-lg">
-                        {currentTenant.name.substring(0, 2).toUpperCase()}
-                    </div>
-                    <div className="text-left hidden lg:block pr-2">
-                        <p className="text-xs font-black text-slate-900 dark:text-white leading-none mb-1">{currentTenant.name}</p>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{isSuperAdmin ? 'Super Admin' : 'Administrador'}</p>
-                    </div>
-                    {isSuperAdmin && <ChevronDown className="w-4 h-4 text-slate-400 mr-2 group-hover:text-primary transition-colors" />}
-                </button>
+                    <button
+                        onClick={() => isSuperAdmin && setIsTenantMenuOpen(!isTenantMenuOpen)}
+                        className="flex items-center gap-3 p-1 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 hover:shadow-md transition-all group"
+                    >
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white text-xs font-black shadow-lg">
+                            {currentTenant.name.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div className="text-left hidden lg:block pr-2">
+                            <p className="text-xs font-black text-slate-900 dark:text-white leading-none mb-1">{currentTenant.name}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{isSuperAdmin ? 'Super Admin' : 'Administrador'}</p>
+                        </div>
+                        {isSuperAdmin && <ChevronDown className="w-4 h-4 text-slate-400 mr-2 group-hover:text-primary transition-colors" />}
+                    </button>
 
                     <AnimatePresence>
                         {isSuperAdmin && isTenantMenuOpen && (

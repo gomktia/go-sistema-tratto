@@ -27,16 +27,16 @@ import {
 import { Button } from "@/components/ui/button"
 
 const superAdminMenuItems = [
-    { icon: LayoutDashboard, label: "SA Dashboard", href: "/super-admin/dashboard" },
+    { icon: LayoutDashboard, label: "Visão Geral", href: "/super-admin/dashboard" },
     { icon: Shield, label: "Administradores", href: "/super-admin/administradores" },
     { icon: Building2, label: "Empresas", href: "/super-admin/empresas" },
     { icon: Package, label: "Planos", href: "/super-admin/planos" },
-    { icon: CreditCard, label: "SA Financeiro", href: "/super-admin/financeiro" },
+    { icon: CreditCard, label: "Financeiro (SA)", href: "/super-admin/financeiro" },
     { icon: FileText, label: "Cobranças", href: "/super-admin/cobrancas" },
     { icon: LifeBuoy, label: "Suporte", href: "/super-admin/suporte" },
     { icon: Zap, label: "Playbooks", href: "/super-admin/playbooks" },
     { icon: ShieldCheck, label: "Auditoria", href: "/super-admin/auditoria" },
-    { icon: Settings, label: "SA Configs", href: "/super-admin/configuracoes" },
+    { icon: Settings, label: "Configurações (SA)", href: "/super-admin/configuracoes" },
 ]
 
 const salonModules = [

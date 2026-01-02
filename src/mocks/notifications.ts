@@ -39,7 +39,7 @@ export const notifications: Notification[] = [
         id: '4',
         type: 'system',
         title: 'Atualização do Sistema',
-        message: 'Nova funcionalidade de buffer times disponível',
+        message: 'Nova funcionalidade de intervalos automáticos disponível',
         read: true,
         createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
     }

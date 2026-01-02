@@ -132,7 +132,7 @@ export default function DashboardPage() {
             {/* Header */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                 <div>
-                    <h2 className="text-5xl font-black tracking-tight text-gray-900 dark:text-white">Dashboard</h2>
+                    <h2 className="text-5xl font-black tracking-tight text-gray-900 dark:text-white">Visão Geral</h2>
                     <p className="text-gray-600 dark:text-zinc-400 font-medium mt-1">Insights e performance da {currentTenant.name}.</p>
                 </div>
 

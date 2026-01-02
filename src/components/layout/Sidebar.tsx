@@ -28,7 +28,7 @@ const menuSections = [
     {
         title: "Principal",
         items: [
-            { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
+            { icon: LayoutDashboard, label: "Visão Geral", href: "/dashboard" },
             { icon: Calendar, label: "Agenda", href: "/agenda" },
         ]
     },
