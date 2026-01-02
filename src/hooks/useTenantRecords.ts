@@ -417,8 +417,8 @@ const mapRowToStaffAvailability = (row: StaffAvailabilityRow): StaffAvailability
     tenantId: row.tenant_id,
     employeeId: row.employee_id,
     weekday: row.weekday,
-    start_time: row.start_time,
-    end_time: row.end_time,
+    startTime: row.start_time,
+    endTime: row.end_time,
 })
 
 const mapMockAvailability = (employee: typeof employeeMocks[number]): StaffAvailabilityRecord[] => {
