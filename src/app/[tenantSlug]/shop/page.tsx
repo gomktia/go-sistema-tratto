@@ -88,7 +88,7 @@ export default function ShopPage() {
             // But better, let's fetch quickly
             import("@/lib/supabase/client").then(({ getSupabaseBrowserClient }) => {
                 const supabase = getSupabaseBrowserClient()
-                supabase.from('customers').select('full_name, email').eq('email', email).maybeSingle()
+                supabase?.from('customers').select('full_name, email').eq('email', email).maybeSingle()
                     .then(({ data }) => {
                         if (data) setCustomer({ name: data.full_name, email: data.email })
                     })
