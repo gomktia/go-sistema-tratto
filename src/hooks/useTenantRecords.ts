@@ -319,6 +319,8 @@ export function useTenantAvailability(tenantId?: string) {
     return { data, loading }
 }
 
+export const useTenantStaffAvailability = useTenantAvailability;
+
 // --------------------------------------------------------------------------
 // EXTRA HOOKS (Marketing, etc.)
 // --------------------------------------------------------------------------
@@ -421,5 +423,25 @@ export function useTenantSettings(tenantId?: string) {
         address: "Rua Exemplo, 123"
     })
     const [loading, setLoading] = useState(false)
+    return { data, loading }
+}
+
+export function useTenantTestimonials(tenantId?: string) {
+    const fallback: any[] = []
+    const [data, setData] = useState<any[]>(fallback)
+    const [loading, setLoading] = useState<boolean>(false)
+    return { data, loading }
+}
+
+export function useTenantBySlug(slug: string) {
+    const fallback = useMemo(() => {
+        return tenantMocks.find(t => t.slug === slug) || null
+    }, [slug])
+
+    const [data, setData] = useState<MockTenant | null>(fallback)
+    const [loading, setLoading] = useState<boolean>(false)
+
+    // TODO: Supabase implementation for getting tenant by slug
+
     return { data, loading }
 }
