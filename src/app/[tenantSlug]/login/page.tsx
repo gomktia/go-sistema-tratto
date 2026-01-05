@@ -97,11 +97,14 @@ export default function CustomerLoginPage() {
                 let userEmail = identifier
 
                 if (result.userType === 'customer') {
-                    userName = result.data.customer?.name || 'Cliente'
-                    userEmail = result.data.email || identifier
+                    // result.data can be the customer record itself or nested depending on query
+                    const customerData = result.data as any
+                    userName = customerData.name || customerData.full_name || customerData.customer?.full_name || 'Cliente'
+                    userEmail = customerData.email || identifier
                 } else {
                     // Employee/Admin
-                    userName = result.data.full_name || 'Profissional'
+                    const empData = result.data as any
+                    userName = empData.full_name || empData.name || 'Profissional'
                 }
 
                 setDetectedUser({
@@ -144,7 +147,8 @@ export default function CustomerLoginPage() {
 
                 // For customers, store email securely
                 if (result.userType === 'customer' && result.userData) {
-                    const customerEmail = result.userData.email || identifier
+                    const userData = result.userData as any
+                    const customerEmail = userData.email || identifier
                     sessionStorage.setItem('customerEmail', customerEmail)
                 }
 
