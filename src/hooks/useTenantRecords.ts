@@ -362,48 +362,84 @@ export function useTenantCustomers(tenantId?: string) {
 
 export function useTenantGallery(tenantId?: string) {
     const fallback: GalleryImage[] = []
-    const [data, setData] = useState<GalleryImage[]>(fallback)
-    const [loading, setLoading] = useState<boolean>(false)
+    const [data] = useState<GalleryImage[]>(fallback)
+    const [loading] = useState<boolean>(false)
+    // Hook implementation placeholder using tenantId
+    useEffect(() => {
+        if (tenantId) { /* future impl */ }
+    }, [tenantId])
     return { data, loading }
 }
 
 export function useTenantHighlights(tenantId?: string) {
     const fallback: Highlight[] = []
-    const [data, setData] = useState<Highlight[]>(fallback)
-    const [loading, setLoading] = useState<boolean>(false)
+    const [data] = useState<Highlight[]>(fallback)
+    const [loading] = useState<boolean>(false)
+    // Hook implementation placeholder using tenantId
+    useEffect(() => {
+        if (tenantId) { /* future impl */ }
+    }, [tenantId])
     return { data, loading }
 }
 
 export function useTenantReviews(tenantId?: string) {
     const fallback: Review[] = []
-    const [data, setData] = useState<Review[]>(fallback)
-    const [loading, setLoading] = useState<boolean>(false)
+    const [data] = useState<Review[]>(fallback)
+    const [loading] = useState<boolean>(false)
+    // Hook implementation placeholder using tenantId
+    useEffect(() => {
+        if (tenantId) { /* future impl */ }
+    }, [tenantId])
     return { data, loading }
 }
 
 export function useTenantStories(tenantId?: string) {
     const fallback: Story[] = []
-    const [data, setData] = useState<Story[]>(fallback)
-    const [loading, setLoading] = useState<boolean>(false)
+    const [data] = useState<Story[]>(fallback)
+    const [loading] = useState<boolean>(false)
+    // Hook implementation placeholder using tenantId
+    useEffect(() => {
+        if (tenantId) { /* future impl */ }
+    }, [tenantId])
     return { data, loading }
 }
 
 export function useTenantSettings(tenantId?: string) {
     // Mock settings
-    const [data, setData] = useState({
+    const [data] = useState({
         name: "Salão Exemplo",
         primaryColor: "#000000",
         logoUrl: "",
         address: "Rua Exemplo, 123"
     })
-    const [loading, setLoading] = useState(false)
+    const [loading] = useState(false)
+    // Hook implementation placeholder using tenantId
+    useEffect(() => {
+        if (tenantId) { /* future impl */ }
+    }, [tenantId])
     return { data, loading }
 }
 
+interface Testimonial {
+    id: string;
+    tenantId: string;
+    text: string;
+    isApproved: boolean;
+    customerName: string;
+    rating: number;
+    testimonial: string;
+    imageUrl?: string;
+    customerRole?: string;
+}
+
 export function useTenantTestimonials(tenantId?: string) {
-    const fallback: any[] = []
-    const [data, setData] = useState<any[]>(fallback)
-    const [loading, setLoading] = useState<boolean>(false)
+    const fallback: Testimonial[] = []
+    const [data] = useState<Testimonial[]>(fallback)
+    const [loading] = useState<boolean>(false)
+    // Hook implementation placeholder using tenantId
+    useEffect(() => {
+        if (tenantId) { /* future impl */ }
+    }, [tenantId])
     return { data, loading }
 }
 
@@ -416,6 +452,8 @@ export function useTenantBySlug(slug: string) {
     const [loading, setLoading] = useState<boolean>(false)
 
     // TODO: Supabase implementation for getting tenant by slug
+    // Avoiding unused vars
+    const _placeholder = { setData, setLoading }
 
     return { data, loading }
 }

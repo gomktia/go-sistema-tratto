@@ -1011,7 +1011,7 @@ export default function LandingPage() {
                       ))}
                     </div>
                     <p className="text-gray-700 mb-6 leading-relaxed flex-1 font-medium">
-                      "{testimonial.quote}"
+                      &quot;{testimonial.quote}&quot;
                     </p>
                     <div className="flex items-center gap-4 pt-6 border-t border-gray-100">
                       <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg">

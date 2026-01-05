@@ -15,7 +15,7 @@ export type UserType = 'customer' | 'employee' | 'company_admin' | 'super_admin'
 export interface AuthResult {
   success: boolean
   userType: UserType | null
-  userData: any
+  userData: unknown
   redirectPath: string
   error?: string
 }
@@ -27,7 +27,7 @@ export async function checkCustomerAuth(
   identifier: string,
   password: string,
   tenantId: string
-): Promise<{ exists: boolean; data?: any; error?: string }> {
+): Promise<{ exists: boolean; data?: unknown; error?: string }> {
   try {
     // Normalize identifier (could be CPF or email)
     const isEmail = identifier.includes('@')
@@ -58,8 +58,9 @@ export async function checkCustomerAuth(
     }
 
     return { exists: false, error: 'Senha incorreta' }
-  } catch (error: any) {
-    return { exists: false, error: error.message }
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    return { exists: false, error: message }
   }
 }
 
@@ -70,7 +71,7 @@ export async function checkEmployeeAuth(
   email: string,
   password: string,
   tenantId: string
-): Promise<{ exists: boolean; data?: any; userType?: UserType; error?: string }> {
+): Promise<{ exists: boolean; data?: unknown; userType?: UserType; error?: string }> {
   try {
     // Attempt to sign in with Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
@@ -163,8 +164,9 @@ export async function checkEmployeeAuth(
     }
 
     return { exists: false, error: 'Tipo de usuário inválido' }
-  } catch (error: any) {
-    return { exists: false, error: error.message }
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    return { exists: false, error: message }
   }
 }
 
@@ -256,7 +258,7 @@ export async function intelligentLogin(
 export async function checkUserExists(
   identifier: string,
   tenantId: string
-): Promise<{ exists: boolean; userType?: UserType; data?: any }> {
+): Promise<{ exists: boolean; userType?: UserType; data?: unknown }> {
   const isEmail = identifier.includes('@')
 
   if (isEmail) {

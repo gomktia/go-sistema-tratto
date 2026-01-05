@@ -174,7 +174,7 @@ export default function TenantStorefrontPage() {
                                                         <Star key={i} className={`w-3 h-3 ${i < t.rating ? "fill-current" : "opacity-30"}`} />
                                                     ))}
                                                 </div>
-                                                <p className="text-gray-700 dark:text-gray-300 italic mb-2">"{t.testimonial}"</p>
+                                                <p className="text-gray-700 dark:text-gray-300 italic mb-2">&quot;{t.testimonial}&quot;</p>
                                                 <p className="text-xs font-bold text-gray-500 uppercase">{t.customerName}</p>
                                             </div>
                                         </div>

@@ -1758,7 +1758,7 @@ export default function BookingPage() {
                                                 ))}
                                             </div>
                                             <p className="text-sm text-slate-800 dark:text-zinc-300 italic leading-relaxed">
-                                                "{testimonial.testimonial}"
+                                                &quot;{testimonial.testimonial}&quot;
                                             </p>
                                             <div>
                                                 <p className="text-xs font-bold text-slate-900 dark:text-white">{testimonial.customerName}</p>
