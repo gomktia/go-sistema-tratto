@@ -1,11 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-<<<<<<< HEAD
 import { Plus, Search, Filter, MoreHorizontal, Mail, Phone, Calendar, Edit, Trash2, LayoutGrid, List as ListIcon, Wallet, Gift, AlertTriangle, Send, Activity, MessageSquare, PhoneCall, Sparkles, CheckSquare } from "lucide-react"
-=======
-import { Plus, Search, Filter, MoreHorizontal, Mail, Phone, Calendar, Edit, Trash2, LayoutGrid, List as ListIcon, Wallet, Gift, AlertTriangle, Send, Activity, MessageSquare, PhoneCall, Sparkles } from "lucide-react"
->>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
 import { cn } from "@/lib/utils"
 import { clients } from "@/mocks/data"
 import type { ClientRecord } from "@/types/crm"
@@ -16,11 +12,8 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Progress } from "@/components/ui/progress"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-<<<<<<< HEAD
 import { toast } from "sonner"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
-=======
->>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
 import {
     Table,
     TableBody,
@@ -33,165 +26,88 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { FormDialog } from "@/components/ui/form-dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { differenceInDays } from "date-fns"
 import { useTenantCustomers } from "@/hooks/useTenantRecords"
-<<<<<<< HEAD
 import { Checkbox } from "@/components/ui/checkbox"
-=======
->>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
 
 const mapMockClient = (client: typeof clients[number]): ClientRecord => ({
     id: client.id,
-    tenantId: client.tenantId,
+    tenantId: "tenant-1", // Default for mocks
     name: client.name,
     email: client.email,
     phone: client.phone,
+    status: client.status as "active" | "inactive" | "churned",
     lastVisit: client.lastVisit,
     totalSpent: client.totalSpent,
-    status: client.status === "inactive" || client.status === "churned" ? client.status : "active",
-    avatar: client.avatar ?? "",
+    avatar: client.avatar,
+    tags: ["VIP", "Recente"],
+    notes: "Cliente preferencial",
+    preferences: {
+        professionalId: "prof-1",
+        serviceId: "serv-1",
+        days: ["SEG", "QUA"],
+        times: ["morning"]
+    },
+    lgpdConsent: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
 })
 
-interface Segment {
-    id: string
-    label: string
-    description: string
-    filter: (client: ClientRecord) => boolean
+// Mapeamento de cor por status
+const getStatusColor = (status: string) => {
+    switch (status) {
+        case "active":
+            return "bg-emerald-500"
+        case "inactive":
+            return "bg-slate-300"
+        case "churned":
+            return "bg-rose-500"
+        default:
+            return "bg-slate-300"
+    }
 }
 
-const segments: Segment[] = [
-    {
-        id: "vip",
-        label: "VIPs",
-        description: "Ticket médio acima de R$ 1.000",
-        filter: (client) => client.totalSpent >= 1000
-    },
-    {
-        id: "recent",
-        label: "Recentes",
-        description: "Visitaram nos últimos 30 dias",
-        filter: (client) => differenceInDays(new Date(), new Date(client.lastVisit)) <= 30
-    },
-    {
-        id: "risk",
-        label: "Em risco",
-        description: "60+ dias sem visitar",
-        filter: (client) => differenceInDays(new Date(), new Date(client.lastVisit)) > 60
-    }
-]
+// Utilitário para gerar ID único (simulação)
+const generateClientId = () => Math.random().toString(36).substr(2, 9)
 
-const statusOptions = [
-    { id: "active", label: "Ativos" },
-    { id: "inactive", label: "Inativos" },
-    { id: "churned", label: "Churn" },
-]
-
-const spendingFilters = [
-    { id: "all", label: "Todos os tickets", range: null },
-    { id: "low", label: "Até R$ 200", range: [0, 200] },
-    { id: "medium", label: "R$ 200 - R$ 800", range: [200, 800] },
-    { id: "high", label: "Acima de R$ 800", range: [800, Infinity] },
-]
-
-const availableTags = [
-    { id: "VIP", label: "VIP" },
-    { id: "Recente", label: "Recentes" },
-    { id: "Reativar", label: "Reativar" },
-    { id: "Churn", label: "Churn" },
-]
-
-const savedFilters = [
-    {
-        id: "vip_reengage",
-        title: "VIP • Recompra",
-        description: "Ativos, ticket alto, últimos 30 dias",
-        status: ["active"],
-        spending: "high",
-        tags: ["VIP"],
-        segment: "recent"
-    },
-    {
-        id: "risk_campaign",
-        title: "Em risco",
-        description: "60+ dias sem visitar",
-        status: [],
-        spending: "all",
-        tags: ["Reativar"],
-        segment: "risk"
-    },
-    {
-        id: "churn_alert",
-        title: "Churn alert",
-        description: "Clientes perdidos para reativar",
-        status: ["churned"],
-        spending: "all",
-        tags: ["Churn"]
-    }
-]
-
-const upcomingEvents = [
-    { id: "birthday", title: "Aniversário • Juliana", date: "03 Jan", action: "Enviar mimo VIP", impact: "+85% retenção" },
-    { id: "loyalty", title: "Pontos expiram • Lucas", date: "Hoje", action: "Ativar campanha fidelidade", impact: "Ticket +R$120" },
-    { id: "risk", title: "90 dias sem visita • Carla", date: "Amanhã", action: "Oferecer combo glow", impact: "Recuperação 42%" },
-]
-
-const lifecycleStages = [
-    { id: "acquisition", label: "Aquisição digital", description: "Novos cadastros no mês", value: 48, delta: "+12%" },
-    { id: "activation", label: "Conversão para 1º serviço", description: "Clientes que efetivaram atendimento", value: 64, delta: "+5%" },
-    { id: "retention", label: "Base fiel", description: "Clientes que retornam em 45 dias", value: 58, delta: "+3%" },
-]
-
-const interactionSignals = [
-    { id: "whatsapp-confirm", client: "Bruna Andrade", detail: "Confirmou horário via WhatsApp", time: "09:12", status: "Confirmado", channel: "WhatsApp", tone: "emerald", icon: MessageSquare },
-    { id: "pix-reminder", client: "Leo Costa", detail: "Abriu lembrete Pix, aguardando confirmação", time: "10:05", status: "Aguardando", channel: "SMS", tone: "amber", icon: Activity },
-    { id: "call-upsell", client: "Paula Freitas", detail: "Aceitou upgrade tratamento capilar", time: "11:40", status: "Upgrade", channel: "Ligação", tone: "blue", icon: PhoneCall },
-]
-
-const automationRecommendations = [
-    { id: "post-service", title: "Follow-up pós-serviço", description: "Envia pesquisa + oferta 2h após atendimento.", impact: "+18% recompra" },
-    { id: "winback", title: "Winback 60 dias", description: "Fluxo automático com cupom limitado.", impact: "Recuperação 32%" },
-    { id: "vip-survey", title: "Pesquisa VIP trimestral", description: "Capta feedback de clientes de alto ticket.", impact: "+25 NPS" },
-]
-
-const toneClassMap: Record<string, string> = {
-    emerald: "bg-emerald-500/10 text-emerald-600",
-    amber: "bg-amber-500/10 text-amber-600",
-    blue: "bg-blue-500/10 text-blue-600",
-}
-
-export default function ClientsPage() {
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
+export default function ClientesPage() {
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
     const [searchTerm, setSearchTerm] = useState("")
-    const [selectedSegment, setSelectedSegment] = useState("all")
-    const [statusFilter, setStatusFilter] = useState<string[]>([])
-    const [spendingFilter, setSpendingFilter] = useState("all")
-    const [tagFilter, setTagFilter] = useState<string[]>([])
-    const [showNewClient, setShowNewClient] = useState(false)
-    const [showEditClient, setShowEditClient] = useState(false)
-    const [showConfirm, setShowConfirm] = useState(false)
-    const [selectedClient, setSelectedClient] = useState<ClientRecord | null>(null)
-    const [clientsList, setClientsList] = useState<ClientRecord[]>(clients.map(mapMockClient))
+
+    // -------------------------------------------------------------------------
+    // STATE & DATA
+    // -------------------------------------------------------------------------
     const { currentTenant } = useTenant()
-<<<<<<< HEAD
     const { data: tenantCustomers, refetch } = useTenantCustomers(currentTenant.id)
-=======
-    const { data: tenantCustomers } = useTenantCustomers(currentTenant.id)
->>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
+    const [clientsList, setClientsList] = useState<ClientRecord[]>([])
+
+    // Sync local state with fetched data
+    useEffect(() => {
+        setClientsList(tenantCustomers)
+    }, [tenantCustomers])
+
     const [activeSavedFilter, setActiveSavedFilter] = useState<string | null>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [importMessage, setImportMessage] = useState("")
 
-<<<<<<< HEAD
     const [selectedClients, setSelectedClients] = useState<string[]>([])
 
-=======
->>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
     const [formData, setFormData] = useState({
         name: "",
         email: "",
@@ -199,67 +115,57 @@ export default function ClientsPage() {
         cpf: ""
     })
 
-    useEffect(() => {
-<<<<<<< HEAD
-        setClientsList(tenantCustomers)
-=======
-        if (tenantCustomers.length > 0) {
-            setClientsList(tenantCustomers)
-        }
->>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
-    }, [tenantCustomers])
+    const [showNewClient, setShowNewClient] = useState(false)
+    const [showEditClient, setShowEditClient] = useState(false)
+    const [showConfirm, setShowConfirm] = useState(false)
+    const [selectedClient, setSelectedClient] = useState<ClientRecord | null>(null)
 
-    // Filter clients by current tenant
-    const tenantClients = clientsList.filter(client => client.tenantId === currentTenant.id)
+    // -------------------------------------------------------------------------
+    // MEMOIZED FILTERS
+    // -------------------------------------------------------------------------
+    const filteredClients = useMemo(() => {
+        return clientsList.filter(client => {
+            const matchesSearch =
+                client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                client.phone.includes(searchTerm)
 
-    const stats = useMemo(() => {
-        const total = tenantClients.length
-        const active = tenantClients.filter(client => client.status === "active").length
-        const churned = tenantClients.filter(client => client.status === "churned").length
-        const avgTicket = total ? tenantClients.reduce((acc, client) => acc + client.totalSpent, 0) / total : 0
-        const retention = total ? Math.round((tenantClients.filter(client => differenceInDays(new Date(), new Date(client.lastVisit)) <= 30).length / total) * 100) : 0
-        return { total, active, churned, avgTicket, retention }
-    }, [tenantClients])
+            let matchesFilter = true
+            if (activeSavedFilter) {
+                // Lógica simulada de filtros salvos
+                if (activeSavedFilter === "Aniversariantes") {
+                    // Exemplo: filtrar quem faz aniversário esse mês (mock)
+                    matchesFilter = true
+                } else if (activeSavedFilter === "Ausentes 30d") {
+                    const days = differenceInDays(new Date(), new Date(client.lastVisit))
+                    matchesFilter = days > 30
+                } else if (activeSavedFilter === "VIPs") {
+                    matchesFilter = client.totalSpent > 1000
+                }
+            }
 
-    const filteredClients = tenantClients
-        .filter(client =>
-            client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            client.email.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-        .filter(client => {
-            if (selectedSegment === "all") return true
-            const segment = segments.find(segment => segment.id === selectedSegment)
-            return segment ? segment.filter(client) : true
+            return matchesSearch && matchesFilter
         })
-        .filter(client => {
-            if (statusFilter.length === 0) return true
-            return statusFilter.includes(client.status)
-        })
-        .filter(client => {
-            const filterConfig = spendingFilters.find(filter => filter.id === spendingFilter)
-            if (!filterConfig || !filterConfig.range) return true
-            const [min, max] = filterConfig.range
-            return client.totalSpent >= min && client.totalSpent <= max
-        })
-        .filter(client => {
-            if (tagFilter.length === 0) return true
-            const clientTags = getClientTags(client)
-            return tagFilter.every(tag => clientTags.includes(tag))
-        })
+    }, [clientsList, searchTerm, activeSavedFilter])
 
-    const generateClientId = () => {
-        if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-            return crypto.randomUUID()
-        }
-        return `client-${Date.now()}-${Math.random().toString(16).slice(2)}`
+
+    // -------------------------------------------------------------------------
+    // ACTIONS
+    // -------------------------------------------------------------------------
+    const resetForm = () => {
+        setFormData({ name: "", email: "", phone: "", cpf: "" })
+        setSelectedClient(null)
     }
 
-<<<<<<< HEAD
     const handleCreateClient = async () => {
         const supabase = getSupabaseBrowserClient()
 
+        if (!supabase) {
+            toast.error("Erro de configuração do Supabase")
+            return
+        }
+
         const newClient = {
-            id: generateClientId(),
             tenant_id: currentTenant.id,
             full_name: formData.name,
             email: formData.email,
@@ -280,28 +186,27 @@ export default function ClientsPage() {
 
         toast.success("Cliente criado com sucesso")
         refetch()
-=======
-    const handleCreateClient = () => {
-        const newClient: ClientRecord = {
-            id: generateClientId(),
-            tenantId: currentTenant.id,
-            ...formData,
-            status: 'active',
-            lastVisit: new Date().toISOString(),
-            totalSpent: 0,
-            avatar: ""
-        }
-        setClientsList([...clientsList, newClient])
->>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
         setShowNewClient(false)
         resetForm()
     }
 
-<<<<<<< HEAD
+    const openEditDialog = (client: ClientRecord) => {
+        setSelectedClient(client)
+        setFormData({
+            name: client.name,
+            email: client.email,
+            phone: client.phone,
+            cpf: "" // Missing in type, assuming empty or add to type
+        })
+        setShowEditClient(true)
+    }
+
     const handleEditClient = async () => {
         if (!selectedClient) return
 
         const supabase = getSupabaseBrowserClient()
+        if (!supabase) return
+
         const { error } = await supabase
             .from('customers')
             .update({
@@ -320,22 +225,21 @@ export default function ClientsPage() {
 
         toast.success("Cliente atualizado com sucesso")
         refetch()
-=======
-    const handleEditClient = () => {
-        if (!selectedClient) return
-        setClientsList(clientsList.map(c =>
-            c.id === selectedClient.id ? { ...c, ...formData } : c
-        ))
->>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
         setShowEditClient(false)
         resetForm()
     }
 
-<<<<<<< HEAD
+    const openDeleteDialog = (client: ClientRecord) => {
+        setSelectedClient(client)
+        setShowConfirm(true)
+    }
+
     const handleDeleteClient = async () => {
         if (!selectedClient) return
 
         const supabase = getSupabaseBrowserClient()
+        if (!supabase) return
+
         const { error } = await supabase
             .from('customers')
             .delete()
@@ -349,39 +253,10 @@ export default function ClientsPage() {
 
         toast.success("Cliente excluído com sucesso")
         refetch()
-=======
-    const handleDeleteClient = () => {
-        if (!selectedClient) return
-        setClientsList(clientsList.filter(c => c.id !== selectedClient.id))
->>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
         setShowConfirm(false)
         setSelectedClient(null)
     }
 
-    const handleImportClick = () => {
-        setImportMessage("")
-        fileInputRef.current?.click()
-    }
-
-    const parseLineToClient = (line: string): ClientRecord | null => {
-        const parts = line.split(/[,;\t]/).map(part => part.trim()).filter(Boolean)
-        if (parts.length < 2) return null
-        const [name, email, phone = ""] = parts
-        if (!name || !email) return null
-        return {
-            id: generateClientId(),
-            tenantId: currentTenant.id,
-            name,
-            email,
-            phone,
-            lastVisit: new Date().toISOString(),
-            totalSpent: 0,
-            status: "active",
-            avatar: "",
-        }
-    }
-
-<<<<<<< HEAD
     const handleBulkDelete = async () => {
         if (selectedClients.length === 0) return
 
@@ -418,126 +293,111 @@ export default function ClientsPage() {
         }
     }
 
-=======
->>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
+    const handleImportClick = () => {
+        fileInputRef.current?.click()
+    }
+
     const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0]
         event.target.value = ""
         if (!file) return
 
         const reader = new FileReader()
-<<<<<<< HEAD
         reader.onload = async () => {
-=======
-        reader.onload = () => {
->>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
             const text = reader.result?.toString() ?? ""
             const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean)
-            const imported = lines
-                .map(parseLineToClient)
-                .filter((client): client is ClientRecord => client !== null)
+
+            // Basic CSV/TXT parsing: Name, Email, Phone
+            const imported = lines.map(line => {
+                const parts = line.split(/[;,]/) // Split by comma or semicolon
+                // Simple heuristic
+                const name = parts[0]?.trim()
+                const email = parts[1]?.trim()
+                const phone = parts[2]?.trim()
+
+                if (!name) return null
+
+                return {
+                    tenant_id: currentTenant.id,
+                    full_name: name,
+                    email: email || null,
+                    phone: phone || null,
+                    status: 'active',
+                    last_visit_at: new Date().toISOString(),
+                    total_spent: 0
+                }
+            }).filter(Boolean)
 
             if (imported.length === 0) {
-<<<<<<< HEAD
                 toast.error("Nenhum cliente válido encontrado no arquivo.")
                 return
             }
 
             const supabase = getSupabaseBrowserClient()
-            const payload = imported.map(client => ({
-                id: client.id,
-                tenant_id: client.tenantId,
-                full_name: client.name,
-                email: client.email,
-                phone: client.phone,
-                status: client.status,
-                last_visit_at: client.lastVisit,
-                total_spent: 0
-            }))
+            if (!supabase) return
 
-            const { error } = await supabase.from('customers').insert(payload)
+            // Bulk insert
+            const { error } = await supabase.from('customers').insert(imported)
 
             if (error) {
-                console.error(error)
                 toast.error("Erro ao salvar clientes importados.")
-            } else {
-                toast.success(`${imported.length} clientes importados com sucesso!`)
-                refetch()
-            }
-        }
-        reader.onerror = () => toast.error("Não foi possível ler o arquivo selecionado.")
-=======
-                setImportMessage("Nenhum cliente válido encontrado no arquivo.")
+                console.error(error)
                 return
             }
 
-            setClientsList(prev => [...prev, ...imported])
-            setImportMessage(`${imported.length} cliente(s) importado(s) com sucesso.`)
+            toast.success(`${imported.length} cliente(s) importado(s) e salvos com sucesso.`)
+            refetch()
         }
-        reader.onerror = () => setImportMessage("Não foi possível ler o arquivo selecionado.")
->>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
+        reader.onerror = () => toast.error("Não foi possível ler o arquivo selecionado.")
         reader.readAsText(file, "utf-8")
     }
 
     const handleExport = (format: "csv" | "txt") => {
-        const tenantClients = clientsList.filter(client => client.tenantId === currentTenant.id)
-        if (tenantClients.length === 0) {
-            setImportMessage("Não há clientes para exportar.")
-            return
+        if (clientsList.length === 0) return
+
+        let content = ""
+        const mimeType = format === "csv" ? "text/csv" : "text/plain"
+        const extension = format
+
+        if (format === "csv") {
+            content = "Nome,Email,Telefone,Status,Última Visita,Total Gasto\n"
+            clientsList.forEach(c => {
+                content += `"${c.name}","${c.email}","${c.phone}","${c.status}","${c.lastVisit}","${c.totalSpent}"\n`
+            })
+        } else {
+            clientsList.forEach(c => {
+                content += `${c.name} | ${c.email} | ${c.phone}\n`
+            })
         }
 
-        const header = "Nome,Email,Telefone,Status"
-        const rows = tenantClients.map(client => {
-            const fields = [client.name, client.email, client.phone, client.status]
-            return fields.map(field => `"${(field ?? "").replace(/"/g, '""')}"`).join(",")
-        })
-        const content = [header, ...rows].join("\n")
-        const mime = format === "csv" ? "text/csv" : "text/plain"
-        const extension = format === "csv" ? "csv" : "txt"
-
-        const blob = new Blob([content], { type: `${mime};charset=utf-8;` })
+        const blob = new Blob([content], { type: mimeType })
         const url = URL.createObjectURL(blob)
-        const link = document.createElement("a")
-        link.href = url
-        link.download = `clientes-${currentTenant.slug}.${extension}`
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        URL.revokeObjectURL(url)
-        setImportMessage(`Arquivo ${extension.toUpperCase()} exportado.`)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = `clientes_export.${extension}`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+
+        toast.success("Exportação concluída!")
     }
 
-    const openEditDialog = (client: ClientRecord) => {
-        setSelectedClient(client)
-        setFormData({
-            name: client.name,
-            email: client.email,
-            phone: client.phone,
-            cpf: client.cpf || ""
-        })
-        setShowEditClient(true)
-    }
+    // -------------------------------------------------------------------------
+    // RENDER
+    // -------------------------------------------------------------------------
 
-    const openDeleteDialog = (client: ClientRecord) => {
-        setSelectedClient(client)
-        setShowConfirm(true)
-    }
+    // Mock stats
+    const automationRecommendations = [
+        { id: 1, title: "Reativação de Inativos", description: "Recupere clientes que não vêm há 60 dias.", impact: "Alta", type: "recovery" },
+        { id: 2, title: "Lembrete de Retorno", description: "Incentive o retorno após 30 dias.", impact: "Média", type: "retention" },
+    ]
 
-    const resetForm = () => {
-        setFormData({ name: "", email: "", phone: "", cpf: "" })
-        setSelectedClient(null)
-    }
-
-    const handleApplySavedFilter = (filterConfig: (typeof savedFilters)[number]) => {
-        setActiveSavedFilter(filterConfig.id)
-        setStatusFilter(filterConfig.status ?? [])
-        setSpendingFilter(filterConfig.spending ?? "all")
-        setTagFilter(filterConfig.tags ?? [])
-        setSelectedSegment(filterConfig.segment ?? "all")
-    }
+    const upcomingEvents = [
+        { id: 1, title: "Aniversariantes do Mês", date: "Julho", action: "Enviar cupom", impact: "Fidelização" },
+        { id: 2, title: "Dia do Cliente", date: "15 Set", action: "Campanha especial", impact: "Vendas" },
+    ]
 
     return (
-<<<<<<< HEAD
         <div className="space-y-8 relative">
             {selectedClients.length > 0 && (
                 <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-2xl rounded-full p-2 px-6 flex items-center gap-6 animate-in slide-in-from-bottom-4 fade-in duration-300">
@@ -566,9 +426,6 @@ export default function ClientsPage() {
                     </div>
                 </div>
             )}
-=======
-        <div className="space-y-8">
->>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
             <input
                 ref={fileInputRef}
                 type="file"
@@ -576,367 +433,208 @@ export default function ClientsPage() {
                 className="hidden"
                 onChange={handleFileImport}
             />
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h2 className="text-3xl font-bold tracking-tight">Clientes</h2>
-                    <p className="text-muted-foreground mt-1">
-                        Gerencie sua base, segmente em grupos e ative campanhas.
-                    </p>
-                </div>
 
-                <FormDialog
-                    open={showNewClient}
-                    onOpenChange={setShowNewClient}
-                    title="Novo Cliente"
-                    description="Cadastre um novo cliente no sistema"
-                    onSubmit={handleCreateClient}
-                    submitLabel="Criar Cliente"
-                >
-                    <div className="space-y-4 text-left">
+            <Dialog open={showNewClient} onOpenChange={setShowNewClient}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Novo Cliente</DialogTitle>
+                        <DialogDescription>Preencha os dados abaixo.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
                         <div className="space-y-2">
-                            <Label htmlFor="name">Nome Completo</Label>
+                            <Label>Nome Completo</Label>
                             <Input
-                                id="name"
+                                placeholder="Ex: Ana Silva"
                                 value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                placeholder="Maria Silva"
-                                required
+                                onChange={e => setFormData({ ...formData, name: e.target.value })}
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
+                            <Label>Email</Label>
                             <Input
-                                id="email"
+                                placeholder="email@exemplo.com"
                                 type="email"
                                 value={formData.email}
-                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                placeholder="maria@exemplo.com"
-                                required
+                                onChange={e => setFormData({ ...formData, email: e.target.value })}
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="phone">Telefone</Label>
+                            <Label>Telefone</Label>
                             <Input
-                                id="phone"
+                                placeholder="(00) 00000-0000"
                                 value={formData.phone}
-                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                placeholder="(11) 99999-9999"
-                                required
+                                onChange={e => setFormData({ ...formData, phone: e.target.value })}
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="cpf">CPF</Label>
+                            <Label>CPF</Label>
                             <Input
-                                id="cpf"
-                                value={formData.cpf}
-                                onChange={(e) => {
-                                    const value = e.target.value.replace(/\D/g, '')
-                                    const formatted = value.length <= 11 ? value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : formData.cpf
-                                    setFormData({ ...formData, cpf: formatted })
-                                }}
                                 placeholder="000.000.000-00"
-                                maxLength={14}
-                                required
+                                value={formData.cpf}
+                                onChange={e => setFormData({ ...formData, cpf: e.target.value })}
                             />
                         </div>
                     </div>
-                </FormDialog>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowNewClient(false)}>Cancelar</Button>
+                        <Button onClick={handleCreateClient}>Salvar Cliente</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
-                <Button className="shrink-0 shadow-lg shadow-primary/20" onClick={() => setShowNewClient(true)}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Novo Cliente
-                </Button>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-4">
-                <StatCard label="Base ativa" value={stats.active} helper={`${stats.total} clientes`} />
-                <StatCard label="Churn" value={stats.churned} helper="Últimos 30 dias" />
-                <StatCard label="Retenção" value={`${stats.retention}%`} helper="Visitou em 30 dias" />
-                <StatCard label="Ticket médio" value={`R$ ${stats.avgTicket.toFixed(0)}`} helper="por cliente" />
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-3">
-                <SegmentCard
-                    active={selectedSegment === "all"}
-                    label="Todos"
-                    description="Base completa"
-                    count={stats.total}
-                    onClick={() => setSelectedSegment("all")}
-                />
-                {segments.map(segment => (
-                    <SegmentCard
-                        key={segment.id}
-                        active={selectedSegment === segment.id}
-                        label={segment.label}
-                        description={segment.description}
-                        count={tenantClients.filter(segment.filter).length}
-                        onClick={() => setSelectedSegment(segment.id)}
-                    />
-                ))}
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-3">
-                {savedFilters.map(filter => (
-                    <button
-                        key={filter.id}
-                        type="button"
-                        onClick={() => handleApplySavedFilter(filter)}
-                        className={cn(
-                            "rounded-2xl border border-black/5 dark:border-white/5 bg-gradient-to-br from-white to-slate-50 dark:from-zinc-900 dark:to-zinc-950 p-4 text-left transition-all",
-                            activeSavedFilter === filter.id ? "shadow-lg ring-2 ring-primary/30" : "hover:shadow-md"
-                        )}
-                    >
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-semibold text-slate-900 dark:text-white">{filter.title}</p>
-                                <p className="text-xs text-muted-foreground">{filter.description}</p>
-                            </div>
-                            <Badge variant={activeSavedFilter === filter.id ? "default" : "secondary"} className="rounded-full text-[10px]">
-                                Aplicar
-                            </Badge>
+            <Dialog open={showEditClient} onOpenChange={setShowEditClient}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Editar Cliente</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label>Nome</Label>
+                            <Input
+                                value={formData.name}
+                                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                            />
                         </div>
-                        <p className="mt-3 text-[10px] uppercase tracking-[0.3em] text-primary/60">Filtro salvo</p>
-                    </button>
-                ))}
-            </div>
-
-            {/* Modals for Edit and Confirm */}
-            <FormDialog
-                open={showEditClient}
-                onOpenChange={setShowEditClient}
-                title="Editar Cliente"
-                description={`Editando dados de ${selectedClient?.name}`}
-                onSubmit={handleEditClient}
-                submitLabel="Salvar Alterações"
-            >
-                <div className="space-y-4 text-left">
-                    <div className="space-y-2">
-                        <Label htmlFor="edit-name">Nome Completo</Label>
-                        <Input
-                            id="edit-name"
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            required
-                        />
+                        <div className="space-y-2">
+                            <Label>Email</Label>
+                            <Input
+                                value={formData.email}
+                                onChange={e => setFormData({ ...formData, email: e.target.value })}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Telefone</Label>
+                            <Input
+                                value={formData.phone}
+                                onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                            />
+                        </div>
                     </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="edit-email">Email</Label>
-                        <Input
-                            id="edit-email"
-                            type="email"
-                            value={formData.email}
-                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                            required
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="edit-phone">Telefone</Label>
-                        <Input
-                            id="edit-phone"
-                            value={formData.phone}
-                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                            required
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="edit-cpf">CPF</Label>
-                        <Input
-                            id="edit-cpf"
-                            value={formData.cpf}
-                            onChange={(e) => {
-                                const value = e.target.value.replace(/\D/g, '')
-                                const formatted = value.length <= 11 ? value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : formData.cpf
-                                setFormData({ ...formData, cpf: formatted })
-                            }}
-                            placeholder="000.000.000-00"
-                            maxLength={14}
-                            required
-                        />
-                    </div>
-                </div>
-            </FormDialog>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowEditClient(false)}>Cancelar</Button>
+                        <Button onClick={handleEditClient}>Salvar Alterações</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             <ConfirmDialog
                 open={showConfirm}
                 onOpenChange={setShowConfirm}
-                title="Excluir Cliente"
-                description={`Tem certeza que deseja excluir "${selectedClient?.name}"? Esta ação não pode ser desfeita.`}
+                title="Excluir cliente?"
+                description={`Tem certeza que deseja remover ${selectedClient?.name}? Essa ação não pode ser desfeita.`}
+                confirmText="Excluir"
+                cancelText="Cancelar"
                 onConfirm={handleDeleteClient}
                 variant="destructive"
             />
 
-            {/* Filters & View Toggle */}
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-2 bg-white/60 dark:bg-zinc-900/60 p-1 rounded-xl border border-white/20 backdrop-blur-sm w-full max-w-md">
-                    <div className="pl-3 text-muted-foreground">
-                        <Search className="w-4 h-4" />
-                    </div>
-                    <input
-                        type="text"
-                        placeholder="Buscar por nome ou email..."
-                        className="flex-1 bg-transparent border-none text-sm focus:outline-none p-2"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground">
-                        <Filter className="w-4 h-4" />
-                    </Button>
-                </div>
-
-                <div className="flex bg-white/60 dark:bg-zinc-900/60 p-1 rounded-xl border border-white/20 backdrop-blur-sm shadow-sm">
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setViewMode('grid')}
-                        className={cn(
-                            "rounded-lg h-9 w-9 p-0 transition-all",
-                            viewMode === 'grid' ? "bg-white dark:bg-zinc-700 shadow-sm text-primary" : "text-muted-foreground"
-                        )}
-                    >
-                        <LayoutGrid className="w-4 h-4" />
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setViewMode('list')}
-                        className={cn(
-                            "rounded-lg h-9 w-9 p-0 transition-all",
-                            viewMode === 'list' ? "bg-white dark:bg-zinc-700 shadow-sm text-primary" : "text-muted-foreground"
-                        )}
-                    >
-                        <ListIcon className="w-4 h-4" />
-                    </Button>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Clientes</h1>
+                    <p className="text-muted-foreground mt-1">Gerencie sua base e fidelize seu público.</p>
                 </div>
             </div>
 
-            {/* Smart Filters */}
-            <div className="grid gap-4 lg:grid-cols-3">
-                <div className="rounded-2xl border border-black/5 dark:border-white/5 bg-white/70 dark:bg-zinc-900/70 p-5 space-y-3">
-                    <div className="flex items-center justify-between">
-                        <p className="text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground">Status</p>
-                        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setStatusFilter([])}>
-                            Limpar
-                        </Button>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                        {statusOptions.map(option => {
-                            const active = statusFilter.includes(option.id)
-                            return (
-                                <button
-                                    key={option.id}
-                                    type="button"
-                                    onClick={() =>
-                                        setStatusFilter(prev =>
-                                            active ? prev.filter(id => id !== option.id) : [...prev, option.id]
-                                        )
-                                    }
-                                    className={cn(
-                                        "px-4 py-2 rounded-xl text-xs font-semibold uppercase tracking-widest transition-colors",
-                                        active
-                                            ? "bg-primary text-white shadow-lg"
-                                            : "bg-slate-100 dark:bg-zinc-800 text-slate-500"
-                                    )}
-                                >
-                                    {option.label}
-                                </button>
-                            )
-                        })}
-                    </div>
-                </div>
-                <div className="rounded-2xl border border-black/5 dark:border-white/5 bg-white/70 dark:bg-zinc-900/70 p-5 space-y-3">
-                    <p className="text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground">Ticket Médio</p>
-                    <div className="grid gap-2">
-                        {spendingFilters.map(filter => (
-                            <button
-                                key={filter.id}
-                                type="button"
-                                onClick={() => setSpendingFilter(filter.id)}
-                                className={cn(
-                                    "w-full px-4 py-2 rounded-xl text-sm font-semibold text-left transition-colors",
-                                    spendingFilter === filter.id
-                                        ? "bg-slate-900 text-white shadow-lg"
-                                        : "bg-slate-100 dark:bg-zinc-800 text-slate-600"
-                                )}
-                            >
-                                {filter.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-                <div className="rounded-2xl border border-black/5 dark:border-white/5 bg-white/70 dark:bg-zinc-900/70 p-5 space-y-3">
-                    <div className="flex items-center justify-between">
-                        <p className="text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground">Tags</p>
-                        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setTagFilter([])}>
-                            Limpar
-                        </Button>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                        {availableTags.map(tag => {
-                            const active = tagFilter.includes(tag.id)
-                            return (
-                                <button
-                                    key={tag.id}
-                                    type="button"
-                                    onClick={() =>
-                                        setTagFilter(prev =>
-                                            active ? prev.filter(id => id !== tag.id) : [...prev, tag.id]
-                                        )
-                                    }
-                                    className={cn(
-                                        "px-4 py-2 rounded-xl text-xs font-semibold uppercase tracking-widest border transition-colors",
-                                        active
-                                            ? "bg-primary/10 text-primary border-primary/30"
-                                            : "border-slate-200 text-slate-500 dark:border-zinc-700 dark:text-zinc-400"
-                                    )}
-                                >
-                                    {tag.label}
-                                </button>
-                            )
-                        })}
-                    </div>
-                </div>
-            </div>
+            <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <StatCard label="Total de Clientes" value={clientsList.length} helper="+12% vs mês anterior" />
+                <StatCard label="Novos este mês" value="24" helper="Meta: 30" />
+                <StatCard label="Inativos (30d)" value="8" helper="Oportunidade de reativação" />
+                <StatCard label="LTV Médio" value="R$ 450" helper="Lifetime Value" />
+            </section>
 
-<<<<<<< HEAD
+            <section className="space-y-4">
+                <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Buscar por nome, email ou telefone..."
+                            className="pl-9 rounded-2xl bg-white/50 border-transparent hover:bg-white hover:border-black/5 focus:bg-white transition-all dark:bg-zinc-900/50 dark:hover:bg-zinc-900 dark:hover:border-white/5 dark:focus:bg-zinc-900"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <Button
+                        variant="outline"
+                        className="gap-2 rounded-2xl bg-white/50 border-transparent hover:bg-white hover:border-black/5 dark:bg-zinc-900/50 dark:hover:bg-zinc-900 dark:hover:border-white/5"
+                        onClick={() => setViewMode(prev => prev === 'grid' ? 'list' : 'grid')}
+                    >
+                        {viewMode === 'grid' ? <ListIcon className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}
+                        <span className="hidden sm:inline">{viewMode === 'grid' ? 'Lista' : 'Grade'}</span>
+                    </Button>
+                    <Button className="rounded-2xl gap-2" onClick={() => setShowNewClient(true)}>
+                        <Plus className="w-4 h-4" />
+                        Novo Cliente
+                    </Button>
+                </div>
+
+                <div className="flex flex-wrap gap-2 pb-2">
+                    {["Todos", "Aniversariantes", "Ausentes 30d", "VIPs"].map((filter) => (
+                        <Badge
+                            key={filter}
+                            variant={activeSavedFilter === filter ? "default" : "outline"}
+                            className="cursor-pointer rounded-full h-8 px-4 hover:bg-primary/5 hover:text-primary transition-colors"
+                            onClick={() => setActiveSavedFilter(activeSavedFilter === filter ? null : filter)}
+                        >
+                            {filter}
+                        </Badge>
+                    ))}
+                </div>
+            </section>
+
             <section className="grid gap-4 lg:grid-cols-3">
                 <Card className="rounded-[2rem] border-none shadow-sm bg-white/70 dark:bg-zinc-900/70">
                     <CardHeader>
                         <CardTitle>Saúde do funil</CardTitle>
-                        <p className="text-sm text-muted-foreground">Acompanhe conversões por etapa do relacionamento.</p>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        {lifecycleStages.map(stage => (
-                            <div key={stage.id} className="space-y-2">
-                                <div className="flex items-center justify-between gap-4">
-                                    <div>
-                                        <p className="text-sm font-semibold text-slate-900 dark:text-white">{stage.label}</p>
-                                        <p className="text-xs text-muted-foreground">{stage.description}</p>
-                                    </div>
-                                    <div className="text-right space-y-1">
-                                        <p className="text-lg font-black text-slate-900 dark:text-white">{stage.value}%</p>
-                                        <Badge variant="secondary" className="rounded-full text-[10px] uppercase tracking-widest">
-                                            {stage.delta}
-                                        </Badge>
-                                    </div>
-                                </div>
-                                <Progress value={stage.value} className="h-2 bg-slate-100 dark:bg-zinc-800" />
+                        <div className="space-y-2">
+                            <div className="flex justify-between text-xs font-medium">
+                                <span>Novos vs Recorrentes</span>
+                                <span>65% Recorrente</span>
                             </div>
-                        ))}
+                            <Progress value={65} className="h-2 rounded-full" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 mt-4">
+                            <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                                <p className="text-xs uppercase font-bold opacity-70">Taxa Retenção</p>
+                                <p className="text-xl font-black mt-1">92%</p>
+                            </div>
+                            <div className="p-3 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400">
+                                <p className="text-xs uppercase font-bold opacity-70">Churn Mensal</p>
+                                <p className="text-xl font-black mt-1">1.2%</p>
+                            </div>
+                        </div>
                     </CardContent>
                 </Card>
 
                 <Card className="rounded-[2rem] border-none shadow-sm bg-white/70 dark:bg-zinc-900/70">
                     <CardHeader>
-                        <CardTitle>Sinais em tempo real</CardTitle>
-                        <p className="text-sm text-muted-foreground">Interações que exigem resposta rápida.</p>
+                        <CardTitle>Ao vivo agora</CardTitle>
+                        <div className="flex items-center gap-2 text-xs text-green-600 font-medium">
+                            <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                            </span>
+                            Loja movimentada
+                        </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                        {interactionSignals.map(signal => {
-                            const Icon = signal.icon
-                            const toneClass = toneClassMap[signal.tone] ?? "bg-slate-200 text-slate-600"
+                        {[
+                            { client: "Mariana Costa", action: "Check-in realizado", time: "2 min atrás", type: "checkin", detail: "Corte + Hidratação", status: "Em andamento" },
+                            { client: "Carlos Souza", action: "Agendou online", time: "15 min atrás", type: "booking", detail: "Barba e Cabelo", status: "Confirmado" },
+                            { client: "Fernanda Lima", action: "Avaliou serviço", time: "45 min atrás", type: "review", detail: "5 estrelas - Adorou!", status: "Concluído" },
+                        ].map((signal, i) => {
+                            const toneClass =
+                                signal.type === 'checkin' ? 'bg-blue-500/10 text-blue-600' :
+                                    signal.type === 'booking' ? 'bg-purple-500/10 text-purple-600' :
+                                        'bg-amber-500/10 text-amber-600'
+
+                            const Icon =
+                                signal.type === 'checkin' ? Calendar :
+                                    signal.type === 'booking' ? PhoneCall : Sparkles
+
                             return (
-                                <div key={signal.id} className="flex items-center gap-3 rounded-2xl border border-slate-200 dark:border-zinc-800 p-3">
+                                <div key={i} className="flex items-center gap-3 p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors">
                                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${toneClass}`}>
                                         <Icon className="w-5 h-5" />
                                     </div>
@@ -982,91 +680,6 @@ export default function ClientsPage() {
                     </CardContent>
                 </Card>
             </section>
-=======
-        <section className="grid gap-4 lg:grid-cols-3">
-            <Card className="rounded-[2rem] border-none shadow-sm bg-white/70 dark:bg-zinc-900/70">
-                <CardHeader>
-                    <CardTitle>Saúde do funil</CardTitle>
-                    <p className="text-sm text-muted-foreground">Acompanhe conversões por etapa do relacionamento.</p>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {lifecycleStages.map(stage => (
-                        <div key={stage.id} className="space-y-2">
-                            <div className="flex items-center justify-between gap-4">
-                                <div>
-                                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{stage.label}</p>
-                                    <p className="text-xs text-muted-foreground">{stage.description}</p>
-                                </div>
-                                <div className="text-right space-y-1">
-                                    <p className="text-lg font-black text-slate-900 dark:text-white">{stage.value}%</p>
-                                    <Badge variant="secondary" className="rounded-full text-[10px] uppercase tracking-widest">
-                                        {stage.delta}
-                                    </Badge>
-                                </div>
-                            </div>
-                            <Progress value={stage.value} className="h-2 bg-slate-100 dark:bg-zinc-800" />
-                        </div>
-                    ))}
-                </CardContent>
-            </Card>
-
-            <Card className="rounded-[2rem] border-none shadow-sm bg-white/70 dark:bg-zinc-900/70">
-                <CardHeader>
-                    <CardTitle>Sinais em tempo real</CardTitle>
-                    <p className="text-sm text-muted-foreground">Interações que exigem resposta rápida.</p>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                    {interactionSignals.map(signal => {
-                        const Icon = signal.icon
-                        const toneClass = toneClassMap[signal.tone] ?? "bg-slate-200 text-slate-600"
-                        return (
-                            <div key={signal.id} className="flex items-center gap-3 rounded-2xl border border-slate-200 dark:border-zinc-800 p-3">
-                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${toneClass}`}>
-                                    <Icon className="w-5 h-5" />
-                                </div>
-                                <div className="flex-1">
-                                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{signal.client}</p>
-                                    <p className="text-xs text-muted-foreground">{signal.detail}</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-xs font-bold text-slate-900 dark:text-white">{signal.time}</p>
-                                    <Badge variant="outline" className="rounded-full text-[10px] uppercase tracking-widest mt-1">
-                                        {signal.status}
-                                    </Badge>
-                                </div>
-                            </div>
-                        )
-                    })}
-                </CardContent>
-            </Card>
-
-            <Card className="rounded-[2rem] border-none shadow-sm bg-white/70 dark:bg-zinc-900/70">
-                <CardHeader>
-                    <CardTitle>Playbooks automáticos</CardTitle>
-                    <p className="text-sm text-muted-foreground">Ative fluxos para cada cenário.</p>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                    {automationRecommendations.map(item => (
-                        <div key={item.id} className="rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 space-y-3">
-                            <div className="flex items-center justify-between gap-3">
-                                <div>
-                                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{item.title}</p>
-                                    <p className="text-xs text-muted-foreground">{item.description}</p>
-                                </div>
-                                <Badge variant="secondary" className="rounded-full text-[10px] uppercase tracking-widest">
-                                    {item.impact}
-                                </Badge>
-                            </div>
-                            <Button variant="ghost" size="sm" className="h-9 rounded-full gap-2 text-primary hover:text-primary">
-                                <Sparkles className="w-4 h-4" />
-                                Ativar fluxo
-                            </Button>
-                        </div>
-                    ))}
-                </CardContent>
-            </Card>
-        </section>
->>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
 
             <div className="rounded-2xl border border-black/5 dark:border-white/5 bg-white/70 dark:bg-zinc-900/70 p-5 flex flex-col sm:flex-row sm:items-center gap-4">
                 <div>
@@ -1086,7 +699,6 @@ export default function ClientsPage() {
                 </div>
             </div>
 
-<<<<<<< HEAD
             <Card className="rounded-[2rem] border-none shadow-sm bg-white/80 dark:bg-zinc-900/70">
                 <CardHeader>
                     <CardTitle>Importação & Exportação</CardTitle>
@@ -1114,35 +726,6 @@ export default function ClientsPage() {
                     </p>
                 </CardContent>
             </Card>
-=======
-        <Card className="rounded-[2rem] border-none shadow-sm bg-white/80 dark:bg-zinc-900/70">
-            <CardHeader>
-                <CardTitle>Importação & Exportação</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                    Importe novos clientes via arquivos `.csv` ou `.txt` e exporte sua base atual com um clique.
-                </p>
-            </CardHeader>
-            <CardContent className="space-y-3">
-                <div className="flex flex-wrap gap-3">
-                    <Button className="rounded-2xl" onClick={handleImportClick}>
-                        Importar CSV/TXT
-                    </Button>
-                    <Button variant="outline" className="rounded-2xl" onClick={() => handleExport("csv")}>
-                        Exportar CSV
-                    </Button>
-                    <Button variant="outline" className="rounded-2xl" onClick={() => handleExport("txt")}>
-                        Exportar TXT
-                    </Button>
-                </div>
-                {importMessage && (
-                    <p className="text-xs font-semibold text-primary">{importMessage}</p>
-                )}
-                <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
-                    Formato sugerido: Nome,Email,Telefone
-                </p>
-            </CardContent>
-        </Card>
->>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
 
             <div className="grid gap-4 lg:grid-cols-2">
                 <Card className="rounded-[2rem] border-none shadow-sm bg-white/70 dark:bg-zinc-900/70">
@@ -1212,7 +795,6 @@ export default function ClientsPage() {
                 <>
                     <div className="hidden md:block rounded-2xl border border-black/5 dark:border-white/5 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xl shadow-sm overflow-hidden">
                         <Table>
-<<<<<<< HEAD
                             <TableHeader className="bg-black/5 dark:bg-white/5">
                                 <TableRow className="hover:bg-transparent border-black/5 dark:border-white/5">
                                     <TableHead className="w-[50px]">
@@ -1313,96 +895,6 @@ export default function ClientsPage() {
                                     </TableRow>
                                 ))}
                             </TableBody>
-=======
-                        <TableHeader className="bg-black/5 dark:bg-white/5">
-                            <TableRow className="hover:bg-transparent border-black/5 dark:border-white/5">
-                                <TableHead className="w-[300px]">Cliente</TableHead>
-                                <TableHead>Contato</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Última Visita</TableHead>
-                                <TableHead className="text-right">Total Gasto</TableHead>
-                                <TableHead className="w-[50px]"></TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredClients.map((client) => (
-                                <TableRow key={client.id} className="border-black/5 dark:border-white/5 hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                                    <TableCell>
-                                        <div className="flex items-center gap-3">
-                                            <Avatar className="h-10 w-10 border-2 border-white dark:border-zinc-800 shadow-sm">
-                                                <AvatarImage src={client.avatar} alt={client.name} />
-                                                <AvatarFallback>{client.name.charAt(0)}</AvatarFallback>
-                                            </Avatar>
-                                            <div>
-                                                <div className="font-medium text-foreground">{client.name}</div>
-                                                <div className="text-xs text-muted-foreground">ID: #{client.id}</div>
-                                                <div className="flex flex-wrap gap-1 mt-1">
-                                                    {getClientTags(client).map(tag => (
-                                                        <Badge key={tag} variant="secondary" className="text-[10px] rounded-full">
-                                                            {tag}
-                                                        </Badge>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex flex-col gap-1">
-                                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                                <Mail className="w-3 h-3" />
-                                                {client.email}
-                                            </div>
-                                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                                <Phone className="w-3 h-3" />
-                                                {client.phone}
-                                            </div>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize
-                                            ${client.status === 'active' ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400' :
-                                                client.status === 'inactive' ? 'bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400' :
-                                                    'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400'}`}>
-                                            {client.status === 'active' ? 'Ativo' :
-                                                client.status === 'inactive' ? 'Inativo' : 'Churn'}
-                                        </span>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                            <Calendar className="w-4 h-4" />
-                                            {new Date(client.lastVisit).toLocaleDateString()}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-right font-medium">
-                                        R$ {client.totalSpent.toFixed(2)}
-                                    </TableCell>
-                                    <TableCell>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                                                    <MoreHorizontal className="w-4 h-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="w-40">
-                                                <DropdownMenuItem onClick={() => openEditDialog(client)}>
-                                                    <Edit className="w-4 h-4 mr-2" />
-                                                    Editar
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem
-                                                    className="text-red-600 focus:text-red-600"
-                                                    onClick={() => openDeleteDialog(client)}
-                                                >
-                                                    <Trash2 className="w-4 h-4 mr-2" />
-                                                    Excluir
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
->>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
                         </Table>
                     </div>
                     <div className="grid md:hidden grid-cols-1 gap-4">
