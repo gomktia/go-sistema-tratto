@@ -1,7 +1,11 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
+<<<<<<< HEAD
 import { Plus, Search, Filter, MoreHorizontal, Mail, Phone, Calendar, Edit, Trash2, LayoutGrid, List as ListIcon, Wallet, Gift, AlertTriangle, Send, Activity, MessageSquare, PhoneCall, Sparkles, CheckSquare } from "lucide-react"
+=======
+import { Plus, Search, Filter, MoreHorizontal, Mail, Phone, Calendar, Edit, Trash2, LayoutGrid, List as ListIcon, Wallet, Gift, AlertTriangle, Send, Activity, MessageSquare, PhoneCall, Sparkles } from "lucide-react"
+>>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
 import { cn } from "@/lib/utils"
 import { clients } from "@/mocks/data"
 import type { ClientRecord } from "@/types/crm"
@@ -12,8 +16,11 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Progress } from "@/components/ui/progress"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+<<<<<<< HEAD
 import { toast } from "sonner"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+=======
+>>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
 import {
     Table,
     TableBody,
@@ -34,7 +41,10 @@ import { FormDialog } from "@/components/ui/form-dialog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { differenceInDays } from "date-fns"
 import { useTenantCustomers } from "@/hooks/useTenantRecords"
+<<<<<<< HEAD
 import { Checkbox } from "@/components/ui/checkbox"
+=======
+>>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
 
 const mapMockClient = (client: typeof clients[number]): ClientRecord => ({
     id: client.id,
@@ -168,13 +178,20 @@ export default function ClientsPage() {
     const [selectedClient, setSelectedClient] = useState<ClientRecord | null>(null)
     const [clientsList, setClientsList] = useState<ClientRecord[]>(clients.map(mapMockClient))
     const { currentTenant } = useTenant()
+<<<<<<< HEAD
     const { data: tenantCustomers, refetch } = useTenantCustomers(currentTenant.id)
+=======
+    const { data: tenantCustomers } = useTenantCustomers(currentTenant.id)
+>>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
     const [activeSavedFilter, setActiveSavedFilter] = useState<string | null>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [importMessage, setImportMessage] = useState("")
 
+<<<<<<< HEAD
     const [selectedClients, setSelectedClients] = useState<string[]>([])
 
+=======
+>>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
     const [formData, setFormData] = useState({
         name: "",
         email: "",
@@ -183,7 +200,13 @@ export default function ClientsPage() {
     })
 
     useEffect(() => {
+<<<<<<< HEAD
         setClientsList(tenantCustomers)
+=======
+        if (tenantCustomers.length > 0) {
+            setClientsList(tenantCustomers)
+        }
+>>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
     }, [tenantCustomers])
 
     // Filter clients by current tenant
@@ -231,6 +254,7 @@ export default function ClientsPage() {
         return `client-${Date.now()}-${Math.random().toString(16).slice(2)}`
     }
 
+<<<<<<< HEAD
     const handleCreateClient = async () => {
         const supabase = getSupabaseBrowserClient()
 
@@ -256,10 +280,24 @@ export default function ClientsPage() {
 
         toast.success("Cliente criado com sucesso")
         refetch()
+=======
+    const handleCreateClient = () => {
+        const newClient: ClientRecord = {
+            id: generateClientId(),
+            tenantId: currentTenant.id,
+            ...formData,
+            status: 'active',
+            lastVisit: new Date().toISOString(),
+            totalSpent: 0,
+            avatar: ""
+        }
+        setClientsList([...clientsList, newClient])
+>>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
         setShowNewClient(false)
         resetForm()
     }
 
+<<<<<<< HEAD
     const handleEditClient = async () => {
         if (!selectedClient) return
 
@@ -282,10 +320,18 @@ export default function ClientsPage() {
 
         toast.success("Cliente atualizado com sucesso")
         refetch()
+=======
+    const handleEditClient = () => {
+        if (!selectedClient) return
+        setClientsList(clientsList.map(c =>
+            c.id === selectedClient.id ? { ...c, ...formData } : c
+        ))
+>>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
         setShowEditClient(false)
         resetForm()
     }
 
+<<<<<<< HEAD
     const handleDeleteClient = async () => {
         if (!selectedClient) return
 
@@ -303,6 +349,11 @@ export default function ClientsPage() {
 
         toast.success("Cliente excluído com sucesso")
         refetch()
+=======
+    const handleDeleteClient = () => {
+        if (!selectedClient) return
+        setClientsList(clientsList.filter(c => c.id !== selectedClient.id))
+>>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
         setShowConfirm(false)
         setSelectedClient(null)
     }
@@ -330,6 +381,7 @@ export default function ClientsPage() {
         }
     }
 
+<<<<<<< HEAD
     const handleBulkDelete = async () => {
         if (selectedClients.length === 0) return
 
@@ -366,13 +418,19 @@ export default function ClientsPage() {
         }
     }
 
+=======
+>>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
     const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0]
         event.target.value = ""
         if (!file) return
 
         const reader = new FileReader()
+<<<<<<< HEAD
         reader.onload = async () => {
+=======
+        reader.onload = () => {
+>>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
             const text = reader.result?.toString() ?? ""
             const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean)
             const imported = lines
@@ -380,6 +438,7 @@ export default function ClientsPage() {
                 .filter((client): client is ClientRecord => client !== null)
 
             if (imported.length === 0) {
+<<<<<<< HEAD
                 toast.error("Nenhum cliente válido encontrado no arquivo.")
                 return
             }
@@ -407,6 +466,16 @@ export default function ClientsPage() {
             }
         }
         reader.onerror = () => toast.error("Não foi possível ler o arquivo selecionado.")
+=======
+                setImportMessage("Nenhum cliente válido encontrado no arquivo.")
+                return
+            }
+
+            setClientsList(prev => [...prev, ...imported])
+            setImportMessage(`${imported.length} cliente(s) importado(s) com sucesso.`)
+        }
+        reader.onerror = () => setImportMessage("Não foi possível ler o arquivo selecionado.")
+>>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
         reader.readAsText(file, "utf-8")
     }
 
@@ -468,6 +537,7 @@ export default function ClientsPage() {
     }
 
     return (
+<<<<<<< HEAD
         <div className="space-y-8 relative">
             {selectedClients.length > 0 && (
                 <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-2xl rounded-full p-2 px-6 flex items-center gap-6 animate-in slide-in-from-bottom-4 fade-in duration-300">
@@ -496,6 +566,9 @@ export default function ClientsPage() {
                     </div>
                 </div>
             )}
+=======
+        <div className="space-y-8">
+>>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
             <input
                 ref={fileInputRef}
                 type="file"
@@ -825,6 +898,7 @@ export default function ClientsPage() {
                 </div>
             </div>
 
+<<<<<<< HEAD
             <section className="grid gap-4 lg:grid-cols-3">
                 <Card className="rounded-[2rem] border-none shadow-sm bg-white/70 dark:bg-zinc-900/70">
                     <CardHeader>
@@ -908,6 +982,91 @@ export default function ClientsPage() {
                     </CardContent>
                 </Card>
             </section>
+=======
+        <section className="grid gap-4 lg:grid-cols-3">
+            <Card className="rounded-[2rem] border-none shadow-sm bg-white/70 dark:bg-zinc-900/70">
+                <CardHeader>
+                    <CardTitle>Saúde do funil</CardTitle>
+                    <p className="text-sm text-muted-foreground">Acompanhe conversões por etapa do relacionamento.</p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {lifecycleStages.map(stage => (
+                        <div key={stage.id} className="space-y-2">
+                            <div className="flex items-center justify-between gap-4">
+                                <div>
+                                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{stage.label}</p>
+                                    <p className="text-xs text-muted-foreground">{stage.description}</p>
+                                </div>
+                                <div className="text-right space-y-1">
+                                    <p className="text-lg font-black text-slate-900 dark:text-white">{stage.value}%</p>
+                                    <Badge variant="secondary" className="rounded-full text-[10px] uppercase tracking-widest">
+                                        {stage.delta}
+                                    </Badge>
+                                </div>
+                            </div>
+                            <Progress value={stage.value} className="h-2 bg-slate-100 dark:bg-zinc-800" />
+                        </div>
+                    ))}
+                </CardContent>
+            </Card>
+
+            <Card className="rounded-[2rem] border-none shadow-sm bg-white/70 dark:bg-zinc-900/70">
+                <CardHeader>
+                    <CardTitle>Sinais em tempo real</CardTitle>
+                    <p className="text-sm text-muted-foreground">Interações que exigem resposta rápida.</p>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                    {interactionSignals.map(signal => {
+                        const Icon = signal.icon
+                        const toneClass = toneClassMap[signal.tone] ?? "bg-slate-200 text-slate-600"
+                        return (
+                            <div key={signal.id} className="flex items-center gap-3 rounded-2xl border border-slate-200 dark:border-zinc-800 p-3">
+                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${toneClass}`}>
+                                    <Icon className="w-5 h-5" />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{signal.client}</p>
+                                    <p className="text-xs text-muted-foreground">{signal.detail}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-xs font-bold text-slate-900 dark:text-white">{signal.time}</p>
+                                    <Badge variant="outline" className="rounded-full text-[10px] uppercase tracking-widest mt-1">
+                                        {signal.status}
+                                    </Badge>
+                                </div>
+                            </div>
+                        )
+                    })}
+                </CardContent>
+            </Card>
+
+            <Card className="rounded-[2rem] border-none shadow-sm bg-white/70 dark:bg-zinc-900/70">
+                <CardHeader>
+                    <CardTitle>Playbooks automáticos</CardTitle>
+                    <p className="text-sm text-muted-foreground">Ative fluxos para cada cenário.</p>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                    {automationRecommendations.map(item => (
+                        <div key={item.id} className="rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 space-y-3">
+                            <div className="flex items-center justify-between gap-3">
+                                <div>
+                                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{item.title}</p>
+                                    <p className="text-xs text-muted-foreground">{item.description}</p>
+                                </div>
+                                <Badge variant="secondary" className="rounded-full text-[10px] uppercase tracking-widest">
+                                    {item.impact}
+                                </Badge>
+                            </div>
+                            <Button variant="ghost" size="sm" className="h-9 rounded-full gap-2 text-primary hover:text-primary">
+                                <Sparkles className="w-4 h-4" />
+                                Ativar fluxo
+                            </Button>
+                        </div>
+                    ))}
+                </CardContent>
+            </Card>
+        </section>
+>>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
 
             <div className="rounded-2xl border border-black/5 dark:border-white/5 bg-white/70 dark:bg-zinc-900/70 p-5 flex flex-col sm:flex-row sm:items-center gap-4">
                 <div>
@@ -927,6 +1086,7 @@ export default function ClientsPage() {
                 </div>
             </div>
 
+<<<<<<< HEAD
             <Card className="rounded-[2rem] border-none shadow-sm bg-white/80 dark:bg-zinc-900/70">
                 <CardHeader>
                     <CardTitle>Importação & Exportação</CardTitle>
@@ -954,6 +1114,35 @@ export default function ClientsPage() {
                     </p>
                 </CardContent>
             </Card>
+=======
+        <Card className="rounded-[2rem] border-none shadow-sm bg-white/80 dark:bg-zinc-900/70">
+            <CardHeader>
+                <CardTitle>Importação & Exportação</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                    Importe novos clientes via arquivos `.csv` ou `.txt` e exporte sua base atual com um clique.
+                </p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+                <div className="flex flex-wrap gap-3">
+                    <Button className="rounded-2xl" onClick={handleImportClick}>
+                        Importar CSV/TXT
+                    </Button>
+                    <Button variant="outline" className="rounded-2xl" onClick={() => handleExport("csv")}>
+                        Exportar CSV
+                    </Button>
+                    <Button variant="outline" className="rounded-2xl" onClick={() => handleExport("txt")}>
+                        Exportar TXT
+                    </Button>
+                </div>
+                {importMessage && (
+                    <p className="text-xs font-semibold text-primary">{importMessage}</p>
+                )}
+                <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
+                    Formato sugerido: Nome,Email,Telefone
+                </p>
+            </CardContent>
+        </Card>
+>>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
 
             <div className="grid gap-4 lg:grid-cols-2">
                 <Card className="rounded-[2rem] border-none shadow-sm bg-white/70 dark:bg-zinc-900/70">
@@ -1023,6 +1212,7 @@ export default function ClientsPage() {
                 <>
                     <div className="hidden md:block rounded-2xl border border-black/5 dark:border-white/5 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xl shadow-sm overflow-hidden">
                         <Table>
+<<<<<<< HEAD
                             <TableHeader className="bg-black/5 dark:bg-white/5">
                                 <TableRow className="hover:bg-transparent border-black/5 dark:border-white/5">
                                     <TableHead className="w-[50px]">
@@ -1123,6 +1313,96 @@ export default function ClientsPage() {
                                     </TableRow>
                                 ))}
                             </TableBody>
+=======
+                        <TableHeader className="bg-black/5 dark:bg-white/5">
+                            <TableRow className="hover:bg-transparent border-black/5 dark:border-white/5">
+                                <TableHead className="w-[300px]">Cliente</TableHead>
+                                <TableHead>Contato</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Última Visita</TableHead>
+                                <TableHead className="text-right">Total Gasto</TableHead>
+                                <TableHead className="w-[50px]"></TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredClients.map((client) => (
+                                <TableRow key={client.id} className="border-black/5 dark:border-white/5 hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                                    <TableCell>
+                                        <div className="flex items-center gap-3">
+                                            <Avatar className="h-10 w-10 border-2 border-white dark:border-zinc-800 shadow-sm">
+                                                <AvatarImage src={client.avatar} alt={client.name} />
+                                                <AvatarFallback>{client.name.charAt(0)}</AvatarFallback>
+                                            </Avatar>
+                                            <div>
+                                                <div className="font-medium text-foreground">{client.name}</div>
+                                                <div className="text-xs text-muted-foreground">ID: #{client.id}</div>
+                                                <div className="flex flex-wrap gap-1 mt-1">
+                                                    {getClientTags(client).map(tag => (
+                                                        <Badge key={tag} variant="secondary" className="text-[10px] rounded-full">
+                                                            {tag}
+                                                        </Badge>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-col gap-1">
+                                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                <Mail className="w-3 h-3" />
+                                                {client.email}
+                                            </div>
+                                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                <Phone className="w-3 h-3" />
+                                                {client.phone}
+                                            </div>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize
+                                            ${client.status === 'active' ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400' :
+                                                client.status === 'inactive' ? 'bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400' :
+                                                    'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400'}`}>
+                                            {client.status === 'active' ? 'Ativo' :
+                                                client.status === 'inactive' ? 'Inativo' : 'Churn'}
+                                        </span>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                            <Calendar className="w-4 h-4" />
+                                            {new Date(client.lastVisit).toLocaleDateString()}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-right font-medium">
+                                        R$ {client.totalSpent.toFixed(2)}
+                                    </TableCell>
+                                    <TableCell>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                                                    <MoreHorizontal className="w-4 h-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" className="w-40">
+                                                <DropdownMenuItem onClick={() => openEditDialog(client)}>
+                                                    <Edit className="w-4 h-4 mr-2" />
+                                                    Editar
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem
+                                                    className="text-red-600 focus:text-red-600"
+                                                    onClick={() => openDeleteDialog(client)}
+                                                >
+                                                    <Trash2 className="w-4 h-4 mr-2" />
+                                                    Excluir
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+>>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
                         </Table>
                     </div>
                     <div className="grid md:hidden grid-cols-1 gap-4">

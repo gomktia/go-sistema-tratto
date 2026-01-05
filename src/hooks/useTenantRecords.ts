@@ -477,9 +477,14 @@ export function useTenantCustomers(tenantId?: string) {
         return normalized.filter(client => client.tenantId === tenantId)
     }, [tenantId])
 
+<<<<<<< HEAD
     const [trigger, setTrigger] = useState(0)
 
     const refetch = () => setTrigger(prev => prev + 1)
+=======
+    const [data, setData] = useState<ClientRecord[]>(fallback)
+    const [loading, setLoading] = useState<boolean>(isSupabaseConfigured)
+>>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
 
     useEffect(() => {
         const supabase = getSupabaseBrowserClient()
@@ -519,9 +524,15 @@ export function useTenantCustomers(tenantId?: string) {
         return () => {
             isMounted = false
         }
+<<<<<<< HEAD
     }, [tenantId, fallback, trigger])
 
     return { data, loading, refetch }
+=======
+    }, [tenantId, fallback])
+
+    return { data, loading }
+>>>>>>> c39074ea243f6d9d66072007533e1a3c4030055a
 }
 
 function useTenantQuery<T>(
