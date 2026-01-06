@@ -122,11 +122,11 @@ export default function CrmPage() {
 
             <Tabs defaultValue="campaigns" className="space-y-6">
                 <TabsList className="bg-slate-100 dark:bg-zinc-800 p-1 rounded-xl">
-                    <TabsTrigger value="campaigns" className="rounded-lg gap-2 data-[state=active]:bg-white">
+                    <TabsTrigger value="campaigns" className="rounded-lg gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-700 dark:data-[state=active]:text-white">
                         <MessageCircle className="w-4 h-4" />
                         Minhas Campanhas
                     </TabsTrigger>
-                    <TabsTrigger value="templates" className="rounded-lg gap-2 data-[state=active]:bg-white">
+                    <TabsTrigger value="templates" className="rounded-lg gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-700 dark:data-[state=active]:text-white">
                         <Gift className="w-4 h-4" />
                         Modelos Prontos
                     </TabsTrigger>
@@ -141,12 +141,12 @@ export default function CrmPage() {
                                     <div className="p-6 flex items-start justify-between">
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2">
-                                                <h3 className="font-bold text-slate-900 text-lg">{camp.name}</h3>
+                                                <h3 className="font-bold text-slate-900 dark:text-white text-lg">{camp.name}</h3>
                                                 {camp.type === 'automatic' && (
                                                     <Badge variant="secondary" className="bg-purple-100 text-purple-700 text-[10px] uppercase font-bold">Auto</Badge>
                                                 )}
                                             </div>
-                                            <p className="text-slate-500 text-sm line-clamp-1">{camp.message}</p>
+                                            <p className="text-slate-500 dark:text-slate-400 text-sm line-clamp-1">{camp.message}</p>
                                             <div className="flex items-center gap-4 mt-2 text-xs text-slate-400">
                                                 <span className="flex items-center gap-1">
                                                     <Users className="w-3 h-3" /> {camp.audience} alvos
@@ -234,7 +234,7 @@ export default function CrmPage() {
                 <TabsContent value="templates">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {['Lembrete de Agendamento', 'Pesquisa de Satisfação NPS', 'Promoção Relâmpago', 'Boas-vindas', 'Feliz Aniversário', 'Reativação de Cliente Sumido'].map((template, i) => (
-                            <Card key={i} className="hover:border-pink-500 cursor-pointer transition-colors border-dashed">
+                            <Card key={i} className="hover:border-pink-500 cursor-pointer transition-colors border-dashed bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800">
                                 <CardHeader>
                                     <div className="w-10 h-10 rounded-lg bg-pink-50 flex items-center justify-center mb-2 text-pink-500">
                                         <MessageCircle className="w-5 h-5" />

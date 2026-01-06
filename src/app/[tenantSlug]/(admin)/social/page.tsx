@@ -77,12 +77,12 @@ export default function SocialAiPage() {
                         <Sparkles className="w-8 h-8 text-indigo-500 fill-indigo-500 animate-pulse" />
                         Tratto Social IA
                     </h1>
-                    <p className="text-slate-500 text-lg">Você posta a foto, a IA cria e agenda tudo sozinha.</p>
+                    <p className="text-slate-500 dark:text-slate-400 text-lg">Você posta a foto, a IA cria e agenda tudo sozinha.</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 bg-indigo-50 px-4 py-2 rounded-full border border-indigo-100">
-                        <Wand2 className="w-4 h-4 text-indigo-600" />
-                        <span className="text-sm font-bold text-indigo-700">Modo Autopilot: Ativado</span>
+                    <div className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-500/10 px-4 py-2 rounded-full border border-indigo-100 dark:border-indigo-500/20">
+                        <Wand2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                        <span className="text-sm font-bold text-indigo-700 dark:text-indigo-300">Modo Autopilot: Ativado</span>
                     </div>
                 </div>
             </div>
@@ -90,10 +90,10 @@ export default function SocialAiPage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Left Panel: Upload & Control */}
                 <div className="lg:col-span-5 space-y-6">
-                    <Card className="border-2 border-dashed border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900/50 shadow-none">
+                    <Card className="border-2 border-dashed border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800/50 shadow-none">
                         <CardContent className="p-8 flex flex-col items-center justify-center text-center space-y-4 min-h-[400px]">
                             {uploadedImage ? (
-                                <div className="relative w-full h-full min-h-[300px] rounded-2xl overflow-hidden group">
+                                <div className="relative w-full h-full min-h-[300px] rounded-2xl overflow-hidden group border border-slate-200 dark:border-zinc-700">
                                     <img src={uploadedImage} alt="Upload" className="w-full h-full object-cover" />
                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                         <Button variant="secondary" onClick={() => setUploadedImage(null)}>Trocar Foto</Button>
@@ -115,10 +115,10 @@ export default function SocialAiPage() {
                                     <div className="w-20 h-20 rounded-full bg-indigo-100 flex items-center justify-center mb-4">
                                         <Upload className="w-10 h-10 text-indigo-600" />
                                     </div>
-                                    <h3 className="text-xl font-bold text-slate-900">Arraste sua foto aqui</h3>
-                                    <p className="text-slate-500 max-w-xs">Ou clique para selecionar da galeria. Suportamos JPG, PNG e HEIC.</p>
+                                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">Arraste sua foto aqui</h3>
+                                    <p className="text-slate-500 dark:text-slate-400 max-w-xs">Ou clique para selecionar da galeria. Suportamos JPG, PNG e HEIC.</p>
                                     <Label htmlFor="image-upload" className="cursor-pointer mt-4">
-                                        <div className="inline-flex h-12 animate-shimmer items-center justify-center rounded-md border border-slate-800 bg-[linear-gradient(110deg,#000103,45%,#1e2631,55%,#000103)] bg-[length:200%_100%] px-6 font-medium text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:ring-offset-slate-50">
+                                        <div className="inline-flex h-12 animate-shimmer items-center justify-center rounded-md border border-slate-800 dark:border-white/20 bg-[linear-gradient(110deg,#000103,45%,#1e2631,55%,#000103)] bg-[length:200%_100%] px-6 font-medium text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:ring-offset-slate-50">
                                             Selecionar Arquivo
                                         </div>
                                         <input id="image-upload" type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
@@ -292,14 +292,14 @@ export default function SocialAiPage() {
                         ) : (
                             // Empty State / Placeholder with "Recent Posts"
                             <div className="h-full flex flex-col">
-                                <h2 className="text-xl font-bold text-slate-900 mb-6">Agendamentos Futuros</h2>
+                                <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Agendamentos Futuros</h2>
                                 <div className="space-y-4">
                                     {[1, 2, 3].map((i) => (
-                                        <div key={i} className="flex gap-4 p-4 rounded-xl bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 shadow-sm opacity-60">
-                                            <div className="w-16 h-16 rounded-lg bg-slate-200 shrink-0 animate-pulse" />
+                                        <div key={i} className="flex gap-4 p-4 rounded-xl bg-white dark:bg-zinc-800 border border-slate-100 dark:border-zinc-700 shadow-sm">
+                                            <div className="w-16 h-16 rounded-lg bg-slate-200 dark:bg-zinc-700 shrink-0 animate-pulse" />
                                             <div className="flex-1 space-y-2">
-                                                <div className="h-4 w-3/4 bg-slate-200 rounded animate-pulse" />
-                                                <div className="h-3 w-1/2 bg-slate-200 rounded animate-pulse" />
+                                                <div className="h-4 w-3/4 bg-slate-200 dark:bg-zinc-700 rounded animate-pulse" />
+                                                <div className="h-3 w-1/2 bg-slate-200 dark:bg-zinc-700 rounded animate-pulse" />
                                             </div>
                                         </div>
                                     ))}

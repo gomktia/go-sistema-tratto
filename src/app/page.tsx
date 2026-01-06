@@ -370,7 +370,7 @@ const defaultPlans = [
   },
   {
     name: "Pro",
-    price: "49,90",
+    price: "97,00",
     period: "mês",
     description: "Para profissionais autônomos",
     features: [
@@ -385,7 +385,7 @@ const defaultPlans = [
   },
   {
     name: "Premium",
-    price: "99,90",
+    price: "197,00",
     period: "mês",
     description: "Para salões em crescimento",
     features: [
@@ -402,7 +402,7 @@ const defaultPlans = [
   },
   {
     name: "Elite / Black",
-    price: "199,90",
+    price: "297,00",
     period: "mês",
     description: "Para grandes redes e franquias",
     features: [
