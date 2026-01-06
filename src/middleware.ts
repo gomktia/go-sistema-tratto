@@ -25,14 +25,14 @@ export default async function middleware(req: NextRequest) {
     const customDomain = hostname.replace(`.${rootDomain}`, "");
 
     // 1. App/Landing Page (root or app subdomain)
-    // If accessing the root domain app.beautyflow.com or localhost
+    // If accessing the root domain app.Tratto.com or localhost
     if (hostname === rootDomain || hostname === `app.${rootDomain}`) {
         // If it's the root path, serve the Landing Page or App Shell
         // For now, we rewrite to /home or similar if we have one, or keep standard handling
         return NextResponse.next();
     }
 
-    // 2. Tenant Subdomains (e.g. beleza-pura.beautyflow.app)
+    // 2. Tenant Subdomains (e.g. beleza-pura.Tratto.app)
     // We assume anything else is a tenant subdomain OR a custom domain
     // If it ends with our root domain, it is a subdomain
     if (hostname.endsWith(`.${rootDomain}`)) {
@@ -54,3 +54,5 @@ export default async function middleware(req: NextRequest) {
 
     return NextResponse.next();
 }
+
+

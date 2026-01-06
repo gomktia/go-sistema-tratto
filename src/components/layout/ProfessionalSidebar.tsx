@@ -87,7 +87,7 @@ export function ProfessionalSidebar() {
                         <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
                             <Scissors className="w-4 h-4 text-white" />
                         </div>
-                        <span className="font-semibold text-lg tracking-tight text-foreground">BeautyFlow</span>
+                        <span className="font-semibold text-lg tracking-tight text-foreground">Tratto</span>
                     </div>
                 </div>
 
@@ -152,3 +152,5 @@ export function ProfessionalSidebar() {
         </>
     )
 }
+
+

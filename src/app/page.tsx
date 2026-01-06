@@ -354,87 +354,97 @@ const benefits = [
 
 const defaultPlans = [
   {
-    name: "Starter",
-    price: "197",
-    period: "mês",
-    description: "Ideal para salões iniciantes",
+    name: "Trial Grátis",
+    price: "0",
+    period: "15 dias",
+    description: "Teste tudo sem compromisso",
     features: [
-      "Até 3 profissionais",
-      "1 unidade/sala",
-      "Portal de agendamento online",
-      "Loja online básica",
-      "Envio de promoções",
-      "CRM básico",
-      "Suporte por email",
+      "Acesso TOTAL a todas funções",
+      "Agendamento Online",
+      "Financeiro Completo",
+      "Clube de Fidelidade",
+      "Sem cartão de crédito"
     ],
-    cta: "Começar agora",
+    cta: "Criar conta grátis",
     popular: false,
   },
   {
-    name: "Professional",
-    price: "397",
+    name: "Pro",
+    price: "49,90",
+    period: "mês",
+    description: "Para profissionais autônomos",
+    features: [
+      "Até 2 profissionais",
+      "Cobrança recorrente (Assinaturas)",
+      "Agendamento Online",
+      "Lembretes WhatsApp basic",
+      "Relatórios básicos"
+    ],
+    cta: "Assinar Pro",
+    popular: false,
+  },
+  {
+    name: "Premium",
+    price: "99,90",
     period: "mês",
     description: "Para salões em crescimento",
     features: [
-      "Profissionais ilimitados",
-      "Até 3 unidades/salas",
-      "Portal completo do cliente",
-      "Loja online avançada",
-      "Marketing automático",
-      "WhatsApp Business API",
-      "Programa de fidelidade",
-      "Suporte prioritário 24/7",
+      "Até 5 profissionais",
+      "Financeiro Avançado (DRE)",
+      "Cálculo de Comissões Automático",
+      "Estoque Inteligente",
+      "Marketing (E-mail/SMS)",
+      "Clube de Fidelidade",
+      "Sem taxa de adesão",
     ],
-    cta: "Testar 14 dias grátis",
+    cta: "Assinar Premium",
     popular: true,
   },
   {
-    name: "Enterprise",
-    price: "Custom",
-    period: "",
-    description: "Redes e franquias",
+    name: "Elite / Black",
+    price: "199,90",
+    period: "mês",
+    description: "Para grandes redes e franquias",
     features: [
-      "Tudo do Professional",
-      "Unidades ilimitadas",
-      "Multi-lojas/franquias",
-      "API customizada",
-      "White label completo",
-      "Gerente de conta dedicado",
-      "SLA 99.9% garantido",
-      "Treinamento presencial",
+      "Profissionais Ilimitados",
+      "Multi-unidades (Franquias)",
+      "Domínio Personalizado (.com.br)",
+      "Gerente de Conta Exclusivo",
+      "API Aberta",
+      "White Label (Sua marca)",
     ],
-    cta: "Falar com vendas",
+    cta: "Falar com Consultor",
     popular: false,
   },
 ]
 
 const testimonials = [
   {
-    name: "Mariana Silva",
+    name: "Ana Ferreira",
     role: "Proprietária",
-    company: "Studio Bella - 1 profissional",
-    avatar: "MS",
-    quote: "Trabalho sozinha e o BeautyFlow mudou tudo! Meus clientes agendam sozinhos e compram produtos online. Faturamento cresceu 65% sem eu precisar contratar ninguém.",
+    company: "Studio Ana - 3 profissionais",
+    avatar: "AF",
+    quote: "O Tratto organizou nosso financeiro de um jeito que nunca vi. O cálculo de comissão automático me economiza 3 dias por mês. Vale cada centavo do Premium.",
     rating: 5,
-    metric: "+65% faturamento"
+    metric: "+30% lucro líquido"
   },
   {
-    name: "Roberto Ferreira",
-    role: "Gerente",
-    company: "Barber Premium - 12 profissionais",
-    avatar: "RF",
-    quote: "Com 12 barbeiros, era um caos gerenciar agenda. Agora o sistema identifica disponibilidade automaticamente e ainda calculamos comissões em 2 cliques. Salvou nossa operação.",
+    name: "Roberto Silva",
+    role: "Dono",
+    company: "Barber King - 8 unidades",
+    avatar: "RS",
+    quote: "Gerencio minhas 8 barbearias em uma tela só. O plano Elite com multi-unidades é perfeito. O cliente tem pontos de fidelidade que valem em qualquer unidade.",
     rating: 5,
-    metric: "10h/sem economizadas"
+    metric: "Gestão centralizada"
   },
   {
-    name: "Amanda Costa",
-    role: "CEO",
-    company: "Rede Glamour - 5 unidades",
-    avatar: "AC",
-    quote: "Mandamos promoções direto pro portal dos clientes. Cupom de aniversário automático? Vendas de produtos aumentaram 80%. E gerencio as 5 unidades de um único painel.",
+    name: "Carla Dias",
+    role: "Esteticista",
+    company: "Autônoma",
+    avatar: "CD",
+    quote: "Comecei com o Trial e já fechei o plano Pro. Meus clientes adoram agendar pelo link no Instagram. Simples e chique, combina com meu trabalho.",
     rating: 5,
-    metric: "+80% venda produtos"
+    metric: "Agenda cheia"
   },
 ]
 
@@ -525,7 +535,7 @@ export default function LandingPage() {
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">BeautyFlow</span>
+            <span className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">Tratto</span>
           </div>
           <div className="hidden md:flex items-center gap-8">
             <a href="#features" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
@@ -1125,7 +1135,7 @@ export default function LandingPage() {
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-lg">
                   <Sparkles className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">BeautyFlow</span>
+                <span className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">Tratto</span>
               </div>
               <p className="text-gray-600 mb-6 leading-relaxed font-medium">
                 Sistema completo para salões: clientes agendam sozinhos, compram produtos e você gerencia tudo em um só lugar.
@@ -1169,7 +1179,7 @@ export default function LandingPage() {
           </div>
           <div className="pt-8 border-t border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-sm text-gray-600">
-              © 2024 BeautyFlow. Todos os direitos reservados.
+              © 2024 Tratto. Todos os direitos reservados.
             </p>
             <div className="flex gap-6 text-sm">
               <a href="#" className="text-gray-600 hover:text-blue-600 transition-colors font-medium">Privacidade</a>
@@ -1182,3 +1192,5 @@ export default function LandingPage() {
     </div>
   )
 }
+
+

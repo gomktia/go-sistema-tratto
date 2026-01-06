@@ -56,8 +56,8 @@ export async function GET() {
 
         // List of known super admin emails
         const knownSuperAdmins = [
-            'geison@beautyflow.app',
-            'oseias@beautyflow.app',
+            'geison@Tratto.app',
+            'oseias@Tratto.app',
             'geisonhoehr@gmail.com'
         ]
 
@@ -92,3 +92,5 @@ export async function GET() {
         return NextResponse.json({ error: err.message }, { status: 500 })
     }
 }
+
+

@@ -61,7 +61,7 @@ export default function CustomerSignupPage() {
         fetchTenant()
     }, [tenantSlug, router])
 
-    const tenantInitials = tenant ? getInitials(tenant.business_name || tenant.name || 'BeautyFlow') : 'BF'
+    const tenantInitials = tenant ? getInitials(tenant.business_name || tenant.name || 'Tratto') : 'TR'
     const tenantBadge = tenant?.logo || tenantInitials
 
     const handleChange = (field: string, value: string) => {

@@ -112,3 +112,4 @@ export type Story = {
     id: string
     url: string
 }
+

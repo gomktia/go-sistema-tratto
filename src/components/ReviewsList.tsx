@@ -209,3 +209,4 @@ export function ReviewsList({ professionalId, serviceId, limit, showStats = true
         </div>
     )
 }
+

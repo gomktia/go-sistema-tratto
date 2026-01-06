@@ -328,3 +328,4 @@ export default function ConfiguracoesPage() {
         </div>
     )
 }
+

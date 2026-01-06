@@ -79,7 +79,7 @@ export function OnboardingChecklist({ tenant, className, onStartWizard }: Onboar
         <Card className={cn("p-6 rounded-[2rem] border-none shadow-sm bg-white dark:bg-zinc-900", className)}>
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
                 <div>
-                    <p className="text-[10px] font-black tracking-[0.3em] uppercase text-primary/70">Onboarding BeautyFlow</p>
+                    <p className="text-[10px] font-black tracking-[0.3em] uppercase text-primary/70">Onboarding Tratto</p>
                     <h3 className="text-2xl font-black text-slate-900 dark:text-white">Próximos passos para {tenant.name}</h3>
                     <p className="text-sm text-slate-500 dark:text-zinc-400">Complete a lista para liberar todo o potencial da plataforma.</p>
                 </div>
@@ -172,4 +172,6 @@ export function OnboardingChecklist({ tenant, className, onStartWizard }: Onboar
         </Card>
     )
 }
+
+
 

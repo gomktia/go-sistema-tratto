@@ -319,3 +319,4 @@ export async function checkUserExists(
 
   return { exists: false }
 }
+

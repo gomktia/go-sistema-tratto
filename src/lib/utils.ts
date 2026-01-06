@@ -49,3 +49,11 @@ export function hexToHsl(hex: string): string | null {
     // Return in "H S% L%" format matching Tailwind globals
     return `${(h * 360).toFixed(1)} ${(s * 100).toFixed(1)}% ${(l * 100).toFixed(1)}%`
 }
+
+
+export function formatCurrency(value: number) {
+    return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+    }).format(value)
+}

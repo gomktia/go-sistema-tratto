@@ -457,3 +457,4 @@ export function useTenantBySlug(slug: string) {
 
     return { data, loading }
 }
+

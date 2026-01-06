@@ -10,11 +10,15 @@ export interface Tenant {
     customLogo?: string // URL or base64 for uploaded logo
     customPrimaryColor?: string // Custom primary color
     customSecondaryColor?: string // Custom secondary color
-    customDomain?: string // Custom domain like "belezapura.beautyflow.app"
+    customDomain?: string // Custom domain like "belezapura.Tratto.app"
     slug: string // Friendly URL identifier like "beleza-pura"
     whatsapp: string // Phone number for WhatsApp contact
     schedulingType: 'individual' | 'shared' // Shared = single room/resource constraint
     settings?: { address?: string;[key: string]: any }
+    // Subscription fields
+    planId?: 'trial' | 'pro' | 'premium' | 'elite';
+    subscriptionStatus?: 'active' | 'canceled' | 'past_due' | 'trialing';
+    trialEndsAt?: string;
 }
 
 export const tenants: Tenant[] = [
@@ -28,10 +32,12 @@ export const tenants: Tenant[] = [
         description: 'Especializado em tratamentos capilares premium',
         customPrimaryColor: '#8B5CF6',
         customSecondaryColor: '#A78BFA',
-        customDomain: 'belezapura-demo.beautyflow.app',
+        customDomain: 'belezapura-demo.Tratto.app',
         slug: 'beleza-pura-demo',
         whatsapp: '5511999999999',
-        schedulingType: 'individual'
+        schedulingType: 'individual',
+        planId: 'elite',
+        subscriptionStatus: 'active'
     },
     {
         id: '22222222-2222-2222-2222-222222222222',
@@ -43,10 +49,12 @@ export const tenants: Tenant[] = [
         description: 'Seu destino para beleza e bem-estar',
         customPrimaryColor: '#EC4899',
         customSecondaryColor: '#F472B6',
-        customDomain: 'studioglamour.beautyflow.app',
+        customDomain: 'studioglamour.Tratto.app',
         slug: 'studio-glamour',
         whatsapp: '5511888888888',
-        schedulingType: 'shared' // Testing shared mode here
+        schedulingType: 'shared', // Testing shared mode here
+        planId: 'pro',
+        subscriptionStatus: 'active'
     },
     {
         id: '3',
@@ -58,10 +66,15 @@ export const tenants: Tenant[] = [
         description: 'Experiência completa de spa e estética',
         customPrimaryColor: '#06B6D4',
         customSecondaryColor: '#22D3EE',
-        customDomain: 'elegance.beautyflow.app',
+        customDomain: 'elegance.Tratto.app',
         slug: 'espaco-elegance',
         whatsapp: '5511777777777',
-        schedulingType: 'individual'
+        schedulingType: 'individual',
+        planId: 'trial',
+        subscriptionStatus: 'trialing',
+        trialEndsAt: new Date(new Date().setDate(new Date().getDate() + 5)).toISOString() // Expires in 5 days
     }
 ]
+
+
 

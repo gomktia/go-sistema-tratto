@@ -288,7 +288,7 @@ export default function PerfilPage() {
                                 id="customDomain"
                                 value={branding.customDomain}
                                 onChange={(e) => setBranding({ ...branding, customDomain: e.target.value })}
-                                placeholder="meusalao.beautyflow.app"
+                                placeholder="meusalao.Tratto.app"
                             />
                             <p className="text-xs text-muted-foreground">
                                 Seu link de agendamento online
@@ -320,3 +320,5 @@ export default function PerfilPage() {
         </div>
     )
 }
+
+

@@ -135,7 +135,7 @@ export const companies: Company[] = [
         logo: 'BP',
         primaryColor: '#8B5CF6',
         secondaryColor: '#A78BFA',
-        customDomain: 'belezapura.beautyflow.app',
+        customDomain: 'belezapura.Tratto.app',
         planId: 'professional',
         status: 'active',
         subscriptionStartDate: '2024-01-15',
@@ -159,7 +159,7 @@ export const companies: Company[] = [
         logo: 'SG',
         primaryColor: '#EC4899',
         secondaryColor: '#F472B6',
-        customDomain: 'studioglamour.beautyflow.app',
+        customDomain: 'studioglamour.Tratto.app',
         planId: 'enterprise',
         status: 'active',
         subscriptionStartDate: '2024-02-01',
@@ -183,7 +183,7 @@ export const companies: Company[] = [
         logo: 'EE',
         primaryColor: '#06B6D4',
         secondaryColor: '#22D3EE',
-        customDomain: 'elegance.beautyflow.app',
+        customDomain: 'elegance.Tratto.app',
         planId: 'starter',
         status: 'trial',
         subscriptionStartDate: '2024-12-20',
@@ -199,3 +199,5 @@ export const companies: Company[] = [
         updatedAt: '2024-12-27T10:00:00Z'
     }
 ]
+
+

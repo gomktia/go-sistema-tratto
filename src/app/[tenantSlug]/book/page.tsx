@@ -96,7 +96,7 @@ type EmployeeWithSchedule = EmployeeRecord & {
 }
 
 const trustHighlights = [
-    { title: "Padrão BeautyFlow", description: "Equipe selecionada, avaliação 4.9/5", icon: Star },
+    { title: "Padrão Tratto", description: "Equipe selecionada, avaliação 4.9/5", icon: Star },
     { title: "Confirmação imediata", description: "Whatsapp + e-mail com todos os detalhes", icon: MessageCircle },
     { title: "Presentes especiais", description: "Cupons exclusivos após o agendamento", icon: Gift },
 ]
@@ -180,8 +180,8 @@ export default function BookingPage() {
     const supabaseReady = Boolean(isSupabaseConfigured && supabase && tenantId)
     const isLoadingData = tenantLoading || servicesLoading || employeesLoading || appointmentsLoading || customersLoading || combosLoading || availabilityLoading
 
-    const tenantInitials = useMemo(() => getInitials(tenant?.fullName || tenant?.name || ""), [tenant?.fullName, tenant?.name])
-    const tenantBadge = tenant?.logo || tenantInitials || "BF"
+    const tenantInitials = useMemo(() => getInitials(tenant?.fullName || tenant?.name || "Tratto"), [tenant?.fullName, tenant?.name])
+    const tenantBadge = tenant?.logo || tenantInitials || "TR"
     // Convert tenant hex to HSL for dynamic branding
     const primaryHsl = useMemo(() => {
         if (!tenant?.primaryColor) return null
@@ -264,12 +264,12 @@ export default function BookingPage() {
 
     const voucherCode = useMemo(() => {
         if (!selectedService) {
-            return "BF0000"
+            return "TR0000"
         }
         const datePart = format(selectedDate, "ddMM")
         const serviceFragment = selectedService.id.replace(/[^A-Za-z0-9]/g, "")
         const servicePart = serviceFragment.slice(-2).padStart(2, "0").toUpperCase()
-        return `BF${datePart}${servicePart}`
+        return `TR${datePart}${servicePart}`
     }, [selectedDate, selectedService])
 
     // Up-sell Logic: Find a service for the next slot

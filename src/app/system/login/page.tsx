@@ -90,7 +90,7 @@ export default function SystemLoginPage() {
                                 <Input
                                     id="email"
                                     type="email"
-                                    placeholder="admin@beautyflow.com"
+                                    placeholder="admin@Tratto.com"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
@@ -174,7 +174,7 @@ export default function SystemLoginPage() {
                     {/* Footer */}
                     <div className="mt-6 text-center">
                         <p className="text-xs text-gray-500">
-                            BeautyFlow Platform Administration • v1.0.0
+                            Tratto Platform Administration • v1.0.0
                         </p>
                     </div>
                 </motion.div>
@@ -182,3 +182,5 @@ export default function SystemLoginPage() {
         </div>
     )
 }
+
+

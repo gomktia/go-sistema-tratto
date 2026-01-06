@@ -63,8 +63,8 @@ export default function CustomerLoginPage() {
     }, [tenantSlug, router])
 
     const tenantInitials = useMemo(() => {
-        if (!tenant) return 'BF'
-        return getInitials(tenant.business_name || tenant.name || 'BeautyFlow')
+        if (!tenant) return 'TR'
+        return getInitials(tenant.business_name || tenant.name || 'Tratto')
     }, [tenant])
 
     const tenantBadge = tenant?.logo || tenantInitials

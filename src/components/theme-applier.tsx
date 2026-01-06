@@ -60,3 +60,4 @@ export function ThemeApplier() {
 
     return null // This component doesn't render anything
 }
+

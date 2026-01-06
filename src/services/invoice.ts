@@ -54,3 +54,4 @@ async function issueFocusNFe(payload: InvoicePayload, apiKey: string) {
 
     return { success: true, provider: 'focus', id: 'ghi-789' };
 }
+

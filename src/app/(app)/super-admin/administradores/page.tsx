@@ -220,7 +220,7 @@ export default function AdministradoresPage() {
                                 <Input
                                     id="email"
                                     type="email"
-                                    placeholder="admin@beautyflow.com"
+                                    placeholder="admin@Tratto.com"
                                     value={formData.email}
                                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                     required
@@ -439,3 +439,5 @@ export default function AdministradoresPage() {
         </div>
     )
 }
+
+

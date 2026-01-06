@@ -13,3 +13,4 @@ export type ClientRecord = {
     loyaltyPoints?: number
 }
 
+

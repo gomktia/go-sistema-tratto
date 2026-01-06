@@ -13,7 +13,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "BeautyFlow - Sistema de Gestão para Salões",
+  title: "Tratto - Sistema de Gestão para Salões",
   description: "Plataforma completa para gestão de salões de beleza",
 };
 
@@ -42,3 +42,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+

@@ -311,8 +311,10 @@ export default function ProfessionalDashboard() {
             </div>
 
             <p className="mt-8 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                <MessageCircle className="w-3 h-3" /> Mobile Experience by BeautyFlow
+                <MessageCircle className="w-3 h-3" /> Mobile Experience by Tratto
             </p>
         </div>
     )
 }
+
+

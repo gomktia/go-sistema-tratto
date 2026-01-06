@@ -85,7 +85,7 @@ export default function LoginPage() {
                                 <Sparkles className="w-8 h-8 text-white" />
                             </div>
                         </div>
-                        <h1 className="text-4xl font-black text-gray-900 mb-2">BeautyFlow</h1>
+                        <h1 className="text-4xl font-black text-gray-900 mb-2">Tratto</h1>
                         <p className="text-gray-600 font-medium">Área para Empresas e Profissionais</p>
                     </div>
 
@@ -189,3 +189,5 @@ export default function LoginPage() {
         </div>
     )
 }
+
+

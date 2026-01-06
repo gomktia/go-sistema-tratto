@@ -221,7 +221,7 @@ export function Header() {
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <p className="font-semibold text-sm text-slate-900 dark:text-white truncate">{tenant.fullName}</p>
-                                                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{tenant.customDomain || `${tenant.slug}.beautyflow.app`}</p>
+                                                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{tenant.customDomain || `${tenant.slug}.Tratto.app`}</p>
                                                     </div>
                                                     {isActive && (
                                                         <Badge variant="outline" className="text-[10px] uppercase border-none bg-primary/10 text-primary">
@@ -241,3 +241,5 @@ export function Header() {
         </header>
     )
 }
+
+

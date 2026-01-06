@@ -90,7 +90,7 @@ export function SuperAdminSidebar() {
                         </div>
                         <div>
                             <span className="font-semibold text-sm tracking-tight text-foreground">Super Admin</span>
-                            <p className="text-xs text-muted-foreground">BeautyFlow</p>
+                            <p className="text-xs text-muted-foreground">Tratto</p>
                         </div>
                     </div>
                 </div>
@@ -168,3 +168,5 @@ export function SuperAdminSidebar() {
         </>
     )
 }
+
+

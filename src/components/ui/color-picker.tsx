@@ -49,3 +49,4 @@ export function ColorPicker({ color, onChange, label }: ColorPickerProps) {
         </div>
     )
 }
+

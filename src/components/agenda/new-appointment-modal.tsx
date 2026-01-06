@@ -181,3 +181,4 @@ export function NewAppointmentModal({ isOpen, onClose, onSuccess, tenantId }: Ne
         </Dialog>
     )
 }
+

@@ -35,3 +35,4 @@ export function FloatingWhatsApp({ phone, tenantName, className }: FloatingWhats
         </motion.a>
     )
 }
+

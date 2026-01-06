@@ -52,7 +52,7 @@ export default function ForgotPasswordPage() {
         fetchTenant()
     }, [tenantSlug, router])
 
-    const tenantInitials = tenant ? getInitials(tenant.business_name || tenant.name || 'BeautyFlow') : 'BF'
+    const tenantInitials = tenant ? getInitials(tenant.business_name || tenant.name || 'Tratto') : 'TR'
     const tenantBadge = tenant?.logo || tenantInitials
 
     const handleSubmit = async (e: React.FormEvent) => {

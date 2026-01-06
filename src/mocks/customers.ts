@@ -43,3 +43,4 @@ export const mockCustomers: Customer[] = [
         totalSpent: 2100.00
     }
 ];
+

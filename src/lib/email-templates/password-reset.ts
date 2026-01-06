@@ -8,7 +8,7 @@ interface PasswordResetProps {
 export const getPasswordResetHtml = ({ resetLink }: PasswordResetProps) => {
     const content = `
     <h1 style="${emailStyles.h1}">Recuperação de Senha</h1>
-    <p>Recebemos uma solicitação para redefinir a senha da sua conta no BeautyFlow.</p>
+    <p>Recebemos uma solicitação para redefinir a senha da sua conta no Tratto.</p>
     <p>Se foi você, clique no botão abaixo para criar uma nova senha:</p>
     
     <p style="text-align: center;">
@@ -22,3 +22,5 @@ export const getPasswordResetHtml = ({ resetLink }: PasswordResetProps) => {
 
     return wrapHtml('Redefinir Senha', content);
 };
+
+

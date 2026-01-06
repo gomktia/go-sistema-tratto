@@ -61,9 +61,9 @@ function IntegrationCard({ id, title, description, icon: Icon, color, isActive, 
 export default function ConfiguracoesPage() {
     // --- State Initialization with LocalStorage (Client-Side Only) ---
     const [platformSettings, setPlatformSettings] = useState({
-        platformName: "BeautyFlow",
-        platformEmail: "suporte@beautyflow.com",
-        platformDomain: "beautyflow.app",
+        platformName: "Tratto",
+        platformEmail: "suporte@Tratto.com",
+        platformDomain: "Tratto.app",
         logo: "BF"
     })
 
@@ -142,7 +142,7 @@ export default function ConfiguracoesPage() {
             <div>
                 <h2 className="text-3xl font-bold tracking-tight">Configurações</h2>
                 <p className="text-muted-foreground mt-1">
-                    Gerencie as configurações globais da plataforma BeautyFlow
+                    Gerencie as configurações globais da plataforma Tratto
                 </p>
             </div>
 
@@ -400,3 +400,5 @@ export default function ConfiguracoesPage() {
         </div>
     )
 }
+
+

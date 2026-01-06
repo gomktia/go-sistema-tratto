@@ -25,3 +25,4 @@ export function getSupabaseBrowserClient() {
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
 
+

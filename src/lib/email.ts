@@ -4,7 +4,7 @@ import { Resend } from 'resend';
 const apiKey = process.env.RESEND_API_KEY || 're_123456789'; // Fallback preventing build crash if env is missing
 const resend = new Resend(apiKey);
 
-const FROM_EMAIL = 'BeautyFlow <nao-responda@beautyflow.app>';
+const FROM_EMAIL = 'Tratto <nao-responda@Tratto.app>';
 
 export interface EmailPayload {
     to: string;
@@ -36,3 +36,5 @@ export async function sendEmail({ to, subject, html }: EmailPayload) {
         return { success: false, error };
     }
 }
+
+

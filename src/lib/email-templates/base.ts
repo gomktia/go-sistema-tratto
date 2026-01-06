@@ -79,15 +79,17 @@ export const wrapHtml = (title: string, content: string) => `
 <body style="margin: 0; padding: 24px; background-color: #f3f4f6;">
   <div style="${emailStyles.container}">
     <div style="${emailStyles.header}">
-      <h1 style="${emailStyles.headerText}">BeautyFlow</h1>
+      <h1 style="${emailStyles.headerText}">Tratto</h1>
     </div>
     <div style="${emailStyles.content}">
       ${content}
     </div>
     <div style="${emailStyles.footer}">
-      <p>© ${new Date().getFullYear()} BeautyFlow SAAS. Todos os direitos reservados.</p>
+      <p>© ${new Date().getFullYear()} Tratto SAAS. Todos os direitos reservados.</p>
     </div>
   </div>
 </body>
 </html>
 `;
+
+

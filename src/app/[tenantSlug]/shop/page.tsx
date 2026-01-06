@@ -66,8 +66,8 @@ export default function ShopPage() {
     const tenantSlug = params.tenantSlug as string
 
     const { data: tenant, loading: tenantLoading } = useTenantBySlug(tenantSlug)
-    const tenantInitials = useMemo(() => getInitials(tenant?.fullName || tenant?.name || "BeautyFlow"), [tenant?.fullName, tenant?.name])
-    const tenantBadge = tenant?.logo || tenantInitials || "BF"
+    const tenantInitials = useMemo(() => getInitials(tenant?.fullName || tenant?.name || "Tratto"), [tenant?.fullName, tenant?.name])
+    const tenantBadge = tenant?.logo || tenantInitials || "TR"
     const tenantId = tenant?.id
     const { data: products } = useTenantProducts(tenantId)
     const { data: tenantCombos } = useTenantCombos(tenantId)
@@ -275,7 +275,7 @@ export default function ShopPage() {
                             </Button>
                             <div className="flex items-center gap-2 text-xs text-slate-400">
                                 <Shield className="w-4 h-4 text-primary" />
-                                Garantia BeautyFlow
+                                Garantia Tratto
                             </div>
                         </div>
                     </div>
@@ -547,7 +547,7 @@ export default function ShopPage() {
                                     return (
                                         <div key={item.productId} className="flex gap-4 p-4 rounded-3xl bg-slate-50 dark:bg-zinc-800/50">
                                             <div className="w-20 h-20 rounded-2xl overflow-hidden shrink-0">
-                                                <img src={product.imageUrl || "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&w=500&q=80"} className="w-full h-full object-cover" />
+                                                <img src={product.imageUrl || "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&w=500&q=80"} alt={product.name} className="w-full h-full object-cover" />
                                             </div>
                                             <div className="flex-1 flex flex-col justify-between">
                                                 <div>

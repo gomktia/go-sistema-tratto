@@ -53,3 +53,4 @@ export const getBookingConfirmationHtml = ({
 
     return wrapHtml('Agendamento Confirmado', content);
 };
+

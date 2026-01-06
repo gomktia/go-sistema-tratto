@@ -58,7 +58,7 @@ export function TenantProvider({ children, forcedSlug }: { children: ReactNode, 
                 customPrimaryColor: theme.primary,
                 customSecondaryColor: theme.secondary,
                 description: settings.description || `Conta ${row.name}`,
-                customDomain: settings.custom_domain || `${row.slug}.beautyflow.app`,
+                customDomain: settings.custom_domain || `${row.slug}.Tratto.app`,
                 slug: row.slug,
                 whatsapp: settings.whatsapp || '',
                 schedulingType: scheduling,
@@ -155,3 +155,5 @@ export function useTenant() {
     }
     return context
 }
+
+

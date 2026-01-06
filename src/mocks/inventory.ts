@@ -76,3 +76,4 @@ export const inventory: Product[] = [
         image: "https://images.unsplash.com/photo-1526947425960-945c6e72858f?auto=format&fit=crop&q=80&w=400"
     }
 ];
+

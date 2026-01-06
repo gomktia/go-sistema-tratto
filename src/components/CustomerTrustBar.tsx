@@ -44,7 +44,7 @@ export function CustomerTrustBar({ tenant, className }: CustomerTrustBarProps) {
                 <div>
                     <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/70">Confiança comprovada</p>
                     <h2 className="text-lg md:text-xl font-black text-slate-900 dark:text-white">{tenant.fullName}</h2>
-                    <p className="text-sm text-slate-500 dark:text-zinc-400">Atendendo beleza e bem-estar com padrão BeautyFlow.</p>
+                    <p className="text-sm text-slate-500 dark:text-zinc-400">Atendendo beleza e bem-estar com padrão Tratto.</p>
                 </div>
                 <Button className="gap-2 rounded-xl">
                     <Sparkles className="w-4 h-4" />
@@ -71,6 +71,8 @@ export function CustomerTrustBar({ tenant, className }: CustomerTrustBarProps) {
         </Card>
     )
 }
+
+
 
 
 
