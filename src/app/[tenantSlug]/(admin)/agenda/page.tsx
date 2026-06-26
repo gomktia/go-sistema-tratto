@@ -50,6 +50,7 @@ import { useTenantAppointments, useTenantEmployees, useTenantServices } from "@/
 import type { AppointmentRecord, ServiceRecord } from "@/types/catalog"
 import { motion, AnimatePresence } from "framer-motion"
 import { NewAppointmentModal } from "@/components/agenda/new-appointment-modal"
+import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client"
 
 // Generate time slots from 08:00 to 20:00
 const timeSlots = Array.from({ length: 13 }, (_, i) => i + 8)
@@ -71,6 +72,7 @@ export default function AgendaPage() {
     const [currentTime, setCurrentTime] = useState<Date>(new Date())
     const [viewType, setViewType] = useState<ViewType>("day")
     const [isNewAppointmentModalOpen, setIsNewAppointmentModalOpen] = useState(false)
+    const [selectedAppointment, setSelectedAppointment] = useState<AppointmentRecord | null>(null)
     const [isMounted, setIsMounted] = useState(false)
     const { currentTenant } = useTenant()
 
@@ -91,7 +93,7 @@ export default function AgendaPage() {
 
     const { data: serviceRecords } = useTenantServices(currentTenant.id)
     const { data: employeeRecords } = useTenantEmployees(currentTenant.id)
-    const { data: appointmentRecords } = useTenantAppointments(currentTenant.id)
+    const { data: appointmentRecords, refetch: refetchAppointments } = useTenantAppointments(currentTenant.id)
 
     const serviceMap = useMemo(() => {
         const map = new Map<string, ServiceRecord>()
@@ -201,14 +203,50 @@ export default function AgendaPage() {
         }
     }
 
-    const getStatusStyles = (status: string) => {
-        const styles = {
-            pending: 'bg-amber-100/40 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-200/50 dark:border-amber-500/50 after:bg-amber-500',
-            confirmed: 'bg-emerald-100/40 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-200/50 dark:border-emerald-500/50 after:bg-emerald-500',
-            completed: 'bg-slate-100/40 dark:bg-slate-500/20 text-slate-700 dark:text-slate-300 border-slate-200/50 dark:border-slate-500/50 after:bg-slate-500',
-            cancelled: 'bg-rose-100/40 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-200/50 dark:border-rose-500/50 after:bg-rose-500'
+    const STATUS_STYLES: Record<string, string> = {
+        scheduled:  'bg-amber-100/40 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-200/50 dark:border-amber-500/50 after:bg-amber-500',
+        pending:    'bg-amber-100/40 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-200/50 dark:border-amber-500/50 after:bg-amber-500',
+        confirmed:  'bg-emerald-100/40 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-200/50 dark:border-emerald-500/50 after:bg-emerald-500',
+        checked_in: 'bg-blue-100/40 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-200/50 dark:border-blue-500/50 after:bg-blue-500',
+        completed:  'bg-slate-100/40 dark:bg-slate-500/20 text-slate-700 dark:text-slate-300 border-slate-200/50 dark:border-slate-500/50 after:bg-slate-500',
+        no_show:    'bg-orange-100/40 dark:bg-orange-500/20 text-orange-700 dark:text-orange-300 border-orange-200/50 dark:border-orange-500/50 after:bg-orange-500',
+        cancelled:  'bg-rose-100/40 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-200/50 dark:border-rose-500/50 after:bg-rose-500',
+        blocked:    'bg-zinc-100/40 dark:bg-zinc-500/20 text-zinc-700 dark:text-zinc-300 border-zinc-200/50 dark:border-zinc-500/50 after:bg-zinc-500',
+    }
+
+    const STATUS_LABELS: Record<string, string> = {
+        scheduled:  'Agendado',
+        pending:    'Pendente',
+        confirmed:  'Confirmado',
+        checked_in: 'Presente',
+        completed:  'Concluído',
+        no_show:    'Faltou',
+        cancelled:  'Cancelado',
+        blocked:    'Bloqueado',
+    }
+
+    const getStatusStyles = (status: string) =>
+        STATUS_STYLES[status] ?? STATUS_STYLES.pending
+
+    const getStatusLabel = (status: string) =>
+        STATUS_LABELS[status] ?? status
+
+    const updateAppointmentStatus = async (appointmentId: string, newStatus: string) => {
+        if (isSupabaseConfigured) {
+            const supabase = getSupabaseBrowserClient()
+            if (!supabase) return
+
+            const { error } = await supabase
+                .from('appointments')
+                .update({ status: newStatus })
+                .eq('id', appointmentId)
+
+            if (error) {
+                console.error("[AgendaPage] Erro ao atualizar status do agendamento:", error.message)
+                return
+            }
         }
-        return styles[status as keyof typeof styles] || styles.pending
+        refetchAppointments()
     }
 
     const employeesWithAppointments = selectedEmployee === "all"
@@ -316,6 +354,10 @@ export default function AgendaPage() {
                                                                 animate={{ scale: 1, opacity: 1 }}
                                                                 whileHover={{ scale: 1.02, y: -2 }}
                                                                 className="absolute left-3 right-3 rounded-2xl overflow-hidden shadow-lg group/card cursor-pointer"
+                                                                onClick={() => {
+                                                                    setSelectedAppointment(apt)
+                                                                    setIsNewAppointmentModalOpen(true)
+                                                                }}
                                                                 style={{
                                                                     top: layout.top,
                                                                     height: layout.height,
@@ -332,9 +374,14 @@ export default function AgendaPage() {
                                                                         <span className="text-xs font-bold">
                                                                             {startLabel} - {endLabel}
                                                                         </span>
-                                                                        <Badge variant="outline" className="h-5 text-xs font-bold border-current">
-                                                                            {apt.duration}m
-                                                                        </Badge>
+                                                                        <div className="flex items-center gap-1">
+                                                                            <Badge variant="outline" className="h-5 text-[10px] font-bold border-current px-1.5">
+                                                                                {getStatusLabel(apt.status)}
+                                                                            </Badge>
+                                                                            <Badge variant="outline" className="h-5 text-xs font-bold border-current">
+                                                                                {apt.duration}m
+                                                                            </Badge>
+                                                                        </div>
                                                                     </div>
                                                                     <p className="font-bold text-sm mb-1 line-clamp-1">
                                                                         {apt.customerName ?? "Cliente"}
@@ -342,6 +389,38 @@ export default function AgendaPage() {
                                                                     <p className="text-xs font-medium opacity-70 dark:opacity-90 line-clamp-1">
                                                                         {service?.name ?? apt.serviceName ?? "Serviço"}
                                                                     </p>
+                                                                    <div className="flex flex-wrap gap-1 mt-2">
+                                                                        {apt.status !== 'confirmed' && apt.status !== 'completed' && apt.status !== 'cancelled' && apt.status !== 'no_show' && (
+                                                                            <button
+                                                                                onClick={e => { e.stopPropagation(); updateAppointmentStatus(apt.id, 'confirmed') }}
+                                                                                className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/40 transition-colors"
+                                                                            >Confirmar</button>
+                                                                        )}
+                                                                        {apt.status !== 'checked_in' && apt.status !== 'completed' && apt.status !== 'cancelled' && apt.status !== 'no_show' && (
+                                                                            <button
+                                                                                onClick={e => { e.stopPropagation(); updateAppointmentStatus(apt.id, 'checked_in') }}
+                                                                                className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-700 dark:text-blue-300 hover:bg-blue-500/40 transition-colors"
+                                                                            >Compareceu</button>
+                                                                        )}
+                                                                        {apt.status !== 'completed' && apt.status !== 'cancelled' && apt.status !== 'no_show' && (
+                                                                            <button
+                                                                                onClick={e => { e.stopPropagation(); updateAppointmentStatus(apt.id, 'completed') }}
+                                                                                className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-500/20 text-slate-700 dark:text-slate-300 hover:bg-slate-500/40 transition-colors"
+                                                                            >Concluir</button>
+                                                                        )}
+                                                                        {apt.status !== 'no_show' && apt.status !== 'completed' && apt.status !== 'cancelled' && (
+                                                                            <button
+                                                                                onClick={e => { e.stopPropagation(); updateAppointmentStatus(apt.id, 'no_show') }}
+                                                                                className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-700 dark:text-orange-300 hover:bg-orange-500/40 transition-colors"
+                                                                            >Faltou</button>
+                                                                        )}
+                                                                        {apt.status !== 'cancelled' && apt.status !== 'completed' && (
+                                                                            <button
+                                                                                onClick={e => { e.stopPropagation(); updateAppointmentStatus(apt.id, 'cancelled') }}
+                                                                                className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-700 dark:text-rose-300 hover:bg-rose-500/40 transition-colors"
+                                                                            >Cancelar</button>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
                                                             </motion.div>
                                                         )
@@ -427,14 +506,23 @@ export default function AgendaPage() {
                                                         "p-2.5 rounded-lg border-l-[3px] cursor-pointer hover:shadow-lg dark:hover:shadow-xl transition-all backdrop-blur-sm",
                                                         getStatusStyles(apt.status)
                                                     )}
+                                                    onClick={() => {
+                                                        setSelectedAppointment(apt)
+                                                        setIsNewAppointmentModalOpen(true)
+                                                    }}
                                                 >
                                                     <div className="flex items-center justify-between mb-1">
                                                         <span className="text-[10px] font-bold">
                                                             {format(apt.startDate, "HH:mm")}
                                                         </span>
-                                                        <Badge variant="outline" className="h-4 text-[9px] px-1.5 font-bold border-current">
-                                                            {apt.duration}m
-                                                        </Badge>
+                                                        <div className="flex items-center gap-0.5">
+                                                            <Badge variant="outline" className="h-4 text-[8px] px-1 font-bold border-current">
+                                                                {getStatusLabel(apt.status)}
+                                                            </Badge>
+                                                            <Badge variant="outline" className="h-4 text-[9px] px-1.5 font-bold border-current">
+                                                                {apt.duration}m
+                                                            </Badge>
+                                                        </div>
                                                     </div>
                                                     <p className="text-xs font-bold truncate leading-tight mb-0.5">
                                                         {apt.customerName ?? "Cliente"}
@@ -447,6 +535,38 @@ export default function AgendaPage() {
                                                             {tenantEmployees.find(e => e.id === apt.employeeId)?.fullName}
                                                         </p>
                                                     )}
+                                                    <div className="flex flex-wrap gap-0.5 mt-1.5">
+                                                        {apt.status !== 'confirmed' && apt.status !== 'completed' && apt.status !== 'cancelled' && apt.status !== 'no_show' && (
+                                                            <button
+                                                                onClick={e => { e.stopPropagation(); updateAppointmentStatus(apt.id, 'confirmed') }}
+                                                                className="text-[8px] font-bold px-1 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/40 transition-colors"
+                                                            >Confirmar</button>
+                                                        )}
+                                                        {apt.status !== 'checked_in' && apt.status !== 'completed' && apt.status !== 'cancelled' && apt.status !== 'no_show' && (
+                                                            <button
+                                                                onClick={e => { e.stopPropagation(); updateAppointmentStatus(apt.id, 'checked_in') }}
+                                                                className="text-[8px] font-bold px-1 py-0.5 rounded bg-blue-500/20 text-blue-700 dark:text-blue-300 hover:bg-blue-500/40 transition-colors"
+                                                            >Compareceu</button>
+                                                        )}
+                                                        {apt.status !== 'completed' && apt.status !== 'cancelled' && apt.status !== 'no_show' && (
+                                                            <button
+                                                                onClick={e => { e.stopPropagation(); updateAppointmentStatus(apt.id, 'completed') }}
+                                                                className="text-[8px] font-bold px-1 py-0.5 rounded bg-slate-500/20 text-slate-700 dark:text-slate-300 hover:bg-slate-500/40 transition-colors"
+                                                            >Concluir</button>
+                                                        )}
+                                                        {apt.status !== 'no_show' && apt.status !== 'completed' && apt.status !== 'cancelled' && (
+                                                            <button
+                                                                onClick={e => { e.stopPropagation(); updateAppointmentStatus(apt.id, 'no_show') }}
+                                                                className="text-[8px] font-bold px-1 py-0.5 rounded bg-orange-500/20 text-orange-700 dark:text-orange-300 hover:bg-orange-500/40 transition-colors"
+                                                            >Faltou</button>
+                                                        )}
+                                                        {apt.status !== 'cancelled' && apt.status !== 'completed' && (
+                                                            <button
+                                                                onClick={e => { e.stopPropagation(); updateAppointmentStatus(apt.id, 'cancelled') }}
+                                                                className="text-[8px] font-bold px-1 py-0.5 rounded bg-rose-500/20 text-rose-700 dark:text-rose-300 hover:bg-rose-500/40 transition-colors"
+                                                            >Cancelar</button>
+                                                        )}
+                                                    </div>
                                                 </motion.div>
                                             ))
                                     )}
@@ -517,10 +637,10 @@ export default function AgendaPage() {
     const stats = useMemo(() => {
         const total = filteredAppointments.length
         const confirmed = filteredAppointments.filter(a => a.status === 'confirmed').length
-        const pending = filteredAppointments.filter(a => a.status === 'pending').length
+        const scheduled = filteredAppointments.filter(a => a.status === 'scheduled' || a.status === 'pending').length
         const completed = filteredAppointments.filter(a => a.status === 'completed').length
 
-        return { total, confirmed, pending, completed }
+        return { total, confirmed, scheduled, completed }
     }, [filteredAppointments])
 
     if (!isMounted) return <div className="h-screen w-full flex items-center justify-center text-muted-foreground">Carregando agenda...</div>
@@ -529,11 +649,17 @@ export default function AgendaPage() {
         <>
             <NewAppointmentModal
                 isOpen={isNewAppointmentModalOpen}
-                onClose={() => setIsNewAppointmentModalOpen(false)}
+                onClose={() => {
+                    setIsNewAppointmentModalOpen(false)
+                    setSelectedAppointment(null)
+                }}
                 onSuccess={() => {
-                    window.location.reload()
+                    setIsNewAppointmentModalOpen(false)
+                    setSelectedAppointment(null)
+                    refetchAppointments()
                 }}
                 tenantId={currentTenant.id}
+                appointment={selectedAppointment}
             />
             <div className="space-y-8 pb-10">
                 {/* Header */}
@@ -556,7 +682,10 @@ export default function AgendaPage() {
                     </div>
                     <Button
                         className="rounded-xl bg-primary hover:bg-primary/90 shadow-lg"
-                        onClick={() => setIsNewAppointmentModalOpen(true)}
+                        onClick={() => {
+                            setSelectedAppointment(null)
+                            setIsNewAppointmentModalOpen(true)
+                        }}
                     >
                         <Plus className="w-4 h-4 mr-2" />
                         Novo Agendamento
@@ -586,8 +715,8 @@ export default function AgendaPage() {
                     <Card className="rounded-2xl border-none shadow-sm bg-amber-500/10 p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-xs font-bold uppercase text-amber-700">Pendentes</p>
-                                <p className="text-3xl font-bold text-amber-700 mt-1">{stats.pending}</p>
+                                <p className="text-xs font-bold uppercase text-amber-700">Agendados</p>
+                                <p className="text-3xl font-bold text-amber-700 mt-1">{stats.scheduled}</p>
                             </div>
                             <Clock className="w-8 h-8 text-amber-500" />
                         </div>
@@ -703,18 +832,26 @@ export default function AgendaPage() {
 
                 {/* Legend */}
                 <div className="flex items-center justify-center">
-                    <div className="flex items-center gap-6 px-8 py-4 rounded-3xl bg-white dark:bg-zinc-900 shadow-lg border border-slate-200 dark:border-zinc-800">
+                    <div className="flex flex-wrap items-center justify-center gap-4 px-8 py-4 rounded-3xl bg-white dark:bg-zinc-900 shadow-lg border border-slate-200 dark:border-zinc-800">
                         <div className="flex items-center gap-2">
                             <div className="w-3 h-3 rounded-full bg-amber-500" />
-                            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Pendente</span>
+                            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Agendado</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <div className="w-3 h-3 rounded-full bg-emerald-500" />
                             <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Confirmado</span>
                         </div>
                         <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-blue-500" />
+                            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Presente</span>
+                        </div>
+                        <div className="flex items-center gap-2">
                             <div className="w-3 h-3 rounded-full bg-slate-500" />
                             <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Concluído</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-orange-500" />
+                            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Faltou</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <div className="w-3 h-3 rounded-full bg-rose-500" />
@@ -726,4 +863,3 @@ export default function AgendaPage() {
         </>
     )
 }
-
