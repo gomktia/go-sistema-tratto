@@ -1,9 +1,9 @@
 
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { format } from "date-fns"
-import { Calendar as CalendarIcon, Loader2 } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -11,28 +11,67 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useTenantCustomers, useTenantServices, useTenantEmployees } from "@/hooks/useTenantRecords"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import type { AppointmentRecord } from "@/types/catalog"
 
 interface NewAppointmentModalProps {
     isOpen: boolean
     onClose: () => void
     onSuccess: () => void
     tenantId: string
+    appointment?: AppointmentRecord | null
 }
 
-export function NewAppointmentModal({ isOpen, onClose, onSuccess, tenantId }: NewAppointmentModalProps) {
+type AppointmentType = "appointment" | "blocked"
+
+const getDefaultFormData = () => ({
+    customerId: "",
+    serviceId: "",
+    employeeId: "",
+    date: format(new Date(), "yyyy-MM-dd"),
+    time: "09:00",
+    notes: "",
+})
+
+export function NewAppointmentModal({ isOpen, onClose, onSuccess, tenantId, appointment }: NewAppointmentModalProps) {
     const [loading, setLoading] = useState(false)
-    const [formData, setFormData] = useState({
-        customerId: "",
-        serviceId: "",
-        employeeId: "",
-        date: format(new Date(), "yyyy-MM-dd"),
-        time: "09:00",
-        notes: ""
-    })
+    const [appointmentType, setAppointmentType] = useState<AppointmentType>("appointment")
+    const [formData, setFormData] = useState(getDefaultFormData())
+
+    const isBlocked = appointmentType === "blocked"
+    const isEditing = Boolean(appointment)
+
+    const isSubmitDisabled =
+        loading ||
+        !formData.employeeId ||
+        !formData.date ||
+        !formData.time ||
+        (isBlocked && !formData.notes.trim()) ||
+        (!isBlocked && (!formData.customerId || !formData.serviceId))
 
     const { data: customers } = useTenantCustomers(tenantId)
     const { data: services } = useTenantServices(tenantId)
     const { data: employees } = useTenantEmployees(tenantId)
+
+    useEffect(() => {
+        if (!isOpen) return
+
+        if (!appointment) {
+            setAppointmentType("appointment")
+            setFormData(getDefaultFormData())
+            return
+        }
+
+        const startAt = new Date(appointment.startAt)
+        setAppointmentType(appointment.status === "blocked" ? "blocked" : "appointment")
+        setFormData({
+            customerId: appointment.customerId ?? "",
+            serviceId: appointment.serviceId ?? "",
+            employeeId: appointment.employeeId ?? "",
+            date: format(startAt, "yyyy-MM-dd"),
+            time: format(startAt, "HH:mm"),
+            notes: appointment.notes ?? "",
+        })
+    }, [appointment, isOpen])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -42,97 +81,142 @@ export function NewAppointmentModal({ isOpen, onClose, onSuccess, tenantId }: Ne
             const supabase = getSupabaseBrowserClient()
             if (!supabase) throw new Error("Supabase client failed to initialize")
 
-            // Combine date and time
             const startAt = new Date(`${formData.date}T${formData.time}:00`)
 
-            // Calculate end time based on service duration
-            const service = services.find(s => s.id === formData.serviceId)
-            const duration = service?.durationMinutes || 60
+            let duration = 60
+            let price = 0
+
+            if (!isBlocked) {
+                const service = services.find(s => s.id === formData.serviceId)
+                duration = service?.durationMinutes || 60
+                price = service?.price || 0
+            }
+
             const endAt = new Date(startAt.getTime() + duration * 60000)
 
-            const { error } = await supabase
-                .from("appointments")
-                .insert({
-                    tenant_id: tenantId,
-                    customer_id: formData.customerId,
-                    service_id: formData.serviceId,
-                    employee_id: formData.employeeId,
-                    start_at: startAt.toISOString(),
-                    end_at: endAt.toISOString(),
-                    duration_minutes: duration,
-                    price: service?.price || 0,
-                    status: "confirmed", // Auto confirm for admin
-                    channel: "admin"
-                })
+            const payload: Record<string, unknown> = {
+                tenant_id: tenantId,
+                employee_id: formData.employeeId,
+                start_at: startAt.toISOString(),
+                end_at: endAt.toISOString(),
+                duration_minutes: duration,
+                price,
+                status: isBlocked ? "blocked" : "confirmed",
+                channel: "admin",
+                notes: formData.notes || null,
+            }
 
-            if (error) throw error
+            if (!isBlocked) {
+                payload.customer_id = formData.customerId
+                payload.service_id = formData.serviceId
+            } else if (isEditing) {
+                payload.customer_id = null
+                payload.service_id = null
+            }
+
+            if (isEditing && appointment) {
+                delete payload.status
+                const { error } = await supabase
+                    .from("appointments")
+                    .update(payload)
+                    .eq("id", appointment.id)
+
+                if (error) throw error
+            } else {
+                const { error } = await supabase.from("appointments").insert(payload)
+
+                if (error) throw error
+            }
 
             onSuccess()
             onClose()
-            // Reset form
-            setFormData({
-                customerId: "",
-                serviceId: "",
-                employeeId: "",
-                date: format(new Date(), "yyyy-MM-dd"),
-                time: "09:00",
-                notes: ""
-            })
+            setAppointmentType("appointment")
+            setFormData(getDefaultFormData())
 
         } catch (error) {
-            console.error("Erro ao criar agendamento:", error)
-            alert("Erro ao criar agendamento. Verifique o console.")
+            console.error("Erro ao salvar agendamento:", error)
+            alert("Erro ao salvar agendamento. Verifique o console.")
         } finally {
             setLoading(false)
         }
     }
 
     return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
+        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle>Novo Agendamento</DialogTitle>
+                    <DialogTitle>
+                        {isEditing
+                            ? isBlocked ? "Editar Bloqueio" : "Editar Agendamento"
+                            : isBlocked ? "Bloquear Horário" : "Novo Agendamento"}
+                    </DialogTitle>
                     <DialogDescription>
-                        Preencha os dados para criar um novo agendamento.
+                        {isEditing
+                            ? "Ajuste profissional, data, horário e observações do registro."
+                            : isBlocked
+                            ? "Bloqueie um horário na agenda de um profissional."
+                            : "Preencha os dados para criar um novo agendamento."}
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+
                     <div className="grid gap-2">
-                        <Label htmlFor="customer">Cliente</Label>
-                        <Select
-                            value={formData.customerId}
-                            onValueChange={(val) => setFormData(prev => ({ ...prev, customerId: val }))}
-                        >
+                        <Label>Tipo</Label>
+                            <Select
+                                value={appointmentType}
+                                onValueChange={(val) => setAppointmentType(val as AppointmentType)}
+                                disabled={isEditing}
+                            >
                             <SelectTrigger>
-                                <SelectValue placeholder="Selecione o cliente" />
+                                <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                {customers.map(c => (
-                                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                                ))}
+                                <SelectItem value="appointment">Agendamento</SelectItem>
+                                <SelectItem value="blocked">Bloqueio de horário</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
 
-                    <div className="grid gap-2">
-                        <Label htmlFor="service">Serviço</Label>
-                        <Select
-                            value={formData.serviceId}
-                            onValueChange={(val) => setFormData(prev => ({ ...prev, serviceId: val }))}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Selecione o serviço" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {services.map(s => (
-                                    <SelectItem key={s.id} value={s.id}>{s.name} - R$ {s.price}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                    {!isBlocked && (
+                        <>
+                            <div className="grid gap-2">
+                                <Label>Cliente</Label>
+                                <Select
+                                    value={formData.customerId}
+                                    onValueChange={(val) => setFormData(prev => ({ ...prev, customerId: val }))}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Selecione o cliente" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {customers.map(c => (
+                                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label>Serviço</Label>
+                                <Select
+                                    value={formData.serviceId}
+                                    onValueChange={(val) => setFormData(prev => ({ ...prev, serviceId: val }))}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Selecione o serviço" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {services.map(s => (
+                                            <SelectItem key={s.id} value={s.id}>{s.name} - R$ {s.price}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </>
+                    )}
 
                     <div className="grid gap-2">
-                        <Label htmlFor="employee">Profissional</Label>
+                        <Label>Profissional</Label>
                         <Select
                             value={formData.employeeId}
                             onValueChange={(val) => setFormData(prev => ({ ...prev, employeeId: val }))}
@@ -169,11 +253,25 @@ export function NewAppointmentModal({ isOpen, onClose, onSuccess, tenantId }: Ne
                         </div>
                     </div>
 
+                    <div className="grid gap-2">
+                        <Label htmlFor="notes">
+                            {isBlocked ? "Motivo *" : "Observações"}
+                        </Label>
+                        <textarea
+                            id="notes"
+                            rows={3}
+                            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                            placeholder={isBlocked ? "Informe o motivo do bloqueio..." : "Observações sobre o agendamento..."}
+                            value={formData.notes}
+                            onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                        />
+                    </div>
+
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-                        <Button type="submit" disabled={loading || !formData.customerId || !formData.serviceId}>
+                        <Button type="submit" disabled={isSubmitDisabled}>
                             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Agendar
+                            {isEditing ? "Salvar Alterações" : isBlocked ? "Bloquear" : "Agendar"}
                         </Button>
                     </DialogFooter>
                 </form>
@@ -181,4 +279,3 @@ export function NewAppointmentModal({ isOpen, onClose, onSuccess, tenantId }: Ne
         </Dialog>
     )
 }
-

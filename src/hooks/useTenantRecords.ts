@@ -144,6 +144,23 @@ const generateMockAvailability = (employeeId: string): StaffAvailabilityRecord[]
 // DB ROW MAPPERS (Supabase -> Domain)
 // --------------------------------------------------------------------------
 
+// Appointments
+const mapRowToAppointment = (row: any): AppointmentRecord => ({
+    id: row.id,
+    tenantId: row.tenant_id,
+    serviceId: row.service_id ?? undefined,
+    employeeId: row.employee_id ?? undefined,
+    customerId: row.customer_id ?? undefined,
+    startAt: row.start_at,
+    endAt: row.end_at ?? undefined,
+    durationMinutes: row.duration_minutes ?? undefined,
+    price: row.price ?? undefined,
+    currency: row.currency ?? "BRL",
+    channel: row.channel ?? undefined,
+    status: row.status,
+    notes: row.notes ?? undefined,
+})
+
 // Customers
 const mapRowToClient = (row: any): ClientRecord => ({
     id: row.id,
@@ -176,21 +193,47 @@ const mapRowToService = (row: any): ServiceRecord => ({
 // --------------------------------------------------------------------------
 
 export function useTenantAppointments(tenantId?: string) {
-    // Fallback: Filtrar mocks pelo tenant (se tivéssemos multi-tenant mocks reais)
     const fallback = useMemo(() => {
-        const normalized = appointmentMocks.map(mapMockAppointment)
-        if (!tenantId) return normalized
-        // Mock não tem tenantId, retornamos tudo por enquanto
-        return normalized
-    }, [tenantId])
+        return appointmentMocks.map(mapMockAppointment)
+    }, [])
 
+    const [trigger, setTrigger] = useState(0)
     const [data, setData] = useState<AppointmentRecord[]>(fallback)
-    const [loading, setLoading] = useState<boolean>(false) // Mock loading is instant
+    const [loading, setLoading] = useState<boolean>(isSupabaseConfigured && !!tenantId)
 
-    // Aqui entraria o useEffect com Supabase
-    // useEffect(() => { ... fetch from 'appointments' table ... }, [tenantId])
+    const refetch = () => setTrigger(prev => prev + 1)
 
-    return { data, loading }
+    useEffect(() => {
+        const supabase = getSupabaseBrowserClient()
+        if (!isSupabaseConfigured || !supabase || !tenantId) {
+            setLoading(false)
+            setData(fallback)
+            return
+        }
+
+        let isMounted = true
+        setLoading(true)
+
+        supabase
+            .from("appointments")
+            .select("id, tenant_id, service_id, employee_id, customer_id, start_at, end_at, duration_minutes, price, currency, channel, status, notes")
+            .eq("tenant_id", tenantId)
+            .order("start_at", { ascending: true })
+            .then(({ data: rows, error }) => {
+                if (!isMounted) return
+                if (error) {
+                    console.error("[useTenantAppointments] Erro ao carregar agendamentos:", error.message)
+                    setData(fallback)
+                } else {
+                    setData(rows ? rows.map(mapRowToAppointment) : fallback)
+                }
+                setLoading(false)
+            })
+
+        return () => { isMounted = false }
+    }, [tenantId, fallback, trigger])
+
+    return { data, loading, refetch }
 }
 
 

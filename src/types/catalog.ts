@@ -50,8 +50,9 @@ export type AppointmentRecord = {
     durationMinutes?: number
     price?: number
     currency: string
-    status: string
     channel?: string
+    status: string
+    notes?: string
 }
 
 export type ProductRecord = {

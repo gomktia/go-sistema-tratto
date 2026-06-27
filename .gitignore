@@ -40,3 +40,18 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Arquivos com dados pessoais / credenciais reais (LGPD)
+INSTRUCOES_DATA_NASCIMENTO.md
+CREDENCIAIS_*.md
+RELATORIO_TESTE_*.md
+supabase/CORRECAO_CPF*.sql
+supabase/EXECUTAR_AGORA*.sql
+supabase/CORRIGIR_*.sql
+supabase/SOLUCAO_DEFINITIVA*.sql
+supabase/DIAGNOSTICO*.sql
+supabase/insert_ana*.sql
+supabase/create_ana*.sql
+supabase/verify_and_insert*.sql
+supabase/investigate*.sql
+scripts/update-oseias-name.ts
