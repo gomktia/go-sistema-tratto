@@ -649,11 +649,52 @@ export function useTenantBySlug(slug: string) {
     }, [slug])
 
     const [data, setData] = useState<MockTenant | null>(fallback)
-    const [loading, setLoading] = useState<boolean>(false)
+    const [loading, setLoading] = useState<boolean>(isSupabaseConfigured && !!slug)
 
-    // TODO: Supabase implementation for getting tenant by slug
-    // Avoiding unused vars
-    const _placeholder = { setData, setLoading }
+    useEffect(() => {
+        const supabase = getSupabaseBrowserClient()
+        if (!isSupabaseConfigured || !supabase || !slug) {
+            setLoading(false)
+            return
+        }
+        let isMounted = true
+        setLoading(true)
+        supabase
+            .from('tenants')
+            .select('id, name, slug, full_name, logo, theme, settings, plan_id, subscription_status, trial_ends_at')
+            .eq('slug', slug)
+            .single()
+            .then(({ data: row, error }) => {
+                if (!isMounted) return
+                if (error || !row) {
+                    setData(fallback)
+                } else {
+                    const theme = (row.theme as Record<string, string> | null) ?? {}
+                    const settings = (row.settings as Record<string, string> | null) ?? {}
+                    setData({
+                        id: row.id,
+                        name: row.name,
+                        slug: row.slug,
+                        fullName: row.full_name || row.name,
+                        logo: row.logo || (row.name || '').substring(0, 2).toUpperCase(),
+                        customLogo: row.logo || undefined,
+                        primaryColor: theme.primaryColor || '#7c3aed',
+                        secondaryColor: theme.accentColor || '#a78bfa',
+                        customPrimaryColor: theme.primaryColor,
+                        customSecondaryColor: theme.accentColor,
+                        description: settings.description || '',
+                        customDomain: settings.custom_domain || `${row.slug}.tratto.app`,
+                        whatsapp: settings.whatsapp || '',
+                        schedulingType: settings.scheduling_type === 'shared' ? 'shared' : 'individual',
+                        planId: (row.plan_id as MockTenant['planId']) || 'trial',
+                        subscriptionStatus: (row.subscription_status as MockTenant['subscriptionStatus']) || 'trialing',
+                        trialEndsAt: row.trial_ends_at || undefined,
+                    })
+                }
+                setLoading(false)
+            })
+        return () => { isMounted = false }
+    }, [slug, fallback])
 
     return { data, loading }
 }

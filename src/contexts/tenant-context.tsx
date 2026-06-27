@@ -19,9 +19,12 @@ type TenantRow = {
     name: string
     slug: string
     full_name?: string | null
-    logo_url?: string | null
+    logo?: string | null
     theme?: Record<string, string | undefined> | null
     settings?: Record<string, string | undefined> | null
+    plan_id?: string | null
+    subscription_status?: string | null
+    trial_ends_at?: string | null
 }
 
 const getInitialTenantId = () => {
@@ -51,24 +54,27 @@ export function TenantProvider({ children, forcedSlug }: { children: ReactNode, 
                 id: row.id,
                 name: row.name,
                 fullName: row.full_name || row.name,
-                logo: row.logo_url || initials,
-                customLogo: row.logo_url || undefined,
-                primaryColor: theme.primary || '#7c3aed',
-                secondaryColor: theme.secondary || '#a78bfa',
-                customPrimaryColor: theme.primary,
-                customSecondaryColor: theme.secondary,
+                logo: row.logo || initials,
+                customLogo: row.logo || undefined,
+                primaryColor: theme.primaryColor || '#7c3aed',
+                secondaryColor: theme.accentColor || '#a78bfa',
+                customPrimaryColor: theme.primaryColor,
+                customSecondaryColor: theme.accentColor,
                 description: settings.description || `Conta ${row.name}`,
                 customDomain: settings.custom_domain || `${row.slug}.Tratto.app`,
                 slug: row.slug,
                 whatsapp: settings.whatsapp || '',
                 schedulingType: scheduling,
+                planId: (row.plan_id as Tenant['planId']) || 'trial',
+                subscriptionStatus: (row.subscription_status as Tenant['subscriptionStatus']) || 'trialing',
+                trialEndsAt: row.trial_ends_at || undefined,
             }
         }
 
         const fetchTenants = async () => {
             const { data, error } = await supabase
                 .from('tenants')
-                .select('id, name, slug, full_name, logo_url, theme, settings')
+                .select('id, name, slug, full_name, logo, theme, settings, plan_id, subscription_status, trial_ends_at')
                 .order('name')
 
             if (error) {
