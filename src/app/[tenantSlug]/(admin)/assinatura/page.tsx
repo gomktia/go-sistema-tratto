@@ -150,7 +150,7 @@ export default function SubscriptionPage() {
                                 <ul className="space-y-3">
                                     <li>
                                         <p className="font-medium text-foreground">Como cancelo?</p>
-                                        <p className="text-xs">Você pode cancelar a qualquer momento no botão "Gerenciar". O acesso continua até o fim do ciclo.</p>
+                                        <p className="text-xs">Você pode cancelar a qualquer momento no botão &quot;Gerenciar&quot;. O acesso continua até o fim do ciclo.</p>
                                     </li>
                                     <li>
                                         <p className="font-medium text-foreground">Emite nota fiscal?</p>

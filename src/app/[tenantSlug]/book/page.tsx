@@ -986,7 +986,7 @@ export default function BookingPage() {
                                 {tenantHighlights.map((highlight) => (
                                     <div key={highlight.id} className="relative min-w-[280px] h-40 rounded-2xl overflow-hidden shadow-lg group">
                                         <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors z-10" />
-                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        { }
                                         <img src={highlight.imageUrl} alt={highlight.title} className="w-full h-full object-cover" />
                                         <div className="absolute bottom-0 left-0 p-4 z-20 text-white">
                                             <div className="flex items-center gap-2 mb-1">
@@ -1091,7 +1091,7 @@ export default function BookingPage() {
                                     >
                                         {service.imageUrl && (
                                             <div className="mb-4 -mx-6 -mt-6 h-32 relative overflow-hidden">
-                                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                { }
                                                 <img src={service.imageUrl} alt={service.name} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
                                             </div>
                                         )}
@@ -1743,7 +1743,7 @@ export default function BookingPage() {
                                     <div className="flex items-start gap-4">
                                         <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-200 shrink-0">
                                             {testimonial.imageUrl ? (
-                                                // eslint-disable-next-line @next/next/no-img-element
+                                                 
                                                 <img src={testimonial.imageUrl} alt={testimonial.customerName} className="w-full h-full object-cover" />
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center text-slate-400 font-bold">
@@ -1783,7 +1783,7 @@ export default function BookingPage() {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 h-64 md:h-80 rounded-[2rem] overflow-hidden">
                             {tenantGallery.map((img, idx) => (
                                 <div key={img.id} className={`relative group overflow-hidden ${idx === 0 ? 'col-span-2 row-span-2' : ''}`}>
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    { }
                                     <img src={img.url} alt={img.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                                     <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors" />
                                 </div>
