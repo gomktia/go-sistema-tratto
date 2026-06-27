@@ -34,6 +34,7 @@ const getDefaultFormData = () => ({
 
 export function NewAppointmentModal({ isOpen, onClose, onSuccess, tenantId, appointment }: NewAppointmentModalProps) {
     const [loading, setLoading] = useState(false)
+    const [conflictError, setConflictError] = useState<string | null>(null)
     const [appointmentType, setAppointmentType] = useState<AppointmentType>("appointment")
     const [formData, setFormData] = useState(getDefaultFormData())
 
@@ -53,7 +54,10 @@ export function NewAppointmentModal({ isOpen, onClose, onSuccess, tenantId, appo
     const { data: employees } = useTenantEmployees(tenantId)
 
     useEffect(() => {
-        if (!isOpen) return
+        if (!isOpen) {
+            setConflictError(null)
+            return
+        }
 
         if (!appointment) {
             setAppointmentType("appointment")
@@ -93,6 +97,33 @@ export function NewAppointmentModal({ isOpen, onClose, onSuccess, tenantId, appo
             }
 
             const endAt = new Date(startAt.getTime() + duration * 60000)
+
+            // Verificar conflito de horário antes de salvar
+            setConflictError(null)
+            const conflictQuery = supabase
+                .from("appointments")
+                .select("id, start_at, end_at, notes")
+                .eq("employee_id", formData.employeeId)
+                .neq("status", "cancelled")
+                .lt("start_at", endAt.toISOString())
+                .gt("end_at", startAt.toISOString())
+
+            if (isEditing && appointment) {
+                conflictQuery.neq("id", appointment.id)
+            }
+
+            const { data: conflicts } = await conflictQuery
+
+            if (conflicts && conflicts.length > 0) {
+                const c = conflicts[0]
+                const cStart = format(new Date(c.start_at), "HH:mm")
+                const cEnd = c.end_at ? format(new Date(c.end_at), "HH:mm") : "?"
+                setConflictError(
+                    `Conflito: este profissional já tem um agendamento das ${cStart} às ${cEnd}.`
+                )
+                setLoading(false)
+                return
+            }
 
             const payload: Record<string, unknown> = {
                 tenant_id: tenantId,
@@ -266,6 +297,12 @@ export function NewAppointmentModal({ isOpen, onClose, onSuccess, tenantId, appo
                             onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                         />
                     </div>
+
+                    {conflictError && (
+                        <p className="text-sm font-medium text-red-500 rounded-lg bg-red-50 px-3 py-2">
+                            {conflictError}
+                        </p>
+                    )}
 
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
