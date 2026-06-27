@@ -27,7 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useTenantBySlug, useTenantAppointments, useTenantEmployees } from "@/hooks/useTenantRecords"
+import { useTenantBySlug, useTenantEmployees, useTenantCommissions } from "@/hooks/useTenantRecords"
 import { formatCurrency } from "@/lib/utils"
 import { toast } from "sonner"
 
@@ -35,8 +35,8 @@ export default function FinancialPage() {
     const params = useParams()
     const tenantSlug = params.tenantSlug as string
     const { data: tenant } = useTenantBySlug(tenantSlug)
-    const { data: appointments } = useTenantAppointments(tenant?.id)
     const { data: employees } = useTenantEmployees(tenant?.id)
+    const { data: commissionRows } = useTenantCommissions(tenant?.id)
 
     // --- STRIPE STATES ---
     const [isStripeConnected, setIsStripeConnected] = useState(false)
@@ -73,51 +73,26 @@ export default function FinancialPage() {
         pending: 3450.00
     }
 
-    // --- CÁLCULO INTELIGENTE DE COMISSÕES ---
-    const commissions = employees.map(emp => {
-        const empAppointments = appointments
-            .filter(a => a.employeeId === emp.id && a.status === 'completed')
-
-        // Detalhamento do calculo
-        let totalServiceValue = 0
-        let totalDeductions = 0
-        let commissionableAmount = 0
-
-        empAppointments.forEach(apt => {
-            const price = apt.price || 0
-            const method = (apt as any).metadata?.payment_method || 'card' // Mock default
-
-            // 1. Aplica taxa da maquininha?
-            let feePercent = 0
-            if (method === 'card') feePercent = settings.cardFeeCredit
-            if (method === 'debit') feePercent = settings.cardFeeDebit
-
-            const feeValue = price * (feePercent / 100)
-
-            // 2. Base de cálculo
-            const baseValue = settings.deductFeesFromCommission ? (price - feeValue) : price
-
-            totalServiceValue += price
-            totalDeductions += feeValue
-            commissionableAmount += baseValue
-        })
-
-        // 3. Aplica % do Profissional
-        const empRate = (emp as any).commissionRate || settings.defaultCommission
-        const empCommissionRate = empRate / 100
-        const finalCommission = commissionableAmount * empCommissionRate
-
-        return {
+    // --- COMISSÕES PERSISTIDAS (appointment_commissions) ---
+    const commissions = employees.flatMap(emp => {
+        const rows = commissionRows.filter(r => r.employeeId === emp.id)
+        if (rows.length === 0) return []
+        const grossValue       = rows.reduce((sum, r) => sum + r.finalPrice, 0)
+        const deductions       = rows.reduce((sum, r) => sum + r.discount, 0)
+        const baseValue        = rows.reduce((sum, r) => sum + r.baseAmount, 0)
+        const commissionAmount = rows.reduce((sum, r) => sum + r.commissionAmount, 0)
+        const rate             = rows[0]?.commissionRate ?? 0
+        return [{
             id: emp.id,
             name: emp.fullName,
-            totalServices: empAppointments.length,
-            grossValue: totalServiceValue,    // Faturamento Bruto
-            deductions: totalDeductions,      // Taxas Maquininha
-            baseValue: commissionableAmount,  // Base de Cálculo
-            commissionRate: empCommissionRate,
-            finalValue: finalCommission,      // Valor a Pagar
-            status: finalCommission > 0 ? 'pending' : 'paid'
-        }
+            totalServices: rows.length,
+            grossValue,          // final_price acumulado
+            deductions,          // discount acumulado
+            baseValue,           // base_amount acumulado (grossValue - deductions)
+            commissionRate: rate / 100,
+            finalValue: commissionAmount,
+            status: commissionAmount > 0 ? 'pending' : 'paid',
+        }]
     })
 
 
@@ -208,11 +183,11 @@ export default function FinancialPage() {
                             <div className="flex justify-between items-center">
                                 <div>
                                     <CardTitle>Fechamento de Comissões</CardTitle>
-                                    <CardDescription>Valores calculados automaticamente descontando taxas de cartão.</CardDescription>
+                                    <CardDescription>Comissões calculadas no fechamento de cada atendimento e persistidas no banco.</CardDescription>
                                 </div>
                                 <Badge variant="outline" className="text-xs font-normal gap-1">
                                     <AlertCircle className="w-3 h-3" />
-                                    Cálculo: (Preço - Taxa Cartão) x % Profissional
+                                    Cálculo: (Valor Final - Desconto) x % Profissional
                                 </Badge>
                             </div>
                         </CardHeader>
@@ -223,7 +198,7 @@ export default function FinancialPage() {
                                         <tr>
                                             <th className="px-6 py-4">Profissional</th>
                                             <th className="px-6 py-4">Fat. Bruto</th>
-                                            <th className="px-6 py-4 text-red-400" title="Taxas de cartão descontadas">Ded. Taxas</th>
+                                            <th className="px-6 py-4 text-red-400" title="Descontos aplicados no atendimento">Descontos</th>
                                             <th className="px-6 py-4 font-bold text-slate-700">Base Calc.</th>
                                             <th className="px-6 py-4">Sua %</th>
                                             <th className="px-6 py-4 text-emerald-600 font-bold bg-emerald-50/50">A PAGAR</th>
