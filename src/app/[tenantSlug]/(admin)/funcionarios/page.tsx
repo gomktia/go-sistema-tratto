@@ -8,17 +8,13 @@ import {
     Search,
     Edit,
     Trash2,
-    Calendar,
-    UserCheck,
     Percent,
-    Smartphone,
     Mail,
-    Sparkles,
-    ShieldCheck,
     ChevronRight,
     LayoutGrid,
     List as ListIcon,
-    Settings2
+    Settings2,
+    Loader2,
 } from "lucide-react"
 import {
     Table,
@@ -30,118 +26,178 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
 import { FormDialog } from "@/components/ui/form-dialog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
-import { employees as initialEmployees, services, type Employee, type Service } from "@/mocks/services"
+import { useTenantEmployees, useTenantServices } from "@/hooks/useTenantRecords"
+import { useTenant } from "@/contexts/tenant-context"
+import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
+import type { EmployeeRecord } from "@/types/catalog"
 
 const weekDays = [
-    { id: 'monday', label: 'Segunda' },
-    { id: 'tuesday', label: 'Terça' },
+    { id: 'monday',    label: 'Segunda' },
+    { id: 'tuesday',   label: 'Terça' },
     { id: 'wednesday', label: 'Quarta' },
-    { id: 'thursday', label: 'Quinta' },
-    { id: 'friday', label: 'Sexta' },
-    { id: 'saturday', label: 'Sábado' },
-    { id: 'sunday', label: 'Domingo' }
+    { id: 'thursday',  label: 'Quinta' },
+    { id: 'friday',    label: 'Sexta' },
+    { id: 'saturday',  label: 'Sábado' },
+    { id: 'sunday',    label: 'Domingo' },
 ]
+
+type FormData = {
+    name: string
+    email: string
+    phone: string
+    specialties: string[]
+    workingHours: Record<string, { start: string; end: string }[]>
+    commission: number
+    acceptsOnlineBooking: boolean
+}
+
+const defaultForm: FormData = {
+    name: "",
+    email: "",
+    phone: "",
+    specialties: [],
+    workingHours: {},
+    commission: 40,
+    acceptsOnlineBooking: true,
+}
 
 export default function FuncionariosPage() {
     const router = useRouter()
+    const { currentTenant } = useTenant()
+    const tenantId = currentTenant?.id
+
+    const { data: employees, loading, refetch } = useTenantEmployees(tenantId)
+    const { data: services } = useTenantServices(tenantId)
+
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-    const [employees, setEmployees] = useState(initialEmployees)
     const [searchTerm, setSearchTerm] = useState("")
+    const [saving, setSaving] = useState(false)
     const [showNewEmployee, setShowNewEmployee] = useState(false)
     const [showEditEmployee, setShowEditEmployee] = useState(false)
     const [showConfirm, setShowConfirm] = useState(false)
-    const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
-
-    const [formData, setFormData] = useState({
-        name: "",
-        email: "",
-        phone: "",
-        specialties: [] as string[],
-        workingHours: {} as { [key: string]: { start: string, end: string }[] },
-        commission: 40,
-        acceptsOnlineBooking: true,
-        roundRobinEnabled: true
-    })
+    const [selectedEmployee, setSelectedEmployee] = useState<EmployeeRecord | null>(null)
+    const [formData, setFormData] = useState<FormData>(defaultForm)
 
     const filteredEmployees = employees.filter(emp =>
-        emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.specialties.some(specId => {
+        emp.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (emp.specialties ?? []).some(specId => {
             const service = services.find(s => s.id === specId)
             return service?.name.toLowerCase().includes(searchTerm.toLowerCase())
         })
     )
 
-    const handleCreateEmployee = () => {
-        const newEmployee: Employee = {
-            id: String(employees.length + 1),
-            tenantId: '1',
-            ...formData,
-            active: true,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        }
+    // ---- Supabase mutations ----
 
-        setEmployees([...employees, newEmployee])
+    const handleCreateEmployee = async () => {
+        if (!isSupabaseConfigured || !tenantId) {
+            // fallback: só fecha o modal se não tem Supabase
+            setShowNewEmployee(false)
+            resetForm()
+            return
+        }
+        const supabase = getSupabaseBrowserClient()
+        if (!supabase) return
+
+        setSaving(true)
+        const { error } = await supabase.from("employees").insert({
+            tenant_id: tenantId,
+            full_name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            specialties: formData.specialties,
+            working_hours: formData.workingHours,
+            commission_rate: formData.commission,
+            accepts_online_booking: formData.acceptsOnlineBooking,
+            status: "active",
+        })
+
+        setSaving(false)
+        if (error) {
+            console.error("[FuncionariosPage] Erro ao criar profissional:", error.message)
+            return
+        }
         setShowNewEmployee(false)
         resetForm()
+        refetch()
     }
 
-    const handleEditEmployee = () => {
+    const handleEditEmployee = async () => {
         if (!selectedEmployee) return
+        if (!isSupabaseConfigured || !tenantId) {
+            setShowEditEmployee(false)
+            resetForm()
+            return
+        }
+        const supabase = getSupabaseBrowserClient()
+        if (!supabase) return
 
-        setEmployees(employees.map(emp =>
-            emp.id === selectedEmployee.id
-                ? { ...emp, ...formData, updatedAt: new Date().toISOString() }
-                : emp
-        ))
+        setSaving(true)
+        const { error } = await supabase.from("employees").update({
+            full_name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            specialties: formData.specialties,
+            working_hours: formData.workingHours,
+            commission_rate: formData.commission,
+            accepts_online_booking: formData.acceptsOnlineBooking,
+            updated_at: new Date().toISOString(),
+        }).eq("id", selectedEmployee.id)
+
+        setSaving(false)
+        if (error) {
+            console.error("[FuncionariosPage] Erro ao editar profissional:", error.message)
+            return
+        }
         setShowEditEmployee(false)
         resetForm()
+        refetch()
     }
 
-    const handleDeleteEmployee = (employee: Employee) => {
-        setEmployees(employees.filter(emp => emp.id !== employee.id))
+    const handleDeleteEmployee = async (employee: EmployeeRecord) => {
+        if (!isSupabaseConfigured || !tenantId) {
+            setShowConfirm(false)
+            return
+        }
+        const supabase = getSupabaseBrowserClient()
+        if (!supabase) return
+
+        // Soft-delete: marcar como inativo em vez de apagar
+        const { error } = await supabase.from("employees")
+            .update({ status: "deleted", updated_at: new Date().toISOString() })
+            .eq("id", employee.id)
+
         setShowConfirm(false)
+        if (error) {
+            console.error("[FuncionariosPage] Erro ao remover profissional:", error.message)
+            return
+        }
+        refetch()
     }
 
-    const openEditDialog = (employee: Employee) => {
+    const openEditDialog = (employee: EmployeeRecord) => {
         setSelectedEmployee(employee)
         setFormData({
-            name: employee.name,
+            name: employee.fullName,
             email: employee.email,
             phone: employee.phone,
-            specialties: employee.specialties,
-            workingHours: employee.workingHours,
-            commission: employee.commission,
-            acceptsOnlineBooking: employee.acceptsOnlineBooking,
-            roundRobinEnabled: employee.roundRobinEnabled
+            specialties: employee.specialties ?? [],
+            workingHours: employee.workingHours ?? {},
+            commission: employee.commissionRate ?? 40,
+            acceptsOnlineBooking: employee.acceptsOnlineBooking ?? true,
         })
         setShowEditEmployee(true)
     }
 
     const resetForm = () => {
-        setFormData({
-            name: "",
-            email: "",
-            phone: "",
-            specialties: [],
-            workingHours: {},
-            commission: 40,
-            acceptsOnlineBooking: true,
-            roundRobinEnabled: true
-        })
+        setFormData(defaultForm)
         setSelectedEmployee(null)
     }
 
@@ -150,17 +206,14 @@ export default function FuncionariosPage() {
             ...prev,
             specialties: prev.specialties.includes(serviceId)
                 ? prev.specialties.filter(id => id !== serviceId)
-                : [...prev.specialties, serviceId]
+                : [...prev.specialties, serviceId],
         }))
     }
 
     const setWorkingHours = (dayId: string, start: string, end: string) => {
         setFormData(prev => ({
             ...prev,
-            workingHours: {
-                ...prev.workingHours,
-                [dayId]: [{ start, end }]
-            }
+            workingHours: { ...prev.workingHours, [dayId]: [{ start, end }] },
         }))
     }
 
@@ -180,7 +233,10 @@ export default function FuncionariosPage() {
                     <h2 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">Equipe</h2>
                     <p className="text-slate-500 dark:text-zinc-400 font-medium">Gestão de profissionais e talentos.</p>
                 </div>
-                <Button onClick={() => setShowNewEmployee(true)} className="rounded-xl h-12 px-6 bg-primary text-white font-bold transition-all hover:scale-105 active:scale-95 shadow-lg shadow-primary/20">
+                <Button
+                    onClick={() => setShowNewEmployee(true)}
+                    className="rounded-xl h-12 px-6 bg-primary text-white font-bold transition-all hover:scale-105 active:scale-95 shadow-lg shadow-primary/20"
+                >
                     <Plus className="w-4 h-4 mr-2" />
                     Novo Profissional
                 </Button>
@@ -225,14 +281,23 @@ export default function FuncionariosPage() {
                     <div className="flex gap-8 border-l border-slate-100 dark:border-zinc-800 pl-8">
                         <div className="text-right">
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Time</p>
-                            <p className="text-lg font-black text-slate-900 dark:text-white">{employees.length}</p>
+                            <p className="text-lg font-black text-slate-900 dark:text-white">
+                                {loading ? <Loader2 className="w-4 h-4 animate-spin inline" /> : employees.length}
+                            </p>
                         </div>
                     </div>
                 </div>
             </div>
 
+            {/* Loading state */}
+            {loading && (
+                <div className="flex justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </div>
+            )}
+
             {/* Content View */}
-            {viewMode === 'grid' ? (
+            {!loading && viewMode === 'grid' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <AnimatePresence mode="popLayout">
                         {filteredEmployees.map((employee, idx) => (
@@ -248,14 +313,14 @@ export default function FuncionariosPage() {
                                     <div className="space-y-6">
                                         <div className="flex justify-between items-start">
                                             <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-black text-2xl group-hover:scale-110 transition-transform">
-                                                {employee.name.charAt(0)}
+                                                {employee.fullName.charAt(0)}
                                             </div>
                                             <div className="flex gap-2">
                                                 <Button
                                                     onClick={() => openEditDialog(employee)}
                                                     variant="ghost"
                                                     size="icon"
-                                                    className="rounded-xl h-10 w-10 bg-slate-50 dark:bg-zinc-800/50 hover:bg-primary hover:text-white transition-all underline-none"
+                                                    className="rounded-xl h-10 w-10 bg-slate-50 dark:bg-zinc-800/50 hover:bg-primary hover:text-white transition-all"
                                                 >
                                                     <Edit className="w-4 h-4" />
                                                 </Button>
@@ -266,7 +331,7 @@ export default function FuncionariosPage() {
                                                     }}
                                                     variant="ghost"
                                                     size="icon"
-                                                    className="rounded-xl h-10 w-10 bg-slate-50 dark:bg-zinc-800/50 hover:bg-red-500 hover:text-white transition-all underline-none"
+                                                    className="rounded-xl h-10 w-10 bg-slate-50 dark:bg-zinc-800/50 hover:bg-red-500 hover:text-white transition-all"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </Button>
@@ -274,13 +339,13 @@ export default function FuncionariosPage() {
                                         </div>
 
                                         <div className="space-y-1">
-                                            <h3 className="text-xl font-black text-slate-900 dark:text-white">{employee.name}</h3>
+                                            <h3 className="text-xl font-black text-slate-900 dark:text-white">{employee.fullName}</h3>
                                             <div className="flex flex-wrap gap-1">
-                                                {employee.specialties.map(specId => {
+                                                {(employee.specialties ?? []).map(specId => {
                                                     const service = services.find(s => s.id === specId)
                                                     return (
                                                         <Badge key={specId} variant="secondary" className="bg-slate-100 dark:bg-zinc-800 text-[10px] py-0 border-none">
-                                                            {service?.name || 'Serviço'}
+                                                            {service?.name || specId}
                                                         </Badge>
                                                     )
                                                 })}
@@ -297,7 +362,7 @@ export default function FuncionariosPage() {
                                                     <Percent className="w-4 h-4 text-emerald-500" />
                                                     Comissão
                                                 </div>
-                                                <span className="font-bold text-slate-900 dark:text-white">{employee.commission}%</span>
+                                                <span className="font-bold text-slate-900 dark:text-white">{employee.commissionRate ?? 0}%</span>
                                             </div>
                                         </div>
 
@@ -312,8 +377,8 @@ export default function FuncionariosPage() {
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                onClick={() => router.push(`/agenda?employee=${employee.id}`)}
-                                                className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase hover:text-primary transition-colors h-auto p-0 underline-none"
+                                                onClick={() => router.push(`agenda?employee=${employee.id}`)}
+                                                className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase hover:text-primary transition-colors h-auto p-0"
                                             >
                                                 Ver Agenda <ChevronRight className="w-3 h-3" />
                                             </Button>
@@ -323,8 +388,17 @@ export default function FuncionariosPage() {
                             </motion.div>
                         ))}
                     </AnimatePresence>
+
+                    {filteredEmployees.length === 0 && (
+                        <div className="col-span-full py-16 text-center text-slate-400">
+                            <p className="text-lg font-bold">Nenhum profissional encontrado.</p>
+                            <p className="text-sm">Clique em &quot;Novo Profissional&quot; para cadastrar.</p>
+                        </div>
+                    )}
                 </div>
-            ) : (
+            )}
+
+            {!loading && viewMode === 'list' && (
                 <div className="rounded-[2rem] overflow-hidden border-none shadow-sm bg-white dark:bg-zinc-900">
                     <Table>
                         <TableHeader>
@@ -343,9 +417,9 @@ export default function FuncionariosPage() {
                                     <TableCell className="pl-8 py-5">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-black">
-                                                {employee.name.charAt(0)}
+                                                {employee.fullName.charAt(0)}
                                             </div>
-                                            <div className="font-bold text-slate-900 dark:text-white uppercase tracking-tight">{employee.name}</div>
+                                            <div className="font-bold text-slate-900 dark:text-white uppercase tracking-tight">{employee.fullName}</div>
                                         </div>
                                     </TableCell>
                                     <TableCell>
@@ -354,18 +428,18 @@ export default function FuncionariosPage() {
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex flex-wrap gap-1 max-w-[200px]">
-                                            {employee.specialties.map(specId => {
+                                            {(employee.specialties ?? []).map(specId => {
                                                 const service = services.find(s => s.id === specId)
                                                 return (
                                                     <Badge key={specId} variant="secondary" className="bg-slate-100 dark:bg-zinc-800 text-[10px] py-0 border-none">
-                                                        {service?.name || 'Serviço'}
+                                                        {service?.name || specId}
                                                     </Badge>
                                                 )
                                             })}
                                         </div>
                                     </TableCell>
                                     <TableCell className="font-bold text-slate-900 dark:text-white">
-                                        {employee.commission}%
+                                        {employee.commissionRate ?? 0}%
                                     </TableCell>
                                     <TableCell>
                                         {employee.acceptsOnlineBooking ? (
@@ -404,16 +478,17 @@ export default function FuncionariosPage() {
                 </div>
             )}
 
-            {/* Modal Novo/Editar */}
+            {/* Modal Novo / Editar */}
             <FormDialog
                 open={showNewEmployee || showEditEmployee}
                 onOpenChange={showNewEmployee ? setShowNewEmployee : setShowEditEmployee}
                 title={showNewEmployee ? "Novo Profissional" : "Editar Profissional"}
                 description="Cadastre as informações e preferências do profissional."
                 onSubmit={showNewEmployee ? handleCreateEmployee : handleEditEmployee}
-                submitLabel={showNewEmployee ? "Concluir Cadastro" : "Salvar Alterações"}
+                submitLabel={saving ? "Salvando..." : showNewEmployee ? "Concluir Cadastro" : "Salvar Alterações"}
             >
                 <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-4 scrollbar-thin">
+                    {/* Informações Básicas */}
                     <div className="space-y-4">
                         <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Informações Básicas</h4>
                         <div className="grid grid-cols-2 gap-4">
@@ -444,6 +519,7 @@ export default function FuncionariosPage() {
                         </div>
                     </div>
 
+                    {/* Especialidades */}
                     <div className="space-y-4 pt-6 border-t border-slate-100 dark:border-zinc-800">
                         <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Especialidades</h4>
                         <div className="grid grid-cols-2 gap-3">
@@ -452,9 +528,9 @@ export default function FuncionariosPage() {
                                     <Checkbox
                                         id={service.id}
                                         checked={formData.specialties.includes(service.id)}
-                                        onCheckedChange={(checked) => toggleSpecialty(service.id)}
+                                        onCheckedChange={() => toggleSpecialty(service.id)}
                                     />
-                                    <label htmlFor={service.id} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                    <label htmlFor={service.id} className="text-sm font-medium leading-none">
                                         {service.name}
                                     </label>
                                 </div>
@@ -462,6 +538,7 @@ export default function FuncionariosPage() {
                         </div>
                     </div>
 
+                    {/* Horários de Atendimento */}
                     <div className="space-y-4 pt-6 border-t border-slate-100 dark:border-zinc-800">
                         <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Horários de Atendimento</h4>
                         <div className="space-y-3">
@@ -503,6 +580,7 @@ export default function FuncionariosPage() {
                         </div>
                     </div>
 
+                    {/* Preferências & Financeiro */}
                     <div className="space-y-4 pt-6 border-t border-slate-100 dark:border-zinc-800">
                         <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Preferências & Financeiro</h4>
                         <div className="grid grid-cols-1 gap-4">
@@ -510,6 +588,8 @@ export default function FuncionariosPage() {
                                 <Label className="text-xs font-bold uppercase">Comissão (%)</Label>
                                 <Input
                                     type="number"
+                                    min={0}
+                                    max={100}
                                     value={formData.commission}
                                     onChange={(e) => setFormData({ ...formData, commission: Number(e.target.value) })}
                                     className="rounded-xl h-12 bg-slate-50 dark:bg-zinc-800 border-none"
@@ -541,4 +621,3 @@ export default function FuncionariosPage() {
         </div>
     )
 }
-

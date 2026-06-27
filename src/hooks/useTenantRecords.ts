@@ -164,11 +164,27 @@ const mapRowToService = (row: any): ServiceRecord => ({
     description: row.description,
     price: row.price,
     durationMinutes: row.duration,
-    categoryId: row.category_id, // Map ID to string or fetch category
+    categoryId: row.category_id,
     isActive: row.active,
     imageUrl: row.image_url,
     requiresConfirmation: false,
     currency: "BRL"
+})
+
+const mapRowToEmployee = (row: any): EmployeeRecord => ({
+    id: row.id,
+    tenantId: row.tenant_id,
+    fullName: row.full_name,
+    email: row.email || '',
+    phone: row.phone || '',
+    role: row.role,
+    status: row.status || 'active',
+    colorTag: row.color_tag,
+    commissionRate: row.commission_rate ?? 0,
+    acceptsOnlineBooking: row.accepts_online_booking ?? true,
+    specialties: row.specialties || [],
+    workingHours: row.working_hours || {},
+    avatarUrl: row.avatar_url,
 })
 
 // --------------------------------------------------------------------------
@@ -238,18 +254,46 @@ export function useTenantServices(tenantId?: string) {
 }
 
 export function useTenantEmployees(tenantId?: string) {
-    const fallback = useMemo(() => {
-        const normalized = employeeMocks.map(mapMockEmployee)
-        if (!tenantId) return normalized
-        return normalized
-    }, [tenantId])
+    const fallback = useMemo(() => employeeMocks.map(mapMockEmployee), [])
 
     const [data, setData] = useState<EmployeeRecord[]>(fallback)
-    const [loading, setLoading] = useState<boolean>(false)
+    const [loading, setLoading] = useState<boolean>(isSupabaseConfigured && !!tenantId)
+    const [trigger, setTrigger] = useState(0)
 
-    // useEffect(() => { ... fetch from 'employees' table ... }, [tenantId])
+    const refetch = () => setTrigger(prev => prev + 1)
 
-    return { data, loading }
+    useEffect(() => {
+        const supabase = getSupabaseBrowserClient()
+        if (!isSupabaseConfigured || !supabase || !tenantId) {
+            setLoading(false)
+            setData(fallback)
+            return
+        }
+
+        let isMounted = true
+        setLoading(true)
+
+        supabase
+            .from("employees")
+            .select("*")
+            .eq("tenant_id", tenantId)
+            .neq("status", "deleted")
+            .order("full_name", { ascending: true })
+            .then(({ data: rows, error }) => {
+                if (!isMounted) return
+                if (!error && rows) {
+                    setData(rows.map(mapRowToEmployee))
+                } else {
+                    console.error("[useTenantEmployees] Erro ao carregar profissionais:", error?.message)
+                    setData(fallback)
+                }
+                setLoading(false)
+            })
+
+        return () => { isMounted = false }
+    }, [tenantId, trigger, fallback])
+
+    return { data, loading, refetch }
 }
 
 export function useTenantProducts(tenantId?: string) {
