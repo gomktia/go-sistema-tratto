@@ -25,6 +25,7 @@ export type EmployeeRecord = {
     commissionRate?: number
     acceptsOnlineBooking?: boolean
     specialties?: string[]
+    workingHours?: Record<string, { start: string; end: string }[]>
     avatarUrl?: string
 }
 
