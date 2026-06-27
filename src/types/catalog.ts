@@ -53,6 +53,10 @@ export type AppointmentRecord = {
     channel?: string
     status: string
     notes?: string
+    // Campos de conclusão/pagamento (PR 3)
+    finalPrice?: number
+    discount?: number
+    paymentMethod?: string
 }
 
 export type ProductRecord = {
