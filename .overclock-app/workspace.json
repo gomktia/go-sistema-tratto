@@ -1,0 +1,10 @@
+{
+  "autoSpawnSquad": null,
+  "favoritePane": {
+    "agent": "claude",
+    "providerId": "claude-oauth",
+    "model": "claude-haiku-4-5"
+  },
+  "accessMode": "write_external",
+  "authorizedExternalPaths": []
+}
