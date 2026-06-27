@@ -159,6 +159,9 @@ const mapRowToAppointment = (row: any): AppointmentRecord => ({
     channel: row.channel ?? undefined,
     status: row.status,
     notes: row.notes ?? undefined,
+    finalPrice: row.final_price ?? undefined,
+    discount: row.discount ?? undefined,
+    paymentMethod: row.payment_method ?? undefined,
 })
 
 // Customers
@@ -232,7 +235,7 @@ export function useTenantAppointments(tenantId?: string) {
 
         supabase
             .from("appointments")
-            .select("id, tenant_id, service_id, employee_id, customer_id, start_at, end_at, duration_minutes, price, currency, channel, status, notes")
+            .select("id, tenant_id, service_id, employee_id, customer_id, start_at, end_at, duration_minutes, price, currency, channel, status, notes, final_price, discount, payment_method")
             .eq("tenant_id", tenantId)
             .order("start_at", { ascending: true })
             .then(({ data: rows, error }) => {

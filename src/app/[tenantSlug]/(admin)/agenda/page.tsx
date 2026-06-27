@@ -50,6 +50,7 @@ import { useTenantAppointments, useTenantEmployees, useTenantServices } from "@/
 import type { AppointmentRecord, ServiceRecord } from "@/types/catalog"
 import { motion, AnimatePresence } from "framer-motion"
 import { NewAppointmentModal } from "@/components/agenda/new-appointment-modal"
+import { CompleteAppointmentModal } from "@/components/agenda/complete-appointment-modal"
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client"
 
 // Generate time slots from 08:00 to 20:00
@@ -73,6 +74,8 @@ export default function AgendaPage() {
     const [viewType, setViewType] = useState<ViewType>("day")
     const [isNewAppointmentModalOpen, setIsNewAppointmentModalOpen] = useState(false)
     const [selectedAppointment, setSelectedAppointment] = useState<AppointmentRecord | null>(null)
+    const [showCompleteModal, setShowCompleteModal] = useState(false)
+    const [appointmentToComplete, setAppointmentToComplete] = useState<AppointmentRecord | null>(null)
     const [isMounted, setIsMounted] = useState(false)
     const { currentTenant } = useTenant()
 
@@ -404,7 +407,7 @@ export default function AgendaPage() {
                                                                         )}
                                                                         {apt.status !== 'completed' && apt.status !== 'cancelled' && apt.status !== 'no_show' && (
                                                                             <button
-                                                                                onClick={e => { e.stopPropagation(); updateAppointmentStatus(apt.id, 'completed') }}
+                                                                                onClick={e => { e.stopPropagation(); setAppointmentToComplete(apt); setShowCompleteModal(true) }}
                                                                                 className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-500/20 text-slate-700 dark:text-slate-300 hover:bg-slate-500/40 transition-colors"
                                                                             >Concluir</button>
                                                                         )}
@@ -550,7 +553,7 @@ export default function AgendaPage() {
                                                         )}
                                                         {apt.status !== 'completed' && apt.status !== 'cancelled' && apt.status !== 'no_show' && (
                                                             <button
-                                                                onClick={e => { e.stopPropagation(); updateAppointmentStatus(apt.id, 'completed') }}
+                                                                onClick={e => { e.stopPropagation(); setAppointmentToComplete(apt); setShowCompleteModal(true) }}
                                                                 className="text-[8px] font-bold px-1 py-0.5 rounded bg-slate-500/20 text-slate-700 dark:text-slate-300 hover:bg-slate-500/40 transition-colors"
                                                             >Concluir</button>
                                                         )}
@@ -660,6 +663,15 @@ export default function AgendaPage() {
                 }}
                 tenantId={currentTenant.id}
                 appointment={selectedAppointment}
+            />
+            <CompleteAppointmentModal
+                open={showCompleteModal}
+                onOpenChange={setShowCompleteModal}
+                appointment={appointmentToComplete}
+                onSuccess={() => {
+                    setAppointmentToComplete(null)
+                    refetchAppointments()
+                }}
             />
             <div className="space-y-8 pb-10">
                 {/* Header */}
