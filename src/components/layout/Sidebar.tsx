@@ -27,7 +27,8 @@ import {
     Trophy,
     CreditCard,
     Lock,
-    Sparkles
+    Sparkles,
+    ClipboardList,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -55,7 +56,8 @@ export function Sidebar() {
                 { icon: Scissors, label: "Serviços", href: `/${slug}/servicos`, permission: null },
                 { icon: ImageIcon, label: "Galeria", href: `/${slug}/galeria`, permission: 'marketingGallery' },
                 { icon: UserCircle, label: "Funcionários", href: `/${slug}/funcionarios`, permission: null },
-                { icon: DollarSign, label: "Financeiro", href: `/${slug}/financeiro`, permission: 'financialModule' },
+                { icon: DollarSign,     label: "Financeiro",  href: `/${slug}/financeiro`, permission: 'financialModule' },
+                { icon: ClipboardList, label: "Fechamento",  href: `/${slug}/fechamento`, permission: 'financialModule' },
                 { icon: Package, label: "Estoque & PDV", href: `/${slug}/estoque`, permission: 'inventoryModule' },
                 { icon: Megaphone, label: "CRM & Marketing", href: `/${slug}/crm`, permission: 'marketingGallery' },
                 { icon: Sparkles, label: "Social IA", href: `/${slug}/social`, permission: 'marketingGallery' },

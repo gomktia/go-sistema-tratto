@@ -133,3 +133,25 @@ export type Story = {
     url: string
 }
 
+// Fechamento diário (PR 5)
+export type DailyClosingRecord = {
+    id: string
+    tenantId: string
+    closingDate: string          // YYYY-MM-DD
+    totalAppointments: number
+    grossRevenue: number         // soma de final_price
+    totalDiscounts: number       // soma de discount
+    netRevenue: number           // gross - discounts
+    totalCommissions: number     // soma de commission_amount
+    revenuePix: number
+    revenueCash: number
+    revenueDebit: number
+    revenueCredit: number
+    revenueOther: number
+    status: 'open' | 'closed'
+    closedAt?: string
+    notes?: string
+    createdAt: string
+    updatedAt: string
+}
+

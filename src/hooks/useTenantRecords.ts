@@ -10,6 +10,7 @@ import type { ClientRecord } from "@/types/crm"
 import type {
     AppointmentRecord,
     ComboRecord,
+    DailyClosingRecord,
     EmployeeRecord,
     ProductRecord,
     ServiceRecord,
@@ -574,6 +575,63 @@ export function useTenantCommissions(tenantId?: string) {
                         baseAmount: r.base_amount,
                         commissionAmount: r.commission_amount,
                         createdAt: r.created_at,
+                    })))
+                }
+                setLoading(false)
+            })
+
+        return () => { isMounted = false }
+    }, [tenantId, trigger])
+
+    return { data, loading, refetch }
+}
+
+// --------------------------------------------------------------------------
+// useTenantDailyClosings — PR 5
+// --------------------------------------------------------------------------
+export function useTenantDailyClosings(tenantId?: string) {
+    const [data, setData] = useState<DailyClosingRecord[]>([])
+    const [loading, setLoading] = useState<boolean>(isSupabaseConfigured && !!tenantId)
+    const [trigger, setTrigger] = useState(0)
+    const refetch = () => setTrigger(prev => prev + 1)
+
+    useEffect(() => {
+        const supabase = getSupabaseBrowserClient()
+        if (!isSupabaseConfigured || !supabase || !tenantId) { setLoading(false); setData([]); return }
+        let isMounted = true
+        setLoading(true)
+
+        supabase
+            .from("daily_closings")
+            .select("*")
+            .eq("tenant_id", tenantId)
+            .order("closing_date", { ascending: false })
+            .limit(30)
+            .then(({ data: rows, error }) => {
+                if (!isMounted) return
+                if (error) {
+                    console.error("[useTenantDailyClosings]", error.message)
+                    setData([])
+                } else {
+                    setData((rows ?? []).map(r => ({
+                        id: r.id,
+                        tenantId: r.tenant_id,
+                        closingDate: r.closing_date,
+                        totalAppointments: r.total_appointments,
+                        grossRevenue: Number(r.gross_revenue),
+                        totalDiscounts: Number(r.total_discounts),
+                        netRevenue: Number(r.net_revenue),
+                        totalCommissions: Number(r.total_commissions),
+                        revenuePix: Number(r.revenue_pix),
+                        revenueCash: Number(r.revenue_cash),
+                        revenueDebit: Number(r.revenue_debit),
+                        revenueCredit: Number(r.revenue_credit),
+                        revenueOther: Number(r.revenue_other),
+                        status: r.status as 'open' | 'closed',
+                        closedAt: r.closed_at ?? undefined,
+                        notes: r.notes ?? undefined,
+                        createdAt: r.created_at,
+                        updatedAt: r.updated_at,
                     })))
                 }
                 setLoading(false)
