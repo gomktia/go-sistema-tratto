@@ -59,6 +59,20 @@ export type AppointmentRecord = {
     paymentMethod?: string
 }
 
+// Comissão por atendimento (PR 4)
+export type CommissionRow = {
+    id: string
+    tenantId: string
+    appointmentId: string
+    employeeId: string
+    commissionRate: number  // snapshot no fechamento (%)
+    finalPrice: number      // valor cobrado do cliente
+    discount: number        // desconto aplicado
+    baseAmount: number      // finalPrice - discount
+    commissionAmount: number // baseAmount * commissionRate / 100
+    createdAt: string
+}
+
 export type ProductRecord = {
     id: string
     tenantId: string

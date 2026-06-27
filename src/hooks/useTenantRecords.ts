@@ -489,6 +489,58 @@ export function useTenantTestimonials(tenantId?: string) {
     return { data, loading }
 }
 
+// ---- Comissões por atendimento (PR 4) ----
+export function useTenantCommissions(tenantId?: string) {
+    const [data, setData] = useState<import("@/types/catalog").CommissionRow[]>([])
+    const [loading, setLoading] = useState<boolean>(isSupabaseConfigured && !!tenantId)
+    const [trigger, setTrigger] = useState(0)
+
+    const refetch = () => setTrigger(prev => prev + 1)
+
+    useEffect(() => {
+        const supabase = getSupabaseBrowserClient()
+        if (!isSupabaseConfigured || !supabase || !tenantId) {
+            setLoading(false)
+            setData([])
+            return
+        }
+
+        let isMounted = true
+        setLoading(true)
+
+        supabase
+            .from("appointment_commissions")
+            .select("*")
+            .eq("tenant_id", tenantId)
+            .order("created_at", { ascending: false })
+            .then(({ data: rows, error }) => {
+                if (!isMounted) return
+                if (error) {
+                    console.error("[useTenantCommissions] Erro ao carregar comissões:", error.message)
+                    setData([])
+                } else {
+                    setData((rows ?? []).map(r => ({
+                        id: r.id,
+                        tenantId: r.tenant_id,
+                        appointmentId: r.appointment_id,
+                        employeeId: r.employee_id,
+                        commissionRate: r.commission_rate,
+                        finalPrice: r.final_price,
+                        discount: r.discount ?? 0,
+                        baseAmount: r.base_amount,
+                        commissionAmount: r.commission_amount,
+                        createdAt: r.created_at,
+                    })))
+                }
+                setLoading(false)
+            })
+
+        return () => { isMounted = false }
+    }, [tenantId, trigger])
+
+    return { data, loading, refetch }
+}
+
 export function useTenantBySlug(slug: string) {
     const fallback = useMemo(() => {
         return tenantMocks.find(t => t.slug === slug) || null

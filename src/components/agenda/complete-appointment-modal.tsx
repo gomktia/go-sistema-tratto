@@ -78,7 +78,8 @@ export function CompleteAppointmentModal({
                 const supabase = getSupabaseBrowserClient()
                 if (!supabase) throw new Error("Supabase client failed to initialize")
 
-                const { error } = await supabase
+                // 1. Salvar conclusão do atendimento
+                const { error: aptError } = await supabase
                     .from("appointments")
                     .update({
                         final_price:    parsedFinalPrice,
@@ -89,7 +90,32 @@ export function CompleteAppointmentModal({
                     })
                     .eq("id", appointment.id)
 
-                if (error) throw error
+                if (aptError) throw aptError
+
+                // 2. Calcular e persistir comissão (se houver profissional)
+                if (appointment.employeeId) {
+                    const { data: empRow } = await supabase
+                        .from("employees")
+                        .select("commission_rate")
+                        .eq("id", appointment.employeeId)
+                        .single()
+
+                    const commissionRate  = empRow?.commission_rate ?? 0
+                    const baseAmount      = netValue  // final_price - discount
+                    const commissionAmt   = baseAmount * (commissionRate / 100)
+
+                    // Upsert: re-conclusão sobrescreve a comissão anterior
+                    await supabase.from("appointment_commissions").upsert({
+                        tenant_id:         appointment.tenantId,
+                        appointment_id:    appointment.id,
+                        employee_id:       appointment.employeeId,
+                        commission_rate:   commissionRate,
+                        final_price:       parsedFinalPrice,
+                        discount:          parsedDiscount,
+                        base_amount:       baseAmount,
+                        commission_amount: commissionAmt,
+                    }, { onConflict: "appointment_id" })
+                }
             }
 
             onSuccess()
