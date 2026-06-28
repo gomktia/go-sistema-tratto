@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Plus, Search, Filter, MoreHorizontal, Mail, Phone, Calendar, Edit, Trash2, LayoutGrid, List as ListIcon, Wallet } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { clients } from "@/mocks/data"
 import type { ClientRecord } from "@/types/crm"
 import { useTenant } from "@/contexts/tenant-context"
 import { Button } from "@/components/ui/button"
@@ -44,18 +43,6 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { differenceInDays } from "date-fns"
 import { useTenantCustomers } from "@/hooks/useTenantRecords"
 import { Checkbox } from "@/components/ui/checkbox"
-
-const mapMockClient = (client: typeof clients[number]): ClientRecord => ({
-    id: client.id,
-    tenantId: "tenant-1", // Default for mocks
-    name: client.name,
-    email: client.email,
-    phone: client.phone,
-    status: client.status as "active" | "inactive" | "churned",
-    lastVisit: client.lastVisit,
-    totalSpent: client.totalSpent,
-    avatar: client.avatar
-})
 
 // Mapeamento de cor por status
 const getStatusColor = (status: string) => {

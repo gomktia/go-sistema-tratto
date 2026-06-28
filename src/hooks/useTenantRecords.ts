@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { clients } from "@/mocks/data"
 import { employees as employeeMocks } from "@/mocks/services"
 import { combos as comboMocks } from "@/mocks/combos"
 import { tenants as tenantMocks, type Tenant as MockTenant } from "@/mocks/tenants"
@@ -24,23 +23,10 @@ import {
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client"
 
 // --------------------------------------------------------------------------
-// MOCK DATA MAPPERS (Adapters)
+// MOCK DATA MAPPERS (Adapters) - Apenas para módulos ainda não migrados
 // --------------------------------------------------------------------------
 
-// 1. CLIENTS
-const mapMockClient = (client: typeof clients[number]): ClientRecord => ({
-    id: client.id,
-    tenantId: "tenant-1",
-    name: client.name,
-    email: client.email,
-    phone: client.phone,
-    status: client.status as "active" | "inactive" | "churned",
-    lastVisit: client.lastVisit,
-    totalSpent: client.totalSpent,
-    avatar: client.avatar,
-})
-
-// 2. EMPLOYEES
+// EMPLOYEES
 const mapMockEmployee = (emp: typeof employeeMocks[number]): EmployeeRecord => ({
     id: emp.id,
     tenantId: "tenant-1",
