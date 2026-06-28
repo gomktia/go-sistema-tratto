@@ -101,32 +101,32 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO customer_credentials (tenant_id, customer_id, identity_type, identity_value, secret_hash)
 VALUES
     -- Beleza Pura - Maria Silva
-    ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'c1111111-1111-1111-1111-111111111111', 'cpf', '12345678901', '$2a$10$rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJ'),
-    ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'c1111111-1111-1111-1111-111111111111', 'email', 'maria.silva@email.com', '$2a$10$rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJ'),
+    ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'c1111111-1111-1111-1111-111111111111', 'cpf', '12345678901', '$2b$10$zIkrKJEyaLcM1/xpD44Rb.Y5ZUugCjTroa4w6khTps0y4kFUq5hfG'),
+    ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'c1111111-1111-1111-1111-111111111111', 'email', 'maria.silva@email.com', '$2b$10$zIkrKJEyaLcM1/xpD44Rb.Y5ZUugCjTroa4w6khTps0y4kFUq5hfG'),
 
     -- Beleza Pura - Ana Paula
-    ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'c1111111-1111-1111-1111-111111111112', 'cpf', '23456789012', '$2a$10$rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJ'),
-    ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'c1111111-1111-1111-1111-111111111112', 'email', 'ana.santos@email.com', '$2a$10$rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJ'),
+    ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'c1111111-1111-1111-1111-111111111112', 'cpf', '23456789012', '$2b$10$zIkrKJEyaLcM1/xpD44Rb.Y5ZUugCjTroa4w6khTps0y4kFUq5hfG'),
+    ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'c1111111-1111-1111-1111-111111111112', 'email', 'ana.santos@email.com', '$2b$10$zIkrKJEyaLcM1/xpD44Rb.Y5ZUugCjTroa4w6khTps0y4kFUq5hfG'),
 
     -- Beleza Pura - Carla
-    ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'c1111111-1111-1111-1111-111111111113', 'cpf', '34567890123', '$2a$10$rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJ'),
-    ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'c1111111-1111-1111-1111-111111111113', 'email', 'carla.oliveira@email.com', '$2a$10$rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJ'),
+    ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'c1111111-1111-1111-1111-111111111113', 'cpf', '34567890123', '$2b$10$zIkrKJEyaLcM1/xpD44Rb.Y5ZUugCjTroa4w6khTps0y4kFUq5hfG'),
+    ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'c1111111-1111-1111-1111-111111111113', 'email', 'carla.oliveira@email.com', '$2b$10$zIkrKJEyaLcM1/xpD44Rb.Y5ZUugCjTroa4w6khTps0y4kFUq5hfG'),
 
     -- Studio Glamour - João Pedro
-    ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'c2222222-2222-2222-2222-222222222221', 'cpf', '45678901234', '$2a$10$rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJ'),
-    ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'c2222222-2222-2222-2222-222222222221', 'email', 'joao.pedro@email.com', '$2a$10$rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJ'),
+    ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'c2222222-2222-2222-2222-222222222221', 'cpf', '45678901234', '$2b$10$zIkrKJEyaLcM1/xpD44Rb.Y5ZUugCjTroa4w6khTps0y4kFUq5hfG'),
+    ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'c2222222-2222-2222-2222-222222222221', 'email', 'joao.pedro@email.com', '$2b$10$zIkrKJEyaLcM1/xpD44Rb.Y5ZUugCjTroa4w6khTps0y4kFUq5hfG'),
 
     -- Studio Glamour - Lucas
-    ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'c2222222-2222-2222-2222-222222222222', 'cpf', '56789012345', '$2a$10$rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJ'),
-    ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'c2222222-2222-2222-2222-222222222222', 'email', 'lucas.mendes@email.com', '$2a$10$rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJ'),
+    ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'c2222222-2222-2222-2222-222222222222', 'cpf', '56789012345', '$2b$10$zIkrKJEyaLcM1/xpD44Rb.Y5ZUugCjTroa4w6khTps0y4kFUq5hfG'),
+    ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'c2222222-2222-2222-2222-222222222222', 'email', 'lucas.mendes@email.com', '$2b$10$zIkrKJEyaLcM1/xpD44Rb.Y5ZUugCjTroa4w6khTps0y4kFUq5hfG'),
 
     -- Espaço Elegance - Beatriz
-    ('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', 'c3333333-3333-3333-3333-333333333331', 'cpf', '67890123456', '$2a$10$rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJ'),
-    ('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', 'c3333333-3333-3333-3333-333333333331', 'email', 'beatriz.ferreira@email.com', '$2a$10$rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJ'),
+    ('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', 'c3333333-3333-3333-3333-333333333331', 'cpf', '67890123456', '$2b$10$zIkrKJEyaLcM1/xpD44Rb.Y5ZUugCjTroa4w6khTps0y4kFUq5hfG'),
+    ('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', 'c3333333-3333-3333-3333-333333333331', 'email', 'beatriz.ferreira@email.com', '$2b$10$zIkrKJEyaLcM1/xpD44Rb.Y5ZUugCjTroa4w6khTps0y4kFUq5hfG'),
 
     -- Espaço Elegance - Camila
-    ('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', 'c3333333-3333-3333-3333-333333333332', 'cpf', '78901234567', '$2a$10$rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJ'),
-    ('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', 'c3333333-3333-3333-3333-333333333332', 'email', 'camila.rodrigues@email.com', '$2a$10$rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJ')
+    ('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', 'c3333333-3333-3333-3333-333333333332', 'cpf', '78901234567', '$2b$10$zIkrKJEyaLcM1/xpD44Rb.Y5ZUugCjTroa4w6khTps0y4kFUq5hfG'),
+    ('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', 'c3333333-3333-3333-3333-333333333332', 'email', 'camila.rodrigues@email.com', '$2b$10$zIkrKJEyaLcM1/xpD44Rb.Y5ZUugCjTroa4w6khTps0y4kFUq5hfG')
 ON CONFLICT DO NOTHING;
 
 -- ============================================

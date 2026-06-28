@@ -29,35 +29,24 @@ export async function checkCustomerAuth(
   tenantId: string
 ): Promise<{ exists: boolean; data?: unknown; error?: string }> {
   try {
-    // Normalize identifier (could be CPF or email)
-    const isEmail = identifier.includes('@')
+    // Autenticação server-side: o secret_hash nunca viaja ao browser.
+    // A comparação bcrypt é feita na rota /api/auth/customer-login.
+    const res = await fetch('/api/auth/customer-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier, password, tenantId }),
+    })
 
-    // Query customer_credentials
-    const { data: credentials, error } = await supabase
-      .from('customer_credentials')
-      .select(`
-        *,
-        customer:customers!inner(*)
-      `)
-      .eq(isEmail ? 'email' : 'cpf', identifier)
-      .eq('customer.tenant_id', tenantId)
-      .single()
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        // No rows returned - user not found
-        return { exists: false }
-      }
-      return { exists: false, error: error.message }
+    if (!res.ok) {
+      return { exists: false, error: 'Erro ao autenticar' }
     }
 
-    // Verify password (bcrypt comparison would happen here)
-    // For now, we'll use direct comparison since we're in transition
-    if (credentials.password_hash === password) {
-      return { exists: true, data: credentials }
+    const result = await res.json()
+    if (result.exists) {
+      return { exists: true, data: result.data }
     }
 
-    return { exists: false, error: 'Senha incorreta' }
+    return { exists: false, error: result.error || 'Credenciais inválidas' }
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
     return { exists: false, error: message }
@@ -78,32 +67,6 @@ export async function checkEmployeeAuth(
       email,
       password,
     })
-
-    // DEMO BACKDOOR: Check for specific demo user if auth fails (since local seed might not populate auth.users)
-    if (authError && email === 'julia@belezapura.com' && password === 'senha') {
-      // Fetch the employee record to ensure we have the correct user_id
-      const { data: demoEmployee } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('email', email)
-        .eq('tenant_id', tenantId)
-        .single()
-
-      if (demoEmployee) {
-        return {
-          exists: true,
-          data: {
-            user: {
-              id: demoEmployee.user_id,
-              email: email,
-              user_metadata: { role: 'employee', tenant_id: tenantId }
-            },
-            employee: demoEmployee
-          },
-          userType: 'employee',
-        }
-      }
-    }
 
     if (authError) {
       return { exists: false, error: authError.message }
@@ -285,35 +248,51 @@ export async function checkUserExists(
       }
     }
 
-    // Check customer
+    // Check customer — sem expor secret_hash; usa colunas reais do schema
     const { data: customer, error: customerError } = await supabase
       .from('customer_credentials')
       .select(`
-        *,
-        customer:customers!inner(*)
+        id,
+        identity_type,
+        identity_value,
+        customer:customers!inner(id, full_name, email, phone, status, tenant_id)
       `)
-      .eq('email', identifier)
+      .eq('identity_type', 'email')
+      .eq('identity_value', identifier.toLowerCase().trim())
       .eq('customer.tenant_id', tenantId)
       .single()
 
     if (!customerError && customer) {
-      return { exists: true, userType: 'customer', data: customer }
+      const c = customer.customer as unknown as Record<string, unknown>
+      return {
+        exists: true,
+        userType: 'customer',
+        data: { full_name: c.full_name, email: c.email, ...c }
+      }
     }
   } else {
-    // CPF - only customers
+    // CPF — somente clientes
     const normalizedCpf = identifier.replace(/\D/g, '')
     const { data: customer, error } = await supabase
       .from('customer_credentials')
       .select(`
-        *,
-        customer:customers!inner(*)
+        id,
+        identity_type,
+        identity_value,
+        customer:customers!inner(id, full_name, email, phone, status, tenant_id)
       `)
-      .eq('cpf', normalizedCpf)
+      .eq('identity_type', 'cpf')
+      .eq('identity_value', normalizedCpf)
       .eq('customer.tenant_id', tenantId)
       .single()
 
     if (!error && customer) {
-      return { exists: true, userType: 'customer', data: customer }
+      const c = customer.customer as unknown as Record<string, unknown>
+      return {
+        exists: true,
+        userType: 'customer',
+        data: { full_name: c.full_name, email: c.email, ...c }
+      }
     }
   }
 

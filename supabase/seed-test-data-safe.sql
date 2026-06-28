@@ -127,16 +127,16 @@ BEGIN
 
     INSERT INTO customer_credentials (tenant_id, customer_id, identity_type, identity_value, secret_hash)
     VALUES
-        (tenant_beleza_pura_id, 'c1111111-1111-1111-1111-111111111111', 'cpf', '12345678901', '$2a$10$rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJ'),
-        (tenant_beleza_pura_id, 'c1111111-1111-1111-1111-111111111111', 'email', 'maria.silva@email.com', '$2a$10$rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJ'),
-        (tenant_beleza_pura_id, 'c1111111-1111-1111-1111-111111111112', 'cpf', '23456789012', '$2a$10$rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJ'),
-        (tenant_beleza_pura_id, 'c1111111-1111-1111-1111-111111111112', 'email', 'ana.santos@email.com', '$2a$10$rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJ'),
-        (tenant_beleza_pura_id, 'c1111111-1111-1111-1111-111111111113', 'cpf', '34567890123', '$2a$10$rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJ'),
-        (tenant_beleza_pura_id, 'c1111111-1111-1111-1111-111111111113', 'email', 'carla.oliveira@email.com', '$2a$10$rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJ'),
-        (tenant_studio_glamour_id, 'c2222222-2222-2222-2222-222222222221', 'cpf', '45678901234', '$2a$10$rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJ'),
-        (tenant_studio_glamour_id, 'c2222222-2222-2222-2222-222222222221', 'email', 'joao.pedro@email.com', '$2a$10$rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJ'),
-        (tenant_studio_glamour_id, 'c2222222-2222-2222-2222-222222222222', 'cpf', '56789012345', '$2a$10$rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJ'),
-        (tenant_studio_glamour_id, 'c2222222-2222-2222-2222-222222222222', 'email', 'lucas.mendes@email.com', '$2a$10$rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJHjGJ5z5rZ5qJHjGJOX5rZ5qJ')
+        (tenant_beleza_pura_id, 'c1111111-1111-1111-1111-111111111111', 'cpf', '12345678901', '$2b$10$zIkrKJEyaLcM1/xpD44Rb.Y5ZUugCjTroa4w6khTps0y4kFUq5hfG'),
+        (tenant_beleza_pura_id, 'c1111111-1111-1111-1111-111111111111', 'email', 'maria.silva@email.com', '$2b$10$zIkrKJEyaLcM1/xpD44Rb.Y5ZUugCjTroa4w6khTps0y4kFUq5hfG'),
+        (tenant_beleza_pura_id, 'c1111111-1111-1111-1111-111111111112', 'cpf', '23456789012', '$2b$10$zIkrKJEyaLcM1/xpD44Rb.Y5ZUugCjTroa4w6khTps0y4kFUq5hfG'),
+        (tenant_beleza_pura_id, 'c1111111-1111-1111-1111-111111111112', 'email', 'ana.santos@email.com', '$2b$10$zIkrKJEyaLcM1/xpD44Rb.Y5ZUugCjTroa4w6khTps0y4kFUq5hfG'),
+        (tenant_beleza_pura_id, 'c1111111-1111-1111-1111-111111111113', 'cpf', '34567890123', '$2b$10$zIkrKJEyaLcM1/xpD44Rb.Y5ZUugCjTroa4w6khTps0y4kFUq5hfG'),
+        (tenant_beleza_pura_id, 'c1111111-1111-1111-1111-111111111113', 'email', 'carla.oliveira@email.com', '$2b$10$zIkrKJEyaLcM1/xpD44Rb.Y5ZUugCjTroa4w6khTps0y4kFUq5hfG'),
+        (tenant_studio_glamour_id, 'c2222222-2222-2222-2222-222222222221', 'cpf', '45678901234', '$2b$10$zIkrKJEyaLcM1/xpD44Rb.Y5ZUugCjTroa4w6khTps0y4kFUq5hfG'),
+        (tenant_studio_glamour_id, 'c2222222-2222-2222-2222-222222222221', 'email', 'joao.pedro@email.com', '$2b$10$zIkrKJEyaLcM1/xpD44Rb.Y5ZUugCjTroa4w6khTps0y4kFUq5hfG'),
+        (tenant_studio_glamour_id, 'c2222222-2222-2222-2222-222222222222', 'cpf', '56789012345', '$2b$10$zIkrKJEyaLcM1/xpD44Rb.Y5ZUugCjTroa4w6khTps0y4kFUq5hfG'),
+        (tenant_studio_glamour_id, 'c2222222-2222-2222-2222-222222222222', 'email', 'lucas.mendes@email.com', '$2b$10$zIkrKJEyaLcM1/xpD44Rb.Y5ZUugCjTroa4w6khTps0y4kFUq5hfG')
     ON CONFLICT DO NOTHING;
 
     -- ============================================
