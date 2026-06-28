@@ -28,32 +28,20 @@ export async function POST(req: NextRequest) {
 
         const isEmail = identifier.includes('@')
         const identityType = isEmail ? 'email' : 'cpf'
-        // Normalizar CPF removendo pontuação
         const identityValue = isEmail
             ? identifier.toLowerCase().trim()
             : identifier.replace(/\D/g, '')
 
-        // Buscar credencial pela identity_type + identity_value + tenant
-        const { data: credential, error } = await adminClient
+        // Query 1: buscar credencial (sem join — FK não registrada no schema cache)
+        const { data: credential, error: credError } = await adminClient
             .from('customer_credentials')
-            .select(`
-                id,
-                secret_hash,
-                customer:customers!inner(
-                    id,
-                    tenant_id,
-                    full_name,
-                    email,
-                    phone,
-                    status
-                )
-            `)
+            .select('id, secret_hash, customer_id, tenant_id')
             .eq('identity_type', identityType)
             .eq('identity_value', identityValue)
             .eq('tenant_id', tenantId)
             .single()
 
-        if (error || !credential) {
+        if (credError || !credential) {
             return NextResponse.json({ exists: false, error: 'Usuário não encontrado' })
         }
 
@@ -64,8 +52,17 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ exists: false, error: 'Senha incorreta' })
         }
 
-        // Retornar dados do cliente sem o hash
-        const customer = credential.customer as unknown as Record<string, unknown>
+        // Query 2: buscar dados do cliente para retornar ao browser (sem hash)
+        const { data: customer, error: custError } = await adminClient
+            .from('customers')
+            .select('id, full_name, email, phone, status, tenant_id')
+            .eq('id', credential.customer_id)
+            .single()
+
+        if (custError || !customer) {
+            return NextResponse.json({ exists: false, error: 'Cliente não encontrado' })
+        }
+
         return NextResponse.json({
             exists: true,
             data: {

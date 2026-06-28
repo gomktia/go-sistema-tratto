@@ -248,51 +248,41 @@ export async function checkUserExists(
       }
     }
 
-    // Check customer — sem expor secret_hash; usa colunas reais do schema
-    const { data: customer, error: customerError } = await supabase
+    // Check customer — sem join (FK não registrada no schema cache do PostgREST)
+    const { data: cred, error: customerError } = await supabase
       .from('customer_credentials')
-      .select(`
-        id,
-        identity_type,
-        identity_value,
-        customer:customers!inner(id, full_name, email, phone, status, tenant_id)
-      `)
+      .select('id, customer_id, tenant_id')
       .eq('identity_type', 'email')
       .eq('identity_value', identifier.toLowerCase().trim())
       .eq('tenant_id', tenantId)
       .single()
 
-    if (!customerError && customer) {
-      const c = customer.customer as unknown as Record<string, unknown>
-      return {
-        exists: true,
-        userType: 'customer',
-        data: { full_name: c.full_name, email: c.email, ...c }
-      }
+    if (!customerError && cred) {
+      const { data: c } = await supabase
+        .from('customers')
+        .select('id, full_name, email, phone, status, tenant_id')
+        .eq('id', cred.customer_id)
+        .single()
+      if (c) return { exists: true, userType: 'customer', data: c }
     }
   } else {
     // CPF — somente clientes
     const normalizedCpf = identifier.replace(/\D/g, '')
-    const { data: customer, error } = await supabase
+    const { data: cred, error } = await supabase
       .from('customer_credentials')
-      .select(`
-        id,
-        identity_type,
-        identity_value,
-        customer:customers!inner(id, full_name, email, phone, status, tenant_id)
-      `)
+      .select('id, customer_id, tenant_id')
       .eq('identity_type', 'cpf')
       .eq('identity_value', normalizedCpf)
       .eq('tenant_id', tenantId)
       .single()
 
-    if (!error && customer) {
-      const c = customer.customer as unknown as Record<string, unknown>
-      return {
-        exists: true,
-        userType: 'customer',
-        data: { full_name: c.full_name, email: c.email, ...c }
-      }
+    if (!error && cred) {
+      const { data: c } = await supabase
+        .from('customers')
+        .select('id, full_name, email, phone, status, tenant_id')
+        .eq('id', cred.customer_id)
+        .single()
+      if (c) return { exists: true, userType: 'customer', data: c }
     }
   }
 
