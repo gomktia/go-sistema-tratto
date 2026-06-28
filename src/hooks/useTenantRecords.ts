@@ -2,8 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { clients, appointments as appointmentMocks } from "@/mocks/data"
-import { services as serviceMocks, employees as employeeMocks } from "@/mocks/services"
-import { inventory as productMocks } from "@/mocks/inventory"
+import { employees as employeeMocks } from "@/mocks/services"
 import { combos as comboMocks } from "@/mocks/combos"
 import { tenants as tenantMocks, type Tenant as MockTenant } from "@/mocks/tenants"
 import type { ClientRecord } from "@/types/crm"
@@ -67,22 +66,7 @@ const mapMockAppointment = (apt: typeof appointmentMocks[number]): AppointmentRe
     }
 }
 
-// 3. SERVICES
-const mapMockService = (srv: typeof serviceMocks[number]): ServiceRecord => ({
-    id: srv.id,
-    tenantId: "tenant-1",
-    name: srv.name,
-    description: srv.description,
-    price: srv.price,
-    durationMinutes: srv.duration, // Supondo que duration no mock seja total, adaptamos
-    categoryId: undefined, // Mock uses category string, Type wants ID
-    isActive: true,
-    imageUrl: srv.imageUrl,
-    requiresConfirmation: false,
-    currency: "BRL"
-})
-
-// 4. EMPLOYEES
+// 3. EMPLOYEES
 const mapMockEmployee = (emp: typeof employeeMocks[number]): EmployeeRecord => ({
     id: emp.id,
     tenantId: "tenant-1",
@@ -96,25 +80,7 @@ const mapMockEmployee = (emp: typeof employeeMocks[number]): EmployeeRecord => (
     colorTag: "#10b981", // Default color
 })
 
-// 5. PRODUCTS
-const mapMockProduct = (prod: typeof productMocks[number]): ProductRecord => ({
-    id: prod.id,
-    tenantId: "tenant-1",
-    name: prod.name,
-    description: "",
-    categoryName: prod.category,
-    price: prod.price,
-    cost: prod.price * 0.5,
-    stockQuantity: prod.stock,
-    minStock: 5,
-    unit: "un",
-    isActive: true,
-    imageUrl: prod.image,
-    currency: "BRL",
-    trackInventory: true
-})
-
-// 6. COMBOS
+// 5. COMBOS
 const mapMockCombo = (combo: typeof comboMocks[number]): ComboRecord => ({
     id: combo.id,
     tenantId: "tenant-1",
@@ -208,6 +174,25 @@ const mapRowToEmployee = (row: any): EmployeeRecord => ({
     avatarUrl: row.avatar_url,
 })
 
+const mapRowToProduct = (row: any): ProductRecord => ({
+    id: row.id,
+    tenantId: row.tenant_id,
+    categoryId: row.category_id ?? undefined,
+    // category name stored in metadata.category (sem coluna de texto direta na tabela)
+    categoryName: row.metadata?.category ?? undefined,
+    name: row.name,
+    description: row.description ?? '',
+    price: Number(row.price ?? 0),
+    cost: row.cost != null ? Number(row.cost) : undefined,
+    currency: row.currency ?? 'BRL',
+    trackInventory: Boolean(row.track_inventory ?? true),
+    stockQuantity: Number(row.stock_quantity ?? 0),
+    minStock: Number(row.min_stock ?? 0),
+    unit: row.unit ?? 'un',
+    isActive: Boolean(row.is_active ?? true),
+    imageUrl: undefined, // coluna image_url não existe em products
+})
+
 // --------------------------------------------------------------------------
 // HOOKS
 // --------------------------------------------------------------------------
@@ -258,20 +243,17 @@ export function useTenantAppointments(tenantId?: string) {
 
 
 export function useTenantServices(tenantId?: string) {
-    const fallback = useMemo(() => {
-        const normalized = serviceMocks.map(mapMockService)
-        if (!tenantId) return normalized
-        return normalized
-    }, [tenantId])
+    const [data, setData] = useState<ServiceRecord[]>([])
+    const [loading, setLoading] = useState<boolean>(isSupabaseConfigured && !!tenantId)
+    const [trigger, setTrigger] = useState(0)
 
-    const [data, setData] = useState<ServiceRecord[]>(fallback)
-    const [loading, setLoading] = useState<boolean>(isSupabaseConfigured)
+    const refetch = () => setTrigger(prev => prev + 1)
 
     useEffect(() => {
         const supabase = getSupabaseBrowserClient()
         if (!isSupabaseConfigured || !supabase || !tenantId) {
             setLoading(false)
-            setData(fallback)
+            setData([])
             return
         }
 
@@ -280,24 +262,24 @@ export function useTenantServices(tenantId?: string) {
 
         supabase
             .from("services")
-            .select("*")
+            .select("id, tenant_id, category_id, name, description, duration_minutes, price, is_active, image_url, requires_confirmation, metadata")
             .eq("tenant_id", tenantId)
-            .eq("is_active", true)
+            .order("name", { ascending: true })
             .then(({ data: rows, error }) => {
                 if (!isMounted) return
                 if (!error && rows) {
                     setData(rows.map(mapRowToService))
                 } else {
-                    console.error("Error fetching services:", error)
-                    setData(fallback) // Fallback on error
+                    console.error("[useTenantServices] Erro ao carregar serviços:", error?.message)
+                    setData([])
                 }
                 setLoading(false)
             })
 
         return () => { isMounted = false }
-    }, [tenantId, fallback])
+    }, [tenantId, trigger])
 
-    return { data, loading }
+    return { data, loading, refetch }
 }
 
 export function useTenantEmployees(tenantId?: string) {
@@ -344,15 +326,41 @@ export function useTenantEmployees(tenantId?: string) {
 }
 
 export function useTenantProducts(tenantId?: string) {
-    const fallback = useMemo(() => {
-        const normalized = productMocks.map(mapMockProduct)
-        if (!tenantId) return normalized
-        return normalized
-    }, [tenantId])
+    const [data, setData] = useState<ProductRecord[]>([])
+    const [loading, setLoading] = useState<boolean>(isSupabaseConfigured && !!tenantId)
+    const [trigger, setTrigger] = useState(0)
 
-    const [data, setData] = useState<ProductRecord[]>(fallback)
-    const [loading, setLoading] = useState<boolean>(false)
-    const refetch = () => { }
+    const refetch = () => setTrigger(prev => prev + 1)
+
+    useEffect(() => {
+        const supabase = getSupabaseBrowserClient()
+        if (!isSupabaseConfigured || !supabase || !tenantId) {
+            setLoading(false)
+            setData([])
+            return
+        }
+
+        let isMounted = true
+        setLoading(true)
+
+        supabase
+            .from('products')
+            .select('id, tenant_id, category_id, name, description, price, cost, currency, track_inventory, stock_quantity, min_stock, unit, is_active, metadata')
+            .eq('tenant_id', tenantId)
+            .order('name', { ascending: true })
+            .then(({ data: rows, error }) => {
+                if (!isMounted) return
+                if (!error && rows) {
+                    setData(rows.map(mapRowToProduct))
+                } else {
+                    console.error('[useTenantProducts] Erro ao carregar produtos:', error?.message)
+                    setData([])
+                }
+                setLoading(false)
+            })
+
+        return () => { isMounted = false }
+    }, [tenantId, trigger])
 
     return { data, loading, refetch }
 }

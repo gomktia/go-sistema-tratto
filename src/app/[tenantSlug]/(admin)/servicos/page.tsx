@@ -45,7 +45,7 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import { useTenant } from "@/contexts/tenant-context"
-import { employees as initialEmployees, services as initialServices, type Service, type Employee } from "@/mocks/services"
+import { type Service, type Employee } from "@/mocks/services"
 import { useTenantEmployees, useTenantServices } from "@/hooks/useTenantRecords"
 import { ImageUpload } from "@/components/ui/image-upload"
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client"
@@ -54,70 +54,81 @@ const categories = ["Cabelo", "Unhas", "Maquiagem", "Estética", "Massagem", "De
 
 export default function ServicosPage() {
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-    const [services, setServices] = useState(initialServices)
+    const [services, setServices] = useState<Service[]>([])
     const [searchTerm, setSearchTerm] = useState("")
     const [showNewService, setShowNewService] = useState(false)
     const [showEditService, setShowEditService] = useState(false)
     const [showConfirm, setShowConfirm] = useState(false)
     const [selectedService, setSelectedService] = useState<Service | null>(null)
-    const [employees, setEmployees] = useState<Employee[]>(initialEmployees)
+    const [employees, setEmployees] = useState<Employee[]>([])
     const { currentTenant } = useTenant()
 
-    // Buscar dados do Supabase // TODO: Unify hooks
+    // Buscar dados do Supabase
     const { data: employeeRecords } = useTenantEmployees(currentTenant.id)
-    const { data: serviceRecords } = useTenantServices(currentTenant.id)
+    const { data: serviceRecords, refetch: refetchServices } = useTenantServices(currentTenant.id)
 
-    // Atualizar employees e services quando os dados do Supabase chegarem
+    // Sincronizar employees com dados do Supabase
     useEffect(() => {
-        if (employeeRecords.length > 0) {
-            const mappedEmployees: Employee[] = employeeRecords.map(record => ({
-                id: record.id,
-                tenantId: record.tenantId,
-                name: record.fullName,
-                email: record.email || '',
-                phone: record.phone || '',
-                specialties: record.specialties || [],
-                workingHours: {},
-                commission: 0,
-                acceptsOnlineBooking: true,
-                roundRobinEnabled: true,
-                active: true,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
-            }))
-            setEmployees(mappedEmployees)
-        }
+        const mappedEmployees: Employee[] = employeeRecords.map(record => ({
+            id: record.id,
+            tenantId: record.tenantId,
+            name: record.fullName,
+            email: record.email || '',
+            phone: record.phone || '',
+            specialties: record.specialties || [],
+            workingHours: {},
+            commission: 0,
+            acceptsOnlineBooking: true,
+            roundRobinEnabled: true,
+            active: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        }))
+        setEmployees(mappedEmployees)
     }, [employeeRecords])
 
+    const [serviceCategories, setServiceCategories] = useState<{ id: string; name: string }[]>([])
+
     useEffect(() => {
-        if (serviceRecords.length > 0) {
-            // Map ServiceRecord to Service mock type (temporary bridge)
-            const mappedServices: Service[] = serviceRecords.map(record => ({
-                id: record.id,
-                tenantId: record.tenantId,
-                name: record.name,
-                category: "Diversos", // Default as category is optional ID in DB
-                duration: record.durationMinutes,
-                price: record.price,
-                description: record.description,
-                requiresDeposit: record.requiresConfirmation,
-                depositAmount: 0,
-                allowOnlineBooking: record.isActive,
-                bufferBefore: 0,
-                bufferAfter: 0,
-                maxClientsPerSlot: 1,
-                requiredStaff: 1,
-                active: record.isActive,
-                imageUrl: record.imageUrl,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
-            }))
-            setServices(mappedServices)
-        }
-    }, [serviceRecords])
+        if (!currentTenant?.id) return
+        const supabase = getSupabaseBrowserClient()
+        if (!supabase) return
+        supabase
+            .from('service_categories')
+            .select('id, name')
+            .eq('tenant_id', currentTenant.id)
+            .order('name')
+            .then(({ data }) => { if (data) setServiceCategories(data) })
+    }, [currentTenant?.id])
+
+    // Sincronizar serviços com dados do Supabase, resolvendo categoria pelo UUID
+    useEffect(() => {
+        const mappedServices: Service[] = serviceRecords.map(record => ({
+            id: record.id,
+            tenantId: record.tenantId,
+            name: record.name,
+            category: serviceCategories.find(c => c.id === record.categoryId)?.name || 'Geral',
+            duration: record.durationMinutes,
+            price: record.price,
+            description: record.description || '',
+            requiresDeposit: record.requiresConfirmation,
+            depositAmount: 0,
+            allowOnlineBooking: record.isActive,
+            bufferBefore: 0,
+            bufferAfter: 0,
+            maxClientsPerSlot: 1,
+            requiredStaff: 1,
+            active: record.isActive,
+            imageUrl: record.imageUrl,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        }))
+        setServices(mappedServices)
+    }, [serviceRecords, serviceCategories])
 
     const [formData, setFormData] = useState({
         name: "",
+        categoryId: "",
         category: "Cabelo",
         duration: 60,
         price: 0,
@@ -138,108 +149,104 @@ export default function ServicosPage() {
 
     const handleCreateService = async () => {
         const supabase = getSupabaseBrowserClient()
+        if (!supabase || !isSupabaseConfigured) return
 
-        if (supabase && isSupabaseConfigured) {
-            try {
-                const { data, error } = await supabase.from('services').insert({
-                    tenant_id: currentTenant.id,
-                    name: formData.name,
-                    description: formData.description,
-                    duration_minutes: formData.duration,
-                    price: formData.price,
-                    requires_confirmation: formData.requiresDeposit,
-                    is_active: true,
-                    image_url: formData.imageUrl,
-                    metadata: {
-                        allowOnlineBooking: formData.allowOnlineBooking,
-                        bufferBefore: formData.bufferBefore,
-                        bufferAfter: formData.bufferAfter,
-                        depositAmount: formData.depositAmount
-                    }
-                }).select().single()
+        const selectedCategory = serviceCategories.find(c => c.id === formData.categoryId)
 
-                if (error) throw error
-
-                // Optimistic update or wait for re-fetch
-                // const newService = mapRecordToService(data)
-                // setServices([...services, newService])
-            } catch (error) {
-                console.error("Error creating service:", error)
-                alert("Erro ao criar serviço no banco de dados.")
-            }
+        try {
+            const { error } = await supabase.from('services').insert({
+                tenant_id: currentTenant.id,
+                name: formData.name,
+                description: formData.description,
+                duration_minutes: formData.duration,
+                price: formData.price,
+                requires_confirmation: formData.requiresDeposit,
+                is_active: true,
+                image_url: formData.imageUrl || null,
+                category_id: formData.categoryId || null,
+                metadata: {
+                    category: selectedCategory?.name || formData.category,
+                    allowOnlineBooking: formData.allowOnlineBooking,
+                    bufferBefore: formData.bufferBefore,
+                    bufferAfter: formData.bufferAfter,
+                    depositAmount: formData.depositAmount
+                }
+            })
+            if (error) throw error
+            refetchServices()
+            setShowNewService(false)
+            resetForm()
+        } catch (error) {
+            console.error('[ServicosPage] Erro ao criar serviço:', error)
+            alert('Erro ao criar serviço. Verifique os dados e tente novamente.')
         }
-
-        // Local State Fallback (for smooth UI if offline/mock)
-        const newServiceId = String(services.length + 1)
-        const newService: Service = {
-            id: newServiceId,
-            tenantId: currentTenant.id,
-            ...formData,
-            active: true,
-            maxClientsPerSlot: 1,
-            requiredStaff: 1,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        }
-        setServices([...services, newService])
-        setShowNewService(false)
-        resetForm()
     }
 
     const handleEditService = async () => {
         if (!selectedService) return
 
         const supabase = getSupabaseBrowserClient()
-        if (supabase && isSupabaseConfigured) {
-            try {
-                const { error } = await supabase
-                    .from('services')
-                    .update({
-                        name: formData.name,
-                        description: formData.description,
-                        duration_minutes: formData.duration,
-                        price: formData.price,
-                        requires_confirmation: formData.requiresDeposit,
-                        image_url: formData.imageUrl,
-                        metadata: {
-                            allowOnlineBooking: formData.allowOnlineBooking,
-                            bufferBefore: formData.bufferBefore,
-                            bufferAfter: formData.bufferAfter,
-                            depositAmount: formData.depositAmount
-                        }
-                    })
-                    .eq('id', selectedService.id)
+        if (!supabase || !isSupabaseConfigured) return
 
-                if (error) throw error
-            } catch (error) {
-                console.error("Error updating service:", error)
-            }
+        const selectedCategory = serviceCategories.find(c => c.id === formData.categoryId)
+
+        try {
+            const { error } = await supabase
+                .from('services')
+                .update({
+                    name: formData.name,
+                    description: formData.description,
+                    duration_minutes: formData.duration,
+                    price: formData.price,
+                    requires_confirmation: formData.requiresDeposit,
+                    image_url: formData.imageUrl || null,
+                    category_id: formData.categoryId || null,
+                    metadata: {
+                        category: selectedCategory?.name || formData.category,
+                        allowOnlineBooking: formData.allowOnlineBooking,
+                        bufferBefore: formData.bufferBefore,
+                        bufferAfter: formData.bufferAfter,
+                        depositAmount: formData.depositAmount
+                    },
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', selectedService.id)
+            if (error) throw error
+            refetchServices()
+            setShowEditService(false)
+            resetForm()
+        } catch (error) {
+            console.error('[ServicosPage] Erro ao editar serviço:', error)
         }
-
-        setServices(services.map(s =>
-            s.id === selectedService.id
-                ? { ...s, ...formData, updatedAt: new Date().toISOString() }
-                : s
-        ))
-
-        setShowEditService(false)
-        resetForm()
     }
 
-    const handleDeleteService = (service: Service) => {
-        setServices(services.filter(s => s.id !== service.id))
+    const handleDeleteService = async (service: Service) => {
+        const supabase = getSupabaseBrowserClient()
+        if (supabase && isSupabaseConfigured) {
+            const { error } = await supabase
+                .from('services')
+                .delete()
+                .eq('id', service.id)
+            if (error) {
+                console.error('[ServicosPage] Erro ao deletar serviço:', error)
+                return
+            }
+        }
+        refetchServices()
         setShowConfirm(false)
     }
 
     const openEditDialog = (service: Service) => {
         setSelectedService(service)
-        // Find which professionals are currently linked via their specialties
         const linkedProfessionalIds = employees
             .filter(emp => emp.specialties.includes(service.id))
             .map(emp => emp.id)
 
+        const originalRecord = serviceRecords.find(r => r.id === service.id)
+
         setFormData({
             name: service.name,
+            categoryId: originalRecord?.categoryId || "",
             category: service.category,
             duration: service.duration,
             price: service.price,
@@ -263,6 +270,7 @@ export default function ServicosPage() {
     const resetForm = () => {
         setFormData({
             name: "",
+            categoryId: "",
             category: "Cabelo",
             duration: 60,
             price: 0,
@@ -515,14 +523,34 @@ export default function ServicosPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label className="text-xs font-bold uppercase">Categoria</Label>
-                                <Select value={formData.category} onValueChange={(val) => setFormData({ ...formData, category: val })}>
-                                    <SelectTrigger className="rounded-xl h-12 bg-slate-50 dark:bg-zinc-800 border-none">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
+                                {serviceCategories.length > 0 ? (
+                                    <Select
+                                        value={formData.categoryId}
+                                        onValueChange={(val) => {
+                                            const cat = serviceCategories.find(c => c.id === val)
+                                            setFormData({ ...formData, categoryId: val, category: cat?.name || '' })
+                                        }}
+                                    >
+                                        <SelectTrigger className="rounded-xl h-12 bg-slate-50 dark:bg-zinc-800 border-none">
+                                            <SelectValue placeholder="Selecione..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="">Sem categoria</SelectItem>
+                                            {serviceCategories.map(cat => (
+                                                <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                ) : (
+                                    <Select value={formData.category} onValueChange={(val) => setFormData({ ...formData, category: val })}>
+                                        <SelectTrigger className="rounded-xl h-12 bg-slate-50 dark:bg-zinc-800 border-none">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                )}
                             </div>
                             <div className="space-y-2">
                                 <Label className="text-xs font-bold uppercase">Preço Base (R$)</Label>

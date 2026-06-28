@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useTenant } from "@/contexts/tenant-context"
 import { useTenantProducts } from "@/hooks/useTenantRecords"
@@ -39,11 +39,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Label } from "@/components/ui/label"
 import { FormDialog } from "@/components/ui/form-dialog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 
 interface ProductForm {
     name: string
-    category: string
+    categoryId: string  // UUID de product_categories (vazio = sem categoria)
     price: number
     stock: number
     minStock: number
@@ -55,6 +56,21 @@ export default function EstoquePage() {
     const { data: productRecords, loading, refetch } = useTenantProducts(currentTenant.id)
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
 
+    // Categorias de produto (carregadas do Supabase)
+    const [categories, setCategories] = useState<{ id: string; name: string }[]>([])
+
+    useEffect(() => {
+        if (!currentTenant?.id) return
+        const supabase = getSupabaseBrowserClient()
+        if (!supabase) return
+        supabase
+            .from('product_categories')
+            .select('id, name')
+            .eq('tenant_id', currentTenant.id)
+            .order('name')
+            .then(({ data }) => { if (data) setCategories(data) })
+    }, [currentTenant?.id])
+
     // CRUD State
     const [showForm, setShowForm] = useState(false)
     const [showDelete, setShowDelete] = useState(false)
@@ -62,7 +78,7 @@ export default function EstoquePage() {
     const [editingProduct, setEditingProduct] = useState<any | null>(null)
     const [formData, setFormData] = useState<ProductForm>({
         name: "",
-        category: "",
+        categoryId: "",
         price: 0,
         stock: 0,
         minStock: 5,
@@ -73,16 +89,19 @@ export default function EstoquePage() {
     const [cart, setCart] = useState<{ productId: string, quantity: number }[]>([])
 
     // Map records to expected format for the UI
+    // Categoria: prioridade categoryId → lookup no state → fallback metadata.category → "Geral"
     const products = (productRecords || []).map(p => ({
         id: p.id,
         name: p.name,
-        category: p.categoryName || "Geral",
+        category: p.categoryId
+            ? (categories.find(c => c.id === p.categoryId)?.name || p.categoryName || 'Geral')
+            : (p.categoryName || 'Geral'),
         price: p.price,
         stock: p.stockQuantity,
         minStock: p.minStock,
         showOnline: p.isActive,
-        image: p.imageUrl,
-        raw: p // keep raw record for edits
+        image: p.imageUrl,  // undefined — products table sem image_url; ícone Package como fallback
+        raw: p
     }))
 
     const addToCart = (productId: string) => {
@@ -113,7 +132,7 @@ export default function EstoquePage() {
     const resetForm = () => {
         setFormData({
             name: "",
-            category: "",
+            categoryId: "",
             price: 0,
             stock: 0,
             minStock: 5,
@@ -131,7 +150,7 @@ export default function EstoquePage() {
         setEditingProduct(product)
         setFormData({
             name: product.name,
-            category: product.category,
+            categoryId: product.raw?.categoryId || "",
             price: product.price,
             stock: product.stock,
             minStock: product.minStock,
@@ -153,31 +172,35 @@ export default function EstoquePage() {
         if (!supabase) return
 
         try {
-            const payload = {
-                tenant_id: currentTenant.id,
+            const selectedCategory = categories.find(c => c.id === formData.categoryId)
+            const basePayload = {
                 name: formData.name,
-                // store category name in product_categories or just flat for now?
-                // The schema has product_categories table, but let's see if we can simplify or if we need to link.
-                // The `products` table has `category_id`. For now, let's assume simple string category isn't fully supported without creating a category first.
-                // However, `useTenantRecords` mapped `categoryName`.
-                // For MVP, we pass the other fields.
+                description: '',
                 price: formData.price,
                 stock_quantity: formData.stock,
                 min_stock: formData.minStock,
-                is_active: formData.showOnline
+                is_active: formData.showOnline,
+                currency: 'BRL',
+                track_inventory: true,
+                unit: 'un',
+                // category_id: UUID real de product_categories (null se não selecionado)
+                category_id: formData.categoryId || null,
+                // metadata.category: nome para display retrocompatível
+                metadata: selectedCategory ? { category: selectedCategory.name } : {},
+                updated_at: new Date().toISOString(),
             }
 
             if (editingProduct) {
                 const { error } = await supabase
                     .from('products')
-                    .update(payload)
+                    .update(basePayload)
                     .eq('id', editingProduct.id)
                 if (error) throw error
                 toast.success("Produto atualizado!")
             } else {
                 const { error } = await supabase
                     .from('products')
-                    .insert(payload)
+                    .insert({ tenant_id: currentTenant.id, ...basePayload })
                 if (error) throw error
                 toast.success("Produto criado!")
             }
@@ -549,12 +572,28 @@ export default function EstoquePage() {
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label>Categoria (Opicional)</Label>
-                            <Input
-                                value={formData.category}
-                                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                placeholder="Geral"
-                            />
+                            <Label>Categoria (Opcional)</Label>
+                            {categories.length > 0 ? (
+                                <Select
+                                    value={formData.categoryId}
+                                    onValueChange={(val) => setFormData({ ...formData, categoryId: val === "__none__" ? "" : val })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Selecionar categoria" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="__none__">Sem categoria</SelectItem>
+                                        {categories.map(cat => (
+                                            <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            ) : (
+                                <p className="text-xs text-slate-400 pt-2">
+                                    Nenhuma categoria cadastrada. Crie categorias em{" "}
+                                    <span className="font-semibold">product_categories</span>.
+                                </p>
+                            )}
                         </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
