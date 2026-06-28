@@ -184,9 +184,9 @@ const mapRowToService = (row: any): ServiceRecord => ({
     name: row.name,
     description: row.description,
     price: row.price,
-    durationMinutes: row.duration,
+    durationMinutes: row.duration_minutes,
     categoryId: row.category_id,
-    isActive: row.active,
+    isActive: row.is_active,
     imageUrl: row.image_url,
     requiresConfirmation: false,
     currency: "BRL"
@@ -282,7 +282,7 @@ export function useTenantServices(tenantId?: string) {
             .from("services")
             .select("*")
             .eq("tenant_id", tenantId)
-            .eq("active", true)
+            .eq("is_active", true)
             .then(({ data: rows, error }) => {
                 if (!isMounted) return
                 if (!error && rows) {
