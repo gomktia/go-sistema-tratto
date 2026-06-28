@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
             `)
             .eq('identity_type', identityType)
             .eq('identity_value', identityValue)
-            .eq('customer.tenant_id', tenantId)
+            .eq('tenant_id', tenantId)
             .single()
 
         if (error || !credential) {

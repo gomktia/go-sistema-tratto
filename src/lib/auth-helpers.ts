@@ -259,7 +259,7 @@ export async function checkUserExists(
       `)
       .eq('identity_type', 'email')
       .eq('identity_value', identifier.toLowerCase().trim())
-      .eq('customer.tenant_id', tenantId)
+      .eq('tenant_id', tenantId)
       .single()
 
     if (!customerError && customer) {
@@ -283,7 +283,7 @@ export async function checkUserExists(
       `)
       .eq('identity_type', 'cpf')
       .eq('identity_value', normalizedCpf)
-      .eq('customer.tenant_id', tenantId)
+      .eq('tenant_id', tenantId)
       .single()
 
     if (!error && customer) {
