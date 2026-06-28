@@ -317,6 +317,30 @@ export async function checkUserExists(
     }
   }
 
+  // Fallback: verificar no Supabase Auth (detecta company_admin e super_admin
+  // que não aparecem nas tabelas employees ou customer_credentials)
+  if (isEmail) {
+    try {
+      const res = await fetch('/api/auth/check-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: identifier }),
+      })
+      if (res.ok) {
+        const result = await res.json()
+        if (result.exists) {
+          return {
+            exists: true,
+            userType: result.userType as UserType,
+            data: result.data,
+          }
+        }
+      }
+    } catch {
+      // fallback silencioso — se a rota falhar, segue o fluxo normal
+    }
+  }
+
   return { exists: false }
 }
 
