@@ -12,12 +12,7 @@ import {
     DollarSign,
     Copy,
     Check,
-    Sparkles,
-    ArrowUpRight,
-    Zap,
     ChevronRight,
-    TrendingDown,
-    Heart
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -60,10 +55,10 @@ export default function TenantDashboardPage() {
     const activeClients = new Set(appointments.map(a => a.customerName)).size
 
     const realStats = [
-        { label: "Agendamentos Hoje", value: appointmentsToday.length.toString(), trend: "+5%", icon: Calendar },
-        { label: "Faturamento Hoje", value: formatCurrency(incomeToday), trend: "+12%", icon: DollarSign },
-        { label: "Faturamento Mês", value: formatCurrency(incomeMonth), trend: "+8%", icon: TrendingUp },
-        { label: "Clientes Ativos", value: activeClients.toString(), trend: "+2%", icon: Users },
+        { label: "Agendamentos Hoje", value: appointmentsToday.length.toString(), icon: Calendar },
+        { label: "Faturamento Hoje", value: formatCurrency(incomeToday), icon: DollarSign },
+        { label: "Faturamento Mês", value: formatCurrency(incomeMonth), icon: TrendingUp },
+        { label: "Clientes Ativos", value: activeClients.toString(), icon: Users },
     ]
 
     // Chart Data (Last 7 Days)
@@ -99,29 +94,6 @@ export default function TenantDashboardPage() {
         setTimeout(() => setCopied(false), 2000)
     }
 
-    const insights = [
-        {
-            title: "Oportunidade Manhã",
-            description: "Você tem horários livres amanhã de manhã. Crie uma oferta!",
-            icon: Zap,
-            color: "text-amber-500",
-            bg: "bg-amber-500/10"
-        },
-        {
-            title: "Serviço em Alta",
-            description: "Hidratação Profunda teve um aumento de 30% na procura.",
-            icon: TrendingUp,
-            color: "text-emerald-500",
-            bg: "bg-emerald-500/10"
-        },
-        {
-            title: "Retenção",
-            description: "5 clientes completam 30 dias sem visita. Chame-os no WhatsApp.",
-            icon: Heart,
-            color: "text-pink-500",
-            bg: "bg-pink-500/10"
-        },
-    ]
 
     return (
         <div className="space-y-8 pb-10 max-w-[1600px] mx-auto">
@@ -148,48 +120,17 @@ export default function TenantDashboardPage() {
                 </Card>
             </div>
 
-            {/* Strategic Insights Section */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {insights.map((insight, i) => (
-                    <motion.div
-                        key={i}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.1 }}
-                    >
-                        <Card className="p-5 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm bg-white dark:bg-zinc-900 group cursor-pointer hover:shadow-lg hover:border-gray-200 transition-all">
-                            <div className="flex gap-4">
-                                <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center shrink-0", insight.bg)}>
-                                    <insight.icon className={cn("w-6 h-6", insight.color)} />
-                                </div>
-                                <div className="space-y-1">
-                                    <h4 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
-                                        {insight.title}
-                                        <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    </h4>
-                                    <p className="text-xs text-gray-600 dark:text-zinc-400 leading-relaxed">{insight.description}</p>
-                                </div>
-                            </div>
-                        </Card>
-                    </motion.div>
-                ))}
-            </div>
-
             {/* Stats Grid */}
             <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
                 {realStats.map((stat, i) => (
                     <Card key={i} className="p-6 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm hover:shadow-lg bg-white dark:bg-zinc-900 transition-all hover:border-gray-200">
-                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">{stat.label}</p>
-                        <div className="flex items-end justify-between">
-                            <h3 className="text-2xl font-black text-slate-900 dark:text-white">{stat.value}</h3>
-                            <div className={cn(
-                                "flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full",
-                                stat.trend.startsWith('+') ? "text-emerald-600 bg-emerald-50" : "text-red-600 bg-red-50"
-                            )}>
-                                {stat.trend.startsWith('+') ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-                                {stat.trend}
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-zinc-800 flex items-center justify-center">
+                                <stat.icon className="w-5 h-5 text-slate-600 dark:text-zinc-400" />
                             </div>
+                            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">{stat.label}</p>
                         </div>
+                        <h3 className="text-2xl font-black text-slate-900 dark:text-white">{stat.value}</h3>
                     </Card>
                 ))}
             </div>

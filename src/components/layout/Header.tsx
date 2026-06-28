@@ -1,6 +1,6 @@
 "use client"
 
-import { Bell, ChevronDown, Check, Search, Command, Calendar, DollarSign, Settings, Timer, Megaphone } from "lucide-react"
+import { Bell, ChevronDown, Check, Search, Command, Calendar, DollarSign, Settings, Timer, Megaphone, LogOut, User } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { useTenant } from "@/contexts/tenant-context"
@@ -38,8 +38,9 @@ export function Header() {
     const pageTitle = pageTitleMap[currentPath] || currentPath.charAt(0).toUpperCase() + currentPath.slice(1)
 
     const { currentTenant, setCurrentTenant, allTenants } = useTenant()
-    const { isSuperAdmin } = useAuth()
+    const { isSuperAdmin, logout } = useAuth()
     const [isTenantMenuOpen, setIsTenantMenuOpen] = useState(false)
+    const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
     const [notifications, setNotifications] = useState(initialNotifications)
 
@@ -174,10 +175,10 @@ export function Header() {
                     </div>
                 </div>
 
-                {/* Tenant & User Profile */}
+                {/* User Profile Menu */}
                 <div className="relative">
                     <button
-                        onClick={() => isSuperAdmin && setIsTenantMenuOpen(!isTenantMenuOpen)}
+                        onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                         className="flex items-center gap-3 p-1 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 hover:shadow-md transition-all group"
                     >
                         <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white text-xs font-black shadow-lg">
@@ -187,50 +188,76 @@ export function Header() {
                             <p className="text-xs font-black text-slate-900 dark:text-white leading-none mb-1">{currentTenant.name}</p>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{isSuperAdmin ? 'Super Admin' : 'Administrador'}</p>
                         </div>
-                        {isSuperAdmin && <ChevronDown className="w-4 h-4 text-slate-400 mr-2 group-hover:text-primary transition-colors" />}
+                        <ChevronDown className="w-4 h-4 text-slate-400 mr-2 group-hover:text-primary transition-colors" />
                     </button>
 
                     <AnimatePresence>
-                        {isSuperAdmin && isTenantMenuOpen && (
+                        {isUserMenuOpen && (
                             <>
-                                <div className="fixed inset-0 z-40" onClick={() => setIsTenantMenuOpen(false)} />
+                                <div className="fixed inset-0 z-40" onClick={() => setIsUserMenuOpen(false)} />
                                 <motion.div
                                     initial={{ opacity: 0, y: 10, scale: 0.98 }}
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     exit={{ opacity: 0, y: 10, scale: 0.98 }}
-                                    className="absolute right-0 mt-3 w-[320px] rounded-2xl bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 shadow-2xl z-50 overflow-hidden"
+                                    className="absolute right-0 mt-3 w-[280px] rounded-2xl bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 shadow-2xl z-50 overflow-hidden"
                                 >
+                                    {/* User Info */}
                                     <div className="p-4 border-b border-slate-100 dark:border-zinc-800">
-                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.3em]">Empresas</p>
-                                        <p className="text-sm font-semibold text-slate-900 dark:text-white">Selecione uma conta para administrar</p>
+                                        <p className="text-sm font-bold text-slate-900 dark:text-white">{currentTenant.name}</p>
+                                        <p className="text-xs text-slate-400">{isSuperAdmin ? 'Super Admin' : 'Administrador'}</p>
                                     </div>
-                                    <div className="max-h-72 overflow-y-auto">
-                                        {allTenants.map((tenant) => {
-                                            const isActive = tenant.id === currentTenant.id
-                                            return (
-                                                <button
-                                                    key={tenant.id}
-                                                    onClick={() => handleTenantSelect(tenant.id)}
-                                                    className={cn(
-                                                        "w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors",
-                                                        isActive && "bg-primary/5"
-                                                    )}
-                                                >
-                                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white font-black text-sm">
-                                                        {tenant.name.substring(0, 2).toUpperCase()}
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="font-semibold text-sm text-slate-900 dark:text-white truncate">{tenant.fullName}</p>
-                                                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{tenant.customDomain || `${tenant.slug}.Tratto.app`}</p>
-                                                    </div>
-                                                    {isActive && (
-                                                        <Badge variant="outline" className="text-[10px] uppercase border-none bg-primary/10 text-primary">
-                                                            Atual
-                                                        </Badge>
-                                                    )}
-                                                </button>
-                                            )
-                                        })}
+
+                                    {/* Tenant Selector (Super Admin only) */}
+                                    {isSuperAdmin && allTenants.length > 1 && (
+                                        <div className="border-b border-slate-100 dark:border-zinc-800">
+                                            <p className="px-4 pt-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Trocar Empresa</p>
+                                            <div className="max-h-40 overflow-y-auto">
+                                                {allTenants.map((tenant) => {
+                                                    const isActive = tenant.id === currentTenant.id
+                                                    return (
+                                                        <button
+                                                            key={tenant.id}
+                                                            onClick={() => {
+                                                                handleTenantSelect(tenant.id)
+                                                                setIsUserMenuOpen(false)
+                                                            }}
+                                                            className={cn(
+                                                                "w-full text-left px-4 py-2 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors text-sm",
+                                                                isActive && "bg-primary/5"
+                                                            )}
+                                                        >
+                                                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white font-bold text-xs">
+                                                                {tenant.name.substring(0, 2).toUpperCase()}
+                                                            </div>
+                                                            <span className="flex-1 truncate text-slate-700 dark:text-zinc-300">{tenant.name}</span>
+                                                            {isActive && <Check className="w-4 h-4 text-primary" />}
+                                                        </button>
+                                                    )
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Menu Actions */}
+                                    <div className="p-2">
+                                        <Link
+                                            href={`/${currentTenant.slug}/configuracoes`}
+                                            onClick={() => setIsUserMenuOpen(false)}
+                                            className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors"
+                                        >
+                                            <Settings className="w-4 h-4" />
+                                            Configurações
+                                        </Link>
+                                        <button
+                                            onClick={() => {
+                                                setIsUserMenuOpen(false)
+                                                logout()
+                                            }}
+                                            className="flex items-center gap-3 w-full px-3 py-2 rounded-xl text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                        >
+                                            <LogOut className="w-4 h-4" />
+                                            Sair
+                                        </button>
                                     </div>
                                 </motion.div>
                             </>

@@ -18,7 +18,6 @@ import {
     Building2,
     DollarSign,
     Package,
-    Megaphone,
     Smartphone,
     Menu,
     X,
@@ -27,7 +26,6 @@ import {
     Trophy,
     CreditCard,
     Lock,
-    Sparkles,
     ClipboardList,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -59,8 +57,7 @@ export function Sidebar() {
                 { icon: DollarSign,     label: "Financeiro",  href: `/${slug}/financeiro`, permission: 'financialModule' },
                 { icon: ClipboardList, label: "Fechamento",  href: `/${slug}/fechamento`, permission: 'financialModule' },
                 { icon: Package, label: "Estoque & PDV", href: `/${slug}/estoque`, permission: 'inventoryModule' },
-                { icon: Megaphone, label: "CRM & Marketing", href: `/${slug}/crm`, permission: 'marketingGallery' },
-                { icon: Sparkles, label: "Social IA", href: `/${slug}/social`, permission: 'marketingGallery' },
+                // CRM & Marketing e Social IA ocultados temporariamente (módulos em desenvolvimento)
                 { icon: BarChart3, label: "Relatórios", href: `/${slug}/relatorios`, permission: 'financialModule' },
                 { icon: Trophy, label: "Clube Fidelidade", href: `/${slug}/fidelidade`, permission: 'fidelityClub' },
                 { icon: Smartphone, label: "Vista Profissional", href: `/${slug}/profissional`, permission: null },

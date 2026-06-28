@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Plus, Search, Filter, MoreHorizontal, Mail, Phone, Calendar, Edit, Trash2, LayoutGrid, List as ListIcon, Wallet, Gift, AlertTriangle, Send, Activity, MessageSquare, PhoneCall, Sparkles, CheckSquare } from "lucide-react"
+import { Plus, Search, Filter, MoreHorizontal, Mail, Phone, Calendar, Edit, Trash2, LayoutGrid, List as ListIcon, Wallet } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { clients } from "@/mocks/data"
 import type { ClientRecord } from "@/types/crm"
@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Progress } from "@/components/ui/progress"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "sonner"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -377,16 +376,6 @@ export default function ClientesPage() {
     // RENDER
     // -------------------------------------------------------------------------
 
-    // Mock stats
-    const automationRecommendations = [
-        { id: 1, title: "Reativação de Inativos", description: "Recupere clientes que não vêm há 60 dias.", impact: "Alta", type: "recovery" },
-        { id: 2, title: "Lembrete de Retorno", description: "Incentive o retorno após 30 dias.", impact: "Média", type: "retention" },
-    ]
-
-    const upcomingEvents = [
-        { id: 1, title: "Aniversariantes do Mês", date: "Julho", action: "Enviar cupom", impact: "Fidelização" },
-        { id: 2, title: "Dia do Cliente", date: "15 Set", action: "Campanha especial", impact: "Vendas" },
-    ]
 
     return (
         <div className="space-y-8 relative">
@@ -526,11 +515,10 @@ export default function ClientesPage() {
                 </div>
             </div>
 
-            <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <StatCard label="Total de Clientes" value={clientsList.length} helper="+12% vs mês anterior" />
-                <StatCard label="Novos este mês" value="24" helper="Meta: 30" />
-                <StatCard label="Inativos (30d)" value="8" helper="Oportunidade de reativação" />
-                <StatCard label="LTV Médio" value="R$ 450" helper="Lifetime Value" />
+            <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <StatCard label="Total de Clientes" value={clientsList.length} helper="Base atual" />
+                <StatCard label="Ativos" value={clientsList.filter(c => c.status === 'active').length} helper="Clientes ativos" />
+                <StatCard label="Inativos" value={clientsList.filter(c => c.status !== 'active').length} helper="Requerem atenção" />
             </section>
 
             <section className="space-y-4">
@@ -572,123 +560,6 @@ export default function ClientesPage() {
                 </div>
             </section>
 
-            <section className="grid gap-4 lg:grid-cols-3">
-                <Card className="rounded-[2rem] border-none shadow-sm bg-white/70 dark:bg-zinc-900/70">
-                    <CardHeader>
-                        <CardTitle>Saúde do funil</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                            <div className="flex justify-between text-xs font-medium">
-                                <span>Novos vs Recorrentes</span>
-                                <span>65% Recorrente</span>
-                            </div>
-                            <Progress value={65} className="h-2 rounded-full" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 mt-4">
-                            <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                                <p className="text-xs uppercase font-bold opacity-70">Taxa Retenção</p>
-                                <p className="text-xl font-black mt-1">92%</p>
-                            </div>
-                            <div className="p-3 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400">
-                                <p className="text-xs uppercase font-bold opacity-70">Churn Mensal</p>
-                                <p className="text-xl font-black mt-1">1.2%</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="rounded-[2rem] border-none shadow-sm bg-white/70 dark:bg-zinc-900/70">
-                    <CardHeader>
-                        <CardTitle>Ao vivo agora</CardTitle>
-                        <div className="flex items-center gap-2 text-xs text-green-600 font-medium">
-                            <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                            </span>
-                            Loja movimentada
-                        </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                        {[
-                            { client: "Mariana Costa", action: "Check-in realizado", time: "2 min atrás", type: "checkin", detail: "Corte + Hidratação", status: "Em andamento" },
-                            { client: "Carlos Souza", action: "Agendou online", time: "15 min atrás", type: "booking", detail: "Barba e Cabelo", status: "Confirmado" },
-                            { client: "Fernanda Lima", action: "Avaliou serviço", time: "45 min atrás", type: "review", detail: "5 estrelas - Adorou!", status: "Concluído" },
-                        ].map((signal, i) => {
-                            const toneClass =
-                                signal.type === 'checkin' ? 'bg-blue-500/10 text-blue-600' :
-                                    signal.type === 'booking' ? 'bg-purple-500/10 text-purple-600' :
-                                        'bg-amber-500/10 text-amber-600'
-
-                            const Icon =
-                                signal.type === 'checkin' ? Calendar :
-                                    signal.type === 'booking' ? PhoneCall : Sparkles
-
-                            return (
-                                <div key={i} className="flex items-center gap-3 p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors">
-                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${toneClass}`}>
-                                        <Icon className="w-5 h-5" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-sm font-semibold text-slate-900 dark:text-white">{signal.client}</p>
-                                        <p className="text-xs text-muted-foreground">{signal.detail}</p>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-xs font-bold text-slate-900 dark:text-white">{signal.time}</p>
-                                        <Badge variant="outline" className="rounded-full text-[10px] uppercase tracking-widest mt-1">
-                                            {signal.status}
-                                        </Badge>
-                                    </div>
-                                </div>
-                            )
-                        })}
-                    </CardContent>
-                </Card>
-
-                <Card className="rounded-[2rem] border-none shadow-sm bg-white/70 dark:bg-zinc-900/70">
-                    <CardHeader>
-                        <CardTitle>Playbooks automáticos</CardTitle>
-                        <p className="text-sm text-muted-foreground">Ative fluxos para cada cenário.</p>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                        {automationRecommendations.map(item => (
-                            <div key={item.id} className="rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 space-y-3">
-                                <div className="flex items-center justify-between gap-3">
-                                    <div>
-                                        <p className="text-sm font-semibold text-slate-900 dark:text-white">{item.title}</p>
-                                        <p className="text-xs text-muted-foreground">{item.description}</p>
-                                    </div>
-                                    <Badge variant="secondary" className="rounded-full text-[10px] uppercase tracking-widest">
-                                        {item.impact}
-                                    </Badge>
-                                </div>
-                                <Button variant="ghost" size="sm" className="h-9 rounded-full gap-2 text-primary hover:text-primary">
-                                    <Sparkles className="w-4 h-4" />
-                                    Ativar fluxo
-                                </Button>
-                            </div>
-                        ))}
-                    </CardContent>
-                </Card>
-            </section>
-
-            <div className="rounded-2xl border border-black/5 dark:border-white/5 bg-white/70 dark:bg-zinc-900/70 p-5 flex flex-col sm:flex-row sm:items-center gap-4">
-                <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Ações inteligentes</p>
-                    <p className="text-lg font-black text-slate-900 dark:text-white">Ative campanhas e tags sem sair da base</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                    <Button variant="outline" className="rounded-2xl" onClick={() => alert("Campanha agendada!")}>
-                        Enviar campanha
-                    </Button>
-                    <Button variant="outline" className="rounded-2xl" onClick={() => alert("Tag aplicada!")}>
-                        Adicionar etiqueta
-                    </Button>
-                    <Button variant="default" className="rounded-2xl" onClick={() => alert("Exportação iniciada!")}>
-                        Exportar Segmento
-                    </Button>
-                </div>
-            </div>
 
             <Card className="rounded-[2rem] border-none shadow-sm bg-white/80 dark:bg-zinc-900/70">
                 <CardHeader>
@@ -718,68 +589,6 @@ export default function ClientesPage() {
                 </CardContent>
             </Card>
 
-            <div className="grid gap-4 lg:grid-cols-2">
-                <Card className="rounded-[2rem] border-none shadow-sm bg-white/70 dark:bg-zinc-900/70">
-                    <CardHeader>
-                        <CardTitle>Eventos importantes</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                        {upcomingEvents.map(event => (
-                            <div key={event.id} className="flex items-center gap-4 rounded-2xl border border-dashed border-slate-200 dark:border-zinc-800 p-3">
-                                <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary font-black flex flex-col items-center justify-center">
-                                    <span className="text-[10px] uppercase tracking-[0.3em]">Data</span>
-                                    <span className="text-sm">{event.date}</span>
-                                </div>
-                                <div className="flex-1">
-                                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{event.title}</p>
-                                    <p className="text-xs text-muted-foreground">{event.action}</p>
-                                </div>
-                                <Badge variant="secondary" className="rounded-full text-[10px] uppercase tracking-widest">
-                                    {event.impact}
-                                </Badge>
-                            </div>
-                        ))}
-                    </CardContent>
-                </Card>
-
-                <Card className="rounded-[2rem] border-none shadow-sm bg-white/70 dark:bg-zinc-900/70">
-                    <CardHeader>
-                        <CardTitle>Campanhas recomendadas</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                        <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-semibold text-slate-900 dark:text-white">Reativação risco</p>
-                                <p className="text-xs text-muted-foreground">30 clientes aguardando incentivo</p>
-                            </div>
-                            <Button variant="outline" className="rounded-full text-xs gap-1">
-                                <AlertTriangle className="w-3 h-3" />
-                                Executar
-                            </Button>
-                        </div>
-                        <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-semibold text-slate-900 dark:text-white">Surpresa VIP</p>
-                                <p className="text-xs text-muted-foreground">Aniversariantes da semana</p>
-                            </div>
-                            <Button variant="outline" className="rounded-full text-xs gap-1">
-                                <Gift className="w-3 h-3" />
-                                Programar
-                            </Button>
-                        </div>
-                        <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 p-4 flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-semibold text-slate-900 dark:text-white">Campanha recorrência</p>
-                                <p className="text-xs text-muted-foreground">Clientes ativos há 15 dias</p>
-                            </div>
-                            <Button variant="outline" className="rounded-full text-xs gap-1">
-                                <Send className="w-3 h-3" />
-                                Disparar
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
 
             {/* Content View */}
             {viewMode === 'list' ? (
@@ -914,11 +723,7 @@ export default function ClientesPage() {
             <div className="md:hidden fixed bottom-4 left-4 right-4 flex items-center gap-2 bg-white/90 dark:bg-zinc-900/90 border border-slate-200 dark:border-zinc-800 shadow-2xl rounded-2xl p-3">
                 <Button className="flex-1 rounded-xl" onClick={() => setShowNewClient(true)}>
                     <Plus className="w-4 h-4 mr-2" />
-                    Novo
-                </Button>
-                <Button variant="outline" className="flex-1 rounded-xl" onClick={() => alert("Campanha mobile!")}>
-                    <Send className="w-4 h-4 mr-2" />
-                    Campanha
+                    Novo Cliente
                 </Button>
                 <Button variant="ghost" size="icon" className="rounded-xl border">
                     <Filter className="w-4 h-4" />
