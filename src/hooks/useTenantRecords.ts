@@ -373,6 +373,7 @@ export function useTenantCustomers(tenantId?: string) {
     const [trigger, setTrigger] = useState(0)
     const [data, setData] = useState<ClientRecord[]>([])
     const [loading, setLoading] = useState<boolean>(isSupabaseConfigured && !!tenantId)
+    const [error, setError] = useState<string | null>(null)
 
     const refetch = () => setTrigger(prev => prev + 1)
 
@@ -381,24 +382,28 @@ export function useTenantCustomers(tenantId?: string) {
         if (!isSupabaseConfigured || !supabase || !tenantId) {
             setLoading(false)
             setData([])
+            setError(null)
             return
         }
 
         let isMounted = true
         setLoading(true)
+        setError(null)
 
         supabase
             .from("customers")
             .select("id, tenant_id, full_name, email, phone, document, last_visit_at, total_spent, loyalty_points, status")
             .eq("tenant_id", tenantId)
             .order("full_name", { ascending: true })
-            .then(({ data: rows, error }) => {
+            .then(({ data: rows, error: queryError }) => {
                 if (!isMounted) return
 
-                if (error) {
-                    console.error("[useTenantCustomers] Erro ao carregar clientes:", error.message)
+                if (queryError) {
+                    console.error("[useTenantCustomers] Erro ao carregar clientes:", queryError.message)
+                    setError(queryError.message)
                     setData([])
                 } else {
+                    setError(null)
                     setData(rows ? rows.map(mapRowToClient) : [])
                 }
                 setLoading(false)
@@ -407,7 +412,7 @@ export function useTenantCustomers(tenantId?: string) {
         return () => { isMounted = false }
     }, [tenantId, trigger])
 
-    return { data, loading, refetch }
+    return { data, loading, error, refetch }
 }
 
 export function useTenantGallery(tenantId?: string) {

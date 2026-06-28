@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Plus, Search, Filter, MoreHorizontal, Mail, Phone, Calendar, Edit, Trash2, LayoutGrid, List as ListIcon, Wallet } from "lucide-react"
+import { Plus, Search, Filter, MoreHorizontal, Mail, Phone, Calendar, Edit, Trash2, LayoutGrid, List as ListIcon, Wallet, AlertCircle, Users, RefreshCw } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { ClientRecord } from "@/types/crm"
 import { useTenant } from "@/contexts/tenant-context"
@@ -69,7 +69,7 @@ export default function ClientesPage() {
     // STATE & DATA
     // -------------------------------------------------------------------------
     const { currentTenant } = useTenant()
-    const { data: tenantCustomers, refetch } = useTenantCustomers(currentTenant.id)
+    const { data: tenantCustomers, loading: isLoading, error: loadError, refetch } = useTenantCustomers(currentTenant.id)
     const [clientsList, setClientsList] = useState<ClientRecord[]>([])
 
     // Sync local state with fetched data
@@ -191,6 +191,7 @@ export default function ClientesPage() {
                 document: formData.cpf
             })
             .eq('id', selectedClient.id)
+            .eq('tenant_id', currentTenant.id)
 
         if (error) {
             toast.error("Erro ao atualizar cliente")
@@ -219,6 +220,7 @@ export default function ClientesPage() {
             .from('customers')
             .delete()
             .eq('id', selectedClient.id)
+            .eq('tenant_id', currentTenant.id)
 
         if (error) {
             toast.error("Erro ao excluir cliente")
@@ -242,6 +244,7 @@ export default function ClientesPage() {
             .from('customers')
             .delete()
             .in('id', selectedClients)
+            .eq('tenant_id', currentTenant.id)
 
         if (error) {
             toast.error("Erro ao excluir clientes selecionados")
@@ -576,9 +579,54 @@ export default function ClientesPage() {
                 </CardContent>
             </Card>
 
+            {/* Loading State */}
+            {isLoading && (
+                <div className="flex flex-col items-center justify-center py-16 space-y-4">
+                    <RefreshCw className="w-8 h-8 text-primary animate-spin" />
+                    <p className="text-sm font-medium text-muted-foreground">Carregando clientes...</p>
+                </div>
+            )}
 
-            {/* Content View */}
-            {viewMode === 'list' ? (
+            {/* Error State */}
+            {!isLoading && loadError && (
+                <Card className="rounded-2xl border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30">
+                    <CardContent className="flex flex-col items-center justify-center py-12 space-y-4">
+                        <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/50 flex items-center justify-center">
+                            <AlertCircle className="w-8 h-8 text-red-600 dark:text-red-400" />
+                        </div>
+                        <div className="text-center space-y-2">
+                            <h3 className="text-lg font-bold text-red-800 dark:text-red-200">Não foi possível carregar clientes</h3>
+                            <p className="text-sm text-red-600 dark:text-red-400 max-w-md">{loadError}</p>
+                        </div>
+                        <Button variant="outline" onClick={() => refetch()} className="rounded-xl border-red-300 text-red-700 hover:bg-red-100">
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                            Tentar novamente
+                        </Button>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* Empty State */}
+            {!isLoading && !loadError && clientsList.length === 0 && (
+                <Card className="rounded-2xl border-dashed">
+                    <CardContent className="flex flex-col items-center justify-center py-16 space-y-4">
+                        <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center">
+                            <Users className="w-8 h-8 text-slate-400" />
+                        </div>
+                        <div className="text-center space-y-2">
+                            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Nenhum cliente cadastrado</h3>
+                            <p className="text-sm text-muted-foreground max-w-md">Comece adicionando seu primeiro cliente ou importe uma lista.</p>
+                        </div>
+                        <Button onClick={() => setShowNewClient(true)} className="rounded-xl">
+                            <Plus className="w-4 h-4 mr-2" />
+                            Adicionar Cliente
+                        </Button>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* Content View - Only show when we have data */}
+            {!isLoading && !loadError && clientsList.length > 0 && (viewMode === 'list' ? (
                 <>
                     <div className="hidden md:block rounded-2xl border border-black/5 dark:border-white/5 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xl shadow-sm overflow-hidden">
                         <Table>
@@ -706,7 +754,7 @@ export default function ClientesPage() {
                         />
                     ))}
                 </div>
-            )}
+            ))}
             <div className="md:hidden fixed bottom-4 left-4 right-4 flex items-center gap-2 bg-white/90 dark:bg-zinc-900/90 border border-slate-200 dark:border-zinc-800 shadow-2xl rounded-2xl p-3">
                 <Button className="flex-1 rounded-xl" onClick={() => setShowNewClient(true)}>
                     <Plus className="w-4 h-4 mr-2" />
