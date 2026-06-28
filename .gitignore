@@ -41,6 +41,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Overclock / MCP (tokens sensíveis)
+.mcp.json
+.overclock-app/
+supabase/.temp/
+
 # Arquivos com dados pessoais / credenciais reais (LGPD)
 INSTRUCOES_DATA_NASCIMENTO.md
 CREDENCIAIS_*.md
