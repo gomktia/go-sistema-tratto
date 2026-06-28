@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { clients, appointments as appointmentMocks } from "@/mocks/data"
+import { clients } from "@/mocks/data"
 import { employees as employeeMocks } from "@/mocks/services"
 import { combos as comboMocks } from "@/mocks/combos"
 import { tenants as tenantMocks, type Tenant as MockTenant } from "@/mocks/tenants"
@@ -40,33 +40,7 @@ const mapMockClient = (client: typeof clients[number]): ClientRecord => ({
     avatar: client.avatar,
 })
 
-// 2. APPOINTMENTS
-// Ajuste para bater com as propriedades reais que o componente de agenda espera (resourceId, etc.)
-// Assumindo que resourceId = employeeId
-const mapMockAppointment = (apt: typeof appointmentMocks[number]): AppointmentRecord => {
-    // Construct simple start/end dates
-    // Assuming apt.date is ISO string, we take the date part
-    const datePart = apt.date.split('T')[0]
-    const startAt = `${datePart}T${apt.time}:00`
-    // Simple duration calculation for endAt
-    const endAt = new Date(new Date(startAt).getTime() + apt.duration * 60000).toISOString()
-
-    return {
-        id: apt.id,
-        tenantId: apt.tenantId,
-        customerId: "mock-customer-id", // Mock doesn't link to customer ID
-        customerName: apt.customer,
-        employeeId: apt.staffId,
-        serviceId: apt.serviceId,
-        startAt: startAt,
-        endAt: endAt,
-        status: apt.status as AppointmentRecord["status"],
-        price: 0, // Mock appointments don't have price snapshot
-        currency: "BRL"
-    }
-}
-
-// 3. EMPLOYEES
+// 2. EMPLOYEES
 const mapMockEmployee = (emp: typeof employeeMocks[number]): EmployeeRecord => ({
     id: emp.id,
     tenantId: "tenant-1",
@@ -111,13 +85,15 @@ const generateMockAvailability = (employeeId: string): StaffAvailabilityRecord[]
 // DB ROW MAPPERS (Supabase -> Domain)
 // --------------------------------------------------------------------------
 
-// Appointments
+// Appointments (with relational data from customers and services)
 const mapRowToAppointment = (row: any): AppointmentRecord => ({
     id: row.id,
     tenantId: row.tenant_id,
     serviceId: row.service_id ?? undefined,
     employeeId: row.employee_id ?? undefined,
     customerId: row.customer_id ?? undefined,
+    customerName: row.customers?.full_name ?? undefined,
+    serviceName: row.services?.name ?? undefined,
     startAt: row.start_at,
     endAt: row.end_at ?? undefined,
     durationMinutes: row.duration_minutes ?? undefined,
@@ -198,12 +174,8 @@ const mapRowToProduct = (row: any): ProductRecord => ({
 // --------------------------------------------------------------------------
 
 export function useTenantAppointments(tenantId?: string) {
-    const fallback = useMemo(() => {
-        return appointmentMocks.map(mapMockAppointment)
-    }, [])
-
     const [trigger, setTrigger] = useState(0)
-    const [data, setData] = useState<AppointmentRecord[]>(fallback)
+    const [data, setData] = useState<AppointmentRecord[]>([])
     const [loading, setLoading] = useState<boolean>(isSupabaseConfigured && !!tenantId)
 
     const refetch = () => setTrigger(prev => prev + 1)
@@ -212,31 +184,39 @@ export function useTenantAppointments(tenantId?: string) {
         const supabase = getSupabaseBrowserClient()
         if (!isSupabaseConfigured || !supabase || !tenantId) {
             setLoading(false)
-            setData(fallback)
+            setData([])
             return
         }
 
         let isMounted = true
         setLoading(true)
 
+        // Relational query: join customers and services for names
         supabase
             .from("appointments")
-            .select("id, tenant_id, service_id, employee_id, customer_id, start_at, end_at, duration_minutes, price, currency, channel, status, notes, final_price, discount, payment_method")
+            .select(`
+                id, tenant_id, service_id, employee_id, customer_id,
+                start_at, end_at, duration_minutes,
+                price, currency, channel, status, notes,
+                final_price, discount, payment_method,
+                customers(full_name),
+                services(name)
+            `)
             .eq("tenant_id", tenantId)
             .order("start_at", { ascending: true })
             .then(({ data: rows, error }) => {
                 if (!isMounted) return
                 if (error) {
                     console.error("[useTenantAppointments] Erro ao carregar agendamentos:", error.message)
-                    setData(fallback)
+                    setData([])
                 } else {
-                    setData(rows ? rows.map(mapRowToAppointment) : fallback)
+                    setData(rows ? rows.map(mapRowToAppointment) : [])
                 }
                 setLoading(false)
             })
 
         return () => { isMounted = false }
-    }, [tenantId, fallback, trigger])
+    }, [tenantId, trigger])
 
     return { data, loading, refetch }
 }
@@ -404,23 +384,17 @@ const mapMockReview = (rev: any): Review => rev
 const mapMockStory = (story: any): Story => story
 
 export function useTenantCustomers(tenantId?: string) {
-    const fallback = useMemo(() => {
-        const normalized = clients.map(mapMockClient)
-        if (!tenantId) return normalized
-        return normalized.filter(client => client.tenantId === tenantId)
-    }, [tenantId])
-
     const [trigger, setTrigger] = useState(0)
+    const [data, setData] = useState<ClientRecord[]>([])
+    const [loading, setLoading] = useState<boolean>(isSupabaseConfigured && !!tenantId)
 
     const refetch = () => setTrigger(prev => prev + 1)
-    const [data, setData] = useState<ClientRecord[]>(fallback)
-    const [loading, setLoading] = useState<boolean>(isSupabaseConfigured)
 
     useEffect(() => {
         const supabase = getSupabaseBrowserClient()
         if (!isSupabaseConfigured || !supabase || !tenantId) {
             setLoading(false)
-            setData(fallback)
+            setData([])
             return
         }
 
@@ -437,24 +411,15 @@ export function useTenantCustomers(tenantId?: string) {
 
                 if (error) {
                     console.error("[useTenantCustomers] Erro ao carregar clientes:", error.message)
-                    setData(fallback)
-                    setLoading(false)
-                    return
-                }
-
-                // FIX: Trust empty DB array if no error
-                if (!rows) {
-                    setData(fallback)
+                    setData([])
                 } else {
-                    setData(rows.map(mapRowToClient))
+                    setData(rows ? rows.map(mapRowToClient) : [])
                 }
                 setLoading(false)
             })
 
-        return () => {
-            isMounted = false
-        }
-    }, [tenantId, fallback, trigger])
+        return () => { isMounted = false }
+    }, [tenantId, trigger])
 
     return { data, loading, refetch }
 }
