@@ -32,7 +32,9 @@ import {
     ChevronRight,
     Zap,
     LayoutGrid,
-    List as ListIcon
+    List as ListIcon,
+    AlertCircle,
+    RefreshCw,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -45,31 +47,70 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import { useTenant } from "@/contexts/tenant-context"
-import { type Service, type Employee } from "@/mocks/services"
 import { useTenantEmployees, useTenantServices } from "@/hooks/useTenantRecords"
+import type { ServiceRecord, EmployeeRecord } from "@/types/catalog"
 import { ImageUpload } from "@/components/ui/image-upload"
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client"
 
 const categories = ["Cabelo", "Unhas", "Maquiagem", "Estética", "Massagem", "Depilação", "Sobrancelha"]
 
+// Tipo local para UI (derivado de ServiceRecord com campos extras de display)
+interface ServiceUI {
+    id: string
+    tenantId: string
+    name: string
+    category: string
+    duration: number
+    price: number
+    description: string
+    requiresDeposit: boolean
+    depositAmount: number
+    allowOnlineBooking: boolean
+    bufferBefore: number
+    bufferAfter: number
+    maxClientsPerSlot: number
+    requiredStaff: number
+    active: boolean
+    imageUrl?: string
+    createdAt: string
+    updatedAt: string
+}
+
+// Tipo local para Employee UI
+interface EmployeeUI {
+    id: string
+    tenantId: string
+    name: string
+    email: string
+    phone: string
+    specialties: string[]
+    workingHours: Record<string, unknown>
+    commission: number
+    acceptsOnlineBooking: boolean
+    roundRobinEnabled: boolean
+    active: boolean
+    createdAt: string
+    updatedAt: string
+}
+
 export default function ServicosPage() {
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-    const [services, setServices] = useState<Service[]>([])
+    const [services, setServices] = useState<ServiceUI[]>([])
     const [searchTerm, setSearchTerm] = useState("")
     const [showNewService, setShowNewService] = useState(false)
     const [showEditService, setShowEditService] = useState(false)
     const [showConfirm, setShowConfirm] = useState(false)
-    const [selectedService, setSelectedService] = useState<Service | null>(null)
-    const [employees, setEmployees] = useState<Employee[]>([])
+    const [selectedService, setSelectedService] = useState<ServiceUI | null>(null)
+    const [employees, setEmployees] = useState<EmployeeUI[]>([])
     const { currentTenant } = useTenant()
 
     // Buscar dados do Supabase
-    const { data: employeeRecords } = useTenantEmployees(currentTenant.id)
-    const { data: serviceRecords, refetch: refetchServices } = useTenantServices(currentTenant.id)
+    const { data: employeeRecords } = useTenantEmployees(currentTenant?.id)
+    const { data: serviceRecords, loading: servicesLoading, error: servicesError, refetch: refetchServices } = useTenantServices(currentTenant?.id)
 
     // Sincronizar employees com dados do Supabase
     useEffect(() => {
-        const mappedEmployees: Employee[] = employeeRecords.map(record => ({
+        const mappedEmployees: EmployeeUI[] = employeeRecords.map(record => ({
             id: record.id,
             tenantId: record.tenantId,
             name: record.fullName,
@@ -103,7 +144,7 @@ export default function ServicosPage() {
 
     // Sincronizar serviços com dados do Supabase, resolvendo categoria pelo UUID
     useEffect(() => {
-        const mappedServices: Service[] = serviceRecords.map(record => ({
+        const mappedServices: ServiceUI[] = serviceRecords.map(record => ({
             id: record.id,
             tenantId: record.tenantId,
             name: record.name,
@@ -211,6 +252,7 @@ export default function ServicosPage() {
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', selectedService.id)
+                .eq('tenant_id', currentTenant.id)
             if (error) throw error
             refetchServices()
             setShowEditService(false)
@@ -220,13 +262,14 @@ export default function ServicosPage() {
         }
     }
 
-    const handleDeleteService = async (service: Service) => {
+    const handleDeleteService = async (service: ServiceUI) => {
         const supabase = getSupabaseBrowserClient()
-        if (supabase && isSupabaseConfigured) {
+        if (supabase && isSupabaseConfigured && currentTenant?.id) {
             const { error } = await supabase
                 .from('services')
                 .delete()
                 .eq('id', service.id)
+                .eq('tenant_id', currentTenant.id)
             if (error) {
                 console.error('[ServicosPage] Erro ao deletar serviço:', error)
                 return
@@ -236,7 +279,7 @@ export default function ServicosPage() {
         setShowConfirm(false)
     }
 
-    const openEditDialog = (service: Service) => {
+    const openEditDialog = (service: ServiceUI) => {
         setSelectedService(service)
         const linkedProfessionalIds = employees
             .filter(emp => emp.specialties.includes(service.id))
@@ -262,7 +305,7 @@ export default function ServicosPage() {
         setShowEditService(true)
     }
 
-    const openDeleteDialog = (service: Service) => {
+    const openDeleteDialog = (service: ServiceUI) => {
         setSelectedService(service)
         setShowConfirm(true)
     }
@@ -354,8 +397,40 @@ export default function ServicosPage() {
                 </div>
             </div>
 
+            {/* Loading State */}
+            {servicesLoading && (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <RefreshCw className="w-8 h-8 animate-spin text-primary mb-4" />
+                    <p className="text-slate-500 font-medium">Carregando serviços...</p>
+                </div>
+            )}
+
+            {/* Error State */}
+            {!servicesLoading && servicesError && (
+                <div className="flex flex-col items-center justify-center py-16 text-center bg-red-50 dark:bg-red-900/10 rounded-3xl">
+                    <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
+                    <p className="text-red-600 dark:text-red-400 font-bold mb-2">Erro ao carregar serviços</p>
+                    <p className="text-red-500/70 text-sm mb-4">{servicesError}</p>
+                    <Button onClick={refetchServices} variant="outline" className="rounded-xl">
+                        <RefreshCw className="w-4 h-4 mr-2" /> Tentar novamente
+                    </Button>
+                </div>
+            )}
+
+            {/* Empty State */}
+            {!servicesLoading && !servicesError && services.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-16 text-center bg-slate-50 dark:bg-zinc-900 rounded-3xl">
+                    <Sparkles className="w-12 h-12 text-slate-300 dark:text-zinc-600 mb-4" />
+                    <p className="text-slate-500 dark:text-zinc-400 font-bold mb-2">Nenhum serviço cadastrado</p>
+                    <p className="text-slate-400 dark:text-zinc-500 text-sm mb-4">Comece adicionando seu primeiro serviço</p>
+                    <Button onClick={() => setShowNewService(true)} className="rounded-xl">
+                        <Plus className="w-4 h-4 mr-2" /> Novo Serviço
+                    </Button>
+                </div>
+            )}
+
             {/* Content View */}
-            {viewMode === 'grid' ? (
+            {!servicesLoading && !servicesError && services.length > 0 && (viewMode === 'grid' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredServices.map((service, idx) => (
                         <motion.div
@@ -497,7 +572,7 @@ export default function ServicosPage() {
                         </TableBody>
                     </Table>
                 </div>
-            )}
+            ))}
 
             {/* Modal Novo/Editar */}
             <FormDialog

@@ -15,6 +15,9 @@ import {
     List as ListIcon,
     Settings2,
     Loader2,
+    AlertCircle,
+    Users,
+    RefreshCw,
 } from "lucide-react"
 import {
     Table,
@@ -74,7 +77,7 @@ export default function FuncionariosPage() {
     const { currentTenant } = useTenant()
     const tenantId = currentTenant?.id
 
-    const { data: employees, loading, refetch } = useTenantEmployees(tenantId)
+    const { data: employees, loading, error: loadError, refetch } = useTenantEmployees(tenantId)
     const { data: services } = useTenantServices(tenantId)
 
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
@@ -149,7 +152,7 @@ export default function FuncionariosPage() {
             commission_rate: formData.commission,
             accepts_online_booking: formData.acceptsOnlineBooking,
             updated_at: new Date().toISOString(),
-        }).eq("id", selectedEmployee.id)
+        }).eq("id", selectedEmployee.id).eq("tenant_id", tenantId)
 
         setSaving(false)
         if (error) {
@@ -173,6 +176,7 @@ export default function FuncionariosPage() {
         const { error } = await supabase.from("employees")
             .update({ status: "deleted", updated_at: new Date().toISOString() })
             .eq("id", employee.id)
+            .eq("tenant_id", tenantId)
 
         setShowConfirm(false)
         if (error) {
@@ -296,8 +300,20 @@ export default function FuncionariosPage() {
                 </div>
             )}
 
+            {/* Error State */}
+            {!loading && loadError && (
+                <div className="flex flex-col items-center justify-center py-16 text-center bg-red-50 dark:bg-red-900/10 rounded-3xl">
+                    <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
+                    <p className="text-red-600 dark:text-red-400 font-bold mb-2">Erro ao carregar profissionais</p>
+                    <p className="text-red-500/70 text-sm mb-4">{loadError}</p>
+                    <Button onClick={refetch} variant="outline" className="rounded-xl">
+                        <RefreshCw className="w-4 h-4 mr-2" /> Tentar novamente
+                    </Button>
+                </div>
+            )}
+
             {/* Content View */}
-            {!loading && viewMode === 'grid' && (
+            {!loading && !loadError && viewMode === 'grid' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <AnimatePresence mode="popLayout">
                         {filteredEmployees.map((employee, idx) => (
@@ -398,7 +414,7 @@ export default function FuncionariosPage() {
                 </div>
             )}
 
-            {!loading && viewMode === 'list' && (
+            {!loading && !loadError && viewMode === 'list' && (
                 <div className="rounded-[2rem] overflow-hidden border-none shadow-sm bg-white dark:bg-zinc-900">
                     <Table>
                         <TableHeader>

@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { employees as employeeMocks } from "@/mocks/services"
 import { combos as comboMocks } from "@/mocks/combos"
 import { tenants as tenantMocks, type Tenant as MockTenant } from "@/mocks/tenants"
 import type { ClientRecord } from "@/types/crm"
@@ -26,20 +25,6 @@ import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/c
 // MOCK DATA MAPPERS (Adapters) - Apenas para módulos ainda não migrados
 // --------------------------------------------------------------------------
 
-// EMPLOYEES
-const mapMockEmployee = (emp: typeof employeeMocks[number]): EmployeeRecord => ({
-    id: emp.id,
-    tenantId: "tenant-1",
-    fullName: emp.name,
-    email: `${emp.name.toLowerCase().replace(" ", ".")}@example.com`,
-    phone: "(00) 00000-0000",
-    role: "professional", // Default
-    status: emp.active ? "active" : "inactive",
-    avatarUrl: "", // Mock doesn't have avatar
-    specialties: emp.specialties,
-    colorTag: "#10b981", // Default color
-})
-
 // 5. COMBOS
 const mapMockCombo = (combo: typeof comboMocks[number]): ComboRecord => ({
     id: combo.id,
@@ -53,19 +38,6 @@ const mapMockCombo = (combo: typeof comboMocks[number]): ComboRecord => ({
     category: "Combos"
 })
 
-// 7. AVAILABILITY
-// Gerar disponibilidade padrão para todos os funcionários mockados
-const generateMockAvailability = (employeeId: string): StaffAvailabilityRecord[] => {
-    const days = [0, 1, 2, 3, 4, 5, 6] // Dom a Sab
-    return days.map(day => ({
-        id: `avail-${employeeId}-${day}`,
-        tenantId: "tenant-1",
-        employeeId,
-        weekday: day,
-        startTime: "09:00",
-        endTime: "18:00"
-    }))
-}
 
 // --------------------------------------------------------------------------
 // DB ROW MAPPERS (Supabase -> Domain)
@@ -211,6 +183,7 @@ export function useTenantAppointments(tenantId?: string) {
 export function useTenantServices(tenantId?: string) {
     const [data, setData] = useState<ServiceRecord[]>([])
     const [loading, setLoading] = useState<boolean>(isSupabaseConfigured && !!tenantId)
+    const [error, setError] = useState<string | null>(null)
     const [trigger, setTrigger] = useState(0)
 
     const refetch = () => setTrigger(prev => prev + 1)
@@ -220,24 +193,28 @@ export function useTenantServices(tenantId?: string) {
         if (!isSupabaseConfigured || !supabase || !tenantId) {
             setLoading(false)
             setData([])
+            setError(null)
             return
         }
 
         let isMounted = true
         setLoading(true)
+        setError(null)
 
         supabase
             .from("services")
             .select("id, tenant_id, category_id, name, description, duration_minutes, price, is_active, image_url, requires_confirmation, metadata")
             .eq("tenant_id", tenantId)
             .order("name", { ascending: true })
-            .then(({ data: rows, error }) => {
+            .then(({ data: rows, error: queryError }) => {
                 if (!isMounted) return
-                if (!error && rows) {
-                    setData(rows.map(mapRowToService))
-                } else {
-                    console.error("[useTenantServices] Erro ao carregar serviços:", error?.message)
+                if (queryError) {
+                    console.error("[useTenantServices] Erro ao carregar serviços:", queryError.message)
+                    setError(queryError.message)
                     setData([])
+                } else {
+                    setError(null)
+                    setData(rows ? rows.map(mapRowToService) : [])
                 }
                 setLoading(false)
             })
@@ -245,14 +222,13 @@ export function useTenantServices(tenantId?: string) {
         return () => { isMounted = false }
     }, [tenantId, trigger])
 
-    return { data, loading, refetch }
+    return { data, loading, error, refetch }
 }
 
 export function useTenantEmployees(tenantId?: string) {
-    const fallback = useMemo(() => employeeMocks.map(mapMockEmployee), [])
-
-    const [data, setData] = useState<EmployeeRecord[]>(fallback)
+    const [data, setData] = useState<EmployeeRecord[]>([])
     const [loading, setLoading] = useState<boolean>(isSupabaseConfigured && !!tenantId)
+    const [error, setError] = useState<string | null>(null)
     const [trigger, setTrigger] = useState(0)
 
     const refetch = () => setTrigger(prev => prev + 1)
@@ -261,12 +237,14 @@ export function useTenantEmployees(tenantId?: string) {
         const supabase = getSupabaseBrowserClient()
         if (!isSupabaseConfigured || !supabase || !tenantId) {
             setLoading(false)
-            setData(fallback)
+            setData([])
+            setError(null)
             return
         }
 
         let isMounted = true
         setLoading(true)
+        setError(null)
 
         supabase
             .from("employees")
@@ -274,21 +252,23 @@ export function useTenantEmployees(tenantId?: string) {
             .eq("tenant_id", tenantId)
             .neq("status", "deleted")
             .order("full_name", { ascending: true })
-            .then(({ data: rows, error }) => {
+            .then(({ data: rows, error: queryError }) => {
                 if (!isMounted) return
-                if (!error && rows) {
-                    setData(rows.map(mapRowToEmployee))
+                if (queryError) {
+                    console.error("[useTenantEmployees] Erro ao carregar profissionais:", queryError.message)
+                    setError(queryError.message)
+                    setData([])
                 } else {
-                    console.error("[useTenantEmployees] Erro ao carregar profissionais:", error?.message)
-                    setData(fallback)
+                    setError(null)
+                    setData(rows ? rows.map(mapRowToEmployee) : [])
                 }
                 setLoading(false)
             })
 
         return () => { isMounted = false }
-    }, [tenantId, trigger, fallback])
+    }, [tenantId, trigger])
 
-    return { data, loading, refetch }
+    return { data, loading, error, refetch }
 }
 
 export function useTenantProducts(tenantId?: string) {
@@ -345,16 +325,13 @@ export function useTenantCombos(tenantId?: string) {
 }
 
 export function useTenantAvailability(tenantId?: string) {
-    // Generate availability for all employees
-    const fallback = useMemo(() => {
-        const employees = employeeMocks.map(mapMockEmployee)
-        const allAvailabilities = employees.flatMap(emp => generateMockAvailability(emp.id))
-        return allAvailabilities
-    }, [])
-
-    const [data, setData] = useState<StaffAvailabilityRecord[]>(fallback)
-    const [loading, setLoading] = useState<boolean>(false)
-
+    // Placeholder - availability is now read from employees.working_hours
+    const [data] = useState<StaffAvailabilityRecord[]>([])
+    const [loading] = useState<boolean>(false)
+    // Hook implementation placeholder using tenantId
+    useEffect(() => {
+        if (tenantId) { /* future impl: read from staff_availability table if needed */ }
+    }, [tenantId])
     return { data, loading }
 }
 
