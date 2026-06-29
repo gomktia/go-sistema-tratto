@@ -3,9 +3,6 @@
 import { useState } from 'react'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import type { ImportEntityType } from '@/types/import'
-import type { Customer } from '@/types/customer'
-import type { ServiceRecord } from '@/types/service'
-import type { EmployeeRecord } from '@/types/employee'
 
 import { exportToCSV } from '@/lib/import-export/csv-parser'
 import { exportToXLSX } from '@/lib/import-export/xlsx-parser'
@@ -40,7 +37,7 @@ export function useExport(tenantId: string) {
 
         if (fetchError) throw fetchError
 
-        data = (customers as Customer[]).map(customerToTrinksFormat)
+        data = (customers || []).map(customerToTrinksFormat)
         headers = [
           'CPF',
           'Origem',
@@ -67,7 +64,7 @@ export function useExport(tenantId: string) {
 
         if (fetchError) throw fetchError
 
-        data = (services as ServiceRecord[]).map(serviceToTrinksFormat)
+        data = (services || []).map(serviceToTrinksFormat)
         headers = [
           'Nome',
           'Descrição',
@@ -86,7 +83,7 @@ export function useExport(tenantId: string) {
 
         if (fetchError) throw fetchError
 
-        data = (employees as EmployeeRecord[]).map(employeeToTrinksFormat)
+        data = (employees || []).map(employeeToTrinksFormat)
         headers = [
           'Nome completo',
           'Apelido',
@@ -132,7 +129,7 @@ export function useExport(tenantId: string) {
 
         if (fetchError) throw fetchError
 
-        data = (customers as Customer[]).map(customerToTrinksFormat)
+        data = (customers || []).map(customerToTrinksFormat)
         headers = [
           'CPF',
           'Origem',
@@ -159,7 +156,7 @@ export function useExport(tenantId: string) {
 
         if (fetchError) throw fetchError
 
-        data = (services as ServiceRecord[]).map(serviceToTrinksFormat)
+        data = (services || []).map(serviceToTrinksFormat)
         headers = [
           'Nome',
           'Descrição',
@@ -178,7 +175,7 @@ export function useExport(tenantId: string) {
 
         if (fetchError) throw fetchError
 
-        data = (employees as EmployeeRecord[]).map(employeeToTrinksFormat)
+        data = (employees || []).map(employeeToTrinksFormat)
         headers = [
           'Nome completo',
           'Apelido',
