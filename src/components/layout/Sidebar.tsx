@@ -52,24 +52,7 @@ export function Sidebar() {
             items: [
                 { icon: Users, label: "Clientes", href: `/${slug}/clientes`, permission: null },
                 { icon: Scissors, label: "Serviços", href: `/${slug}/servicos`, permission: null },
-                { icon: ImageIcon, label: "Galeria", href: `/${slug}/galeria`, permission: 'marketingGallery' },
-                { icon: UserCircle, label: "Funcionários", href: `/${slug}/funcionarios`, permission: null },
-                { icon: DollarSign,     label: "Financeiro",  href: `/${slug}/financeiro`, permission: 'financialModule' },
-                { icon: ClipboardList, label: "Fechamento",  href: `/${slug}/fechamento`, permission: 'financialModule' },
-                { icon: Package, label: "Estoque & PDV", href: `/${slug}/estoque`, permission: 'inventoryModule' },
-                // CRM & Marketing e Social IA ocultados temporariamente (módulos em desenvolvimento)
-                { icon: BarChart3, label: "Relatórios", href: `/${slug}/relatorios`, permission: 'financialModule' },
-                { icon: Trophy, label: "Clube Fidelidade", href: `/${slug}/fidelidade`, permission: 'fidelityClub' },
-                { icon: Smartphone, label: "Vista Profissional", href: `/${slug}/profissional`, permission: null },
-            ]
-        },
-        {
-            title: "Configurações",
-            items: [
-                { icon: Building2, label: "Perfil", href: `/${slug}/perfil`, permission: null },
-                { icon: CreditCard, label: "Assinatura", href: `/${slug}/assinatura`, permission: null },
-                { icon: Settings, label: "Configurações", href: `/${slug}/configuracoes`, permission: null },
-                { icon: Package, label: "Integrações", href: `/${slug}/integracoes`, permission: 'multiUnit' },
+                { icon: UserCircle, label: "Profissionais", href: `/${slug}/funcionarios`, permission: null },
             ]
         }
     ]

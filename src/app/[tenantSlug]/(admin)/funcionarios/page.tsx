@@ -234,8 +234,8 @@ export default function FuncionariosPage() {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h2 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">Equipe</h2>
-                    <p className="text-slate-500 dark:text-zinc-400 font-medium">Gestão de profissionais e talentos.</p>
+                    <h2 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">Profissionais</h2>
+                    <p className="text-slate-500 dark:text-zinc-400 font-medium">Cadastre e gerencie a equipe do salão.</p>
                 </div>
                 <Button
                     onClick={() => setShowNewEmployee(true)}

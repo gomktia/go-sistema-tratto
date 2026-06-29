@@ -176,6 +176,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             sessionStorage.removeItem('userType')
             sessionStorage.removeItem('tenantSlug')
             setUser(null)
+            // Redirecionar para login
+            if (typeof window !== 'undefined') {
+                window.location.href = '/login'
+            }
         } catch (error) {
             console.error('Logout error:', error)
         }
