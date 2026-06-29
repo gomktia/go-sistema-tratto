@@ -1,7 +1,3 @@
-import type { Customer } from '@/types/customer'
-import type { ServiceRecord } from '@/types/service'
-import type { EmployeeRecord } from '@/types/employee'
-
 export type ImportEntityType = 'clientes' | 'servicos' | 'profissionais'
 
 export type ImportRowStatus =
@@ -17,12 +13,12 @@ export interface ImportRow {
   row: number
   status: ImportRowStatus
   action: ImportRowAction
-  data: Partial<Customer | ServiceRecord | EmployeeRecord>
+  data: any
   errors: string[]
   duplicateOf?: string
   duplicateMatch?: {
     type: 'cpf' | 'email' | 'telefone'
-    existingRecord: Partial<Customer | ServiceRecord | EmployeeRecord>
+    existingRecord: any
   }
 }
 
