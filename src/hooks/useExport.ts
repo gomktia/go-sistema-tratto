@@ -21,6 +21,11 @@ export function useExport(tenantId: string) {
    * Exporta para CSV
    */
   const exportToCsv = async (type: ImportEntityType): Promise<void> => {
+    if (!supabase) {
+      setError('Erro de configuração do Supabase')
+      return
+    }
+
     setIsExporting(true)
     setError(null)
 
@@ -113,6 +118,11 @@ export function useExport(tenantId: string) {
    * Exporta para XLSX
    */
   const exportToXlsx = async (type: ImportEntityType): Promise<void> => {
+    if (!supabase) {
+      setError('Erro de configuração do Supabase')
+      return
+    }
+
     setIsExporting(true)
     setError(null)
 
