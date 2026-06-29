@@ -107,6 +107,11 @@ export function useImport(tenantId: string) {
       return
     }
 
+    if (!supabase) {
+      setError('Erro de configuração do Supabase')
+      return
+    }
+
     setIsProcessing(true)
     setError(null)
 
@@ -268,6 +273,11 @@ export function useImport(tenantId: string) {
    */
   const executeImport = async (): Promise<void> => {
     if (!session) return
+
+    if (!supabase) {
+      setError('Erro de configuração do Supabase')
+      return
+    }
 
     setIsProcessing(true)
     setError(null)
