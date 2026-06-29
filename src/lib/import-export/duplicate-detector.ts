@@ -1,4 +1,3 @@
-import type { Customer } from '@/types/customer'
 import type { DuplicateCheckResult } from '@/types/import'
 import { normalizeCPF, normalizeEmail, normalizePhone } from './validators'
 

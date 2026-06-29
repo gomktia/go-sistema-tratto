@@ -1,6 +1,3 @@
-import type { Customer } from '@/types/customer'
-import type { ServiceRecord } from '@/types/service'
-import type { EmployeeRecord } from '@/types/employee'
 import {
   normalizeCPF,
   normalizePhone,
@@ -204,7 +201,7 @@ export function customerToTrinksFormat(customer: any): any {
 /**
  * Transforma ServiceRecord para formato de exportação Trinks
  */
-export function serviceToTrinksFormat(service: ServiceRecord): any {
+export function serviceToTrinksFormat(service: any): any {
   const hours = Math.floor(service.durationMinutes / 60)
   const mins = service.durationMinutes % 60
 
@@ -233,7 +230,7 @@ export function serviceToTrinksFormat(service: ServiceRecord): any {
 /**
  * Transforma EmployeeRecord para formato de exportação Trinks
  */
-export function employeeToTrinksFormat(employee: EmployeeRecord): any {
+export function employeeToTrinksFormat(employee: any): any {
   return {
     'Nome completo': employee.fullName,
     'Apelido': employee.metadata?.nickname || '',
