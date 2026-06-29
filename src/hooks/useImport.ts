@@ -60,7 +60,7 @@ export function useImport(tenantId: string) {
       // Auto-detectar tipo se não foi especificado
       let detectedType = type
       if (!detectedType) {
-        detectedType = detectTrinksFormat(parsedData.headers)
+        detectedType = detectTrinksFormat(parsedData.headers) ?? undefined
         if (!detectedType) {
           throw new Error(
             'Não foi possível detectar o tipo de arquivo. Por favor, especifique manualmente.'
