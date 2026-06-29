@@ -144,26 +144,29 @@ export default function ServicosPage() {
 
     // Sincronizar serviços com dados do Supabase, resolvendo categoria pelo UUID
     useEffect(() => {
-        const mappedServices: ServiceUI[] = serviceRecords.map(record => ({
-            id: record.id,
-            tenantId: record.tenantId,
-            name: record.name,
-            category: serviceCategories.find(c => c.id === record.categoryId)?.name || 'Geral',
-            duration: record.durationMinutes,
-            price: record.price,
-            description: record.description || '',
-            requiresDeposit: record.requiresConfirmation,
-            depositAmount: 0,
-            allowOnlineBooking: record.isActive,
-            bufferBefore: 0,
-            bufferAfter: 0,
-            maxClientsPerSlot: 1,
-            requiredStaff: 1,
-            active: record.isActive,
-            imageUrl: record.imageUrl,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        }))
+        const mappedServices: ServiceUI[] = serviceRecords.map(record => {
+            const metadata = record.metadata as { allowOnlineBooking?: boolean; bufferAfter?: number; depositAmount?: number } | undefined
+            return {
+                id: record.id,
+                tenantId: record.tenantId,
+                name: record.name,
+                category: serviceCategories.find(c => c.id === record.categoryId)?.name || 'Geral',
+                duration: record.durationMinutes,
+                price: record.price,
+                description: record.description || '',
+                requiresDeposit: record.requiresConfirmation,
+                depositAmount: metadata?.depositAmount ?? 0,
+                allowOnlineBooking: metadata?.allowOnlineBooking ?? true,
+                bufferBefore: 0,
+                bufferAfter: metadata?.bufferAfter ?? 0,
+                maxClientsPerSlot: 1,
+                requiredStaff: 1,
+                active: record.isActive,
+                imageUrl: record.imageUrl,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            }
+        })
         setServices(mappedServices)
     }, [serviceRecords, serviceCategories])
 
@@ -177,7 +180,7 @@ export default function ServicosPage() {
         requiresDeposit: false,
         depositAmount: 0,
         allowOnlineBooking: true,
-        bufferBefore: 5,
+        bufferBefore: 0,
         bufferAfter: 10,
         professionalIds: [] as string[],
         imageUrl: ""
@@ -208,7 +211,6 @@ export default function ServicosPage() {
                 metadata: {
                     category: selectedCategory?.name || formData.category,
                     allowOnlineBooking: formData.allowOnlineBooking,
-                    bufferBefore: formData.bufferBefore,
                     bufferAfter: formData.bufferAfter,
                     depositAmount: formData.depositAmount
                 }
@@ -245,7 +247,6 @@ export default function ServicosPage() {
                     metadata: {
                         category: selectedCategory?.name || formData.category,
                         allowOnlineBooking: formData.allowOnlineBooking,
-                        bufferBefore: formData.bufferBefore,
                         bufferAfter: formData.bufferAfter,
                         depositAmount: formData.depositAmount
                     },
@@ -321,7 +322,7 @@ export default function ServicosPage() {
             requiresDeposit: false,
             depositAmount: 0,
             allowOnlineBooking: true,
-            bufferBefore: 5,
+            bufferBefore: 0,
             bufferAfter: 10,
             professionalIds: [],
             imageUrl: ""
@@ -610,7 +611,6 @@ export default function ServicosPage() {
                                             <SelectValue placeholder="Selecione..." />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="">Sem categoria</SelectItem>
                                             {serviceCategories.map(cat => (
                                                 <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                                             ))}
@@ -631,9 +631,12 @@ export default function ServicosPage() {
                                 <Label className="text-xs font-bold uppercase">Preço Base (R$)</Label>
                                 <Input
                                     type="number"
+                                    step="0.01"
+                                    min="0"
                                     value={formData.price}
-                                    onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                                    onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
                                     className="rounded-xl h-12 bg-slate-50 dark:bg-zinc-800 border-none"
+                                    placeholder="Ex: 90.00"
                                 />
                             </div>
                         </div>
@@ -641,34 +644,37 @@ export default function ServicosPage() {
 
                     <div className="space-y-4 pt-6 border-t border-slate-100 dark:border-zinc-800">
                         <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tempo e Disponibilidade</h4>
-                        <div className="grid grid-cols-3 gap-4">
+                        <p className="text-[10px] text-slate-400 -mt-2">Configure a duração do serviço e o tempo de limpeza para bloquear corretamente a agenda.</p>
+                        <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label className="text-xs font-bold uppercase text-slate-400">Duração (m)</Label>
+                                <Label className="text-xs font-bold uppercase">Duração (min)</Label>
+                                <p className="text-[9px] text-slate-400">Tempo do serviço</p>
                                 <Input
                                     type="number"
+                                    min="0"
                                     value={formData.duration}
                                     onChange={(e) => setFormData({ ...formData, duration: Number(e.target.value) })}
                                     className="h-12 bg-slate-50 dark:bg-zinc-800 border-none rounded-xl"
+                                    placeholder="60"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-xs font-bold uppercase text-slate-400">Antes (m)</Label>
+                                <Label className="text-xs font-bold uppercase text-slate-400">Intervalo (min)</Label>
+                                <p className="text-[9px] text-slate-400">Limpeza e organização</p>
                                 <Input
                                     type="number"
-                                    value={formData.bufferBefore}
-                                    onChange={(e) => setFormData({ ...formData, bufferBefore: Number(e.target.value) })}
-                                    className="h-12 bg-slate-50 dark:bg-zinc-800 border-none rounded-xl"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="text-xs font-bold uppercase text-slate-400">Depois (m)</Label>
-                                <Input
-                                    type="number"
+                                    min="0"
                                     value={formData.bufferAfter}
                                     onChange={(e) => setFormData({ ...formData, bufferAfter: Number(e.target.value) })}
                                     className="h-12 bg-slate-50 dark:bg-zinc-800 border-none rounded-xl"
+                                    placeholder="10"
                                 />
                             </div>
+                        </div>
+                        <div className="bg-blue-50 dark:bg-blue-900/10 p-3 rounded-xl">
+                            <p className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">
+                                💡 Tempo total bloqueado na agenda: {formData.duration + formData.bufferAfter} minutos (Serviço: {formData.duration}min + Intervalo: {formData.bufferAfter}min)
+                            </p>
                         </div>
                     </div>
 

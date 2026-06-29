@@ -59,13 +59,13 @@ async function mapSupabaseUser(supabaseUser: SupabaseUser): Promise<User | null>
     if (role === 'employee') {
         const { data: employee } = await supabase
             .from('employees')
-            .select('id, name, tenant_id')
+            .select('id, full_name, tenant_id')
             .eq('user_id', supabaseUser.id)
             .single()
 
         return {
             id: supabaseUser.id,
-            name: employee?.name || metadata.full_name || metadata.name || 'Funcionário',
+            name: employee?.full_name || metadata.full_name || metadata.name || 'Funcionário',
             email: supabaseUser.email || '',
             role: 'employee',
             companyId: employee?.tenant_id || tenantId,
