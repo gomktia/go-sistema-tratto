@@ -201,13 +201,13 @@ export function ImportWizard({ tenantId, type, onClose, onComplete }: ImportWiza
                   {type === 'servicos' && (
                     <>
                       <li>• Colunas: Nome, Descrição, Duração, Preço Padrão</li>
-                      <li>• Duração no formato: "1h", "60 min", "1h e 30 min"</li>
+                      <li>• Duração no formato: &quot;1h&quot;, &quot;60 min&quot;, &quot;1h e 30 min&quot;</li>
                     </>
                   )}
                   {type === 'profissionais' && (
                     <>
                       <li>• Colunas: Nome completo, Email, Telefones, Função</li>
-                      <li>• Status: "Ativo" ou "Inativo"</li>
+                      <li>• Status: &quot;Ativo&quot; ou &quot;Inativo&quot;</li>
                     </>
                   )}
                 </ul>

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * Testes Programáticos - Sistema de Importação/Exportação
  *
