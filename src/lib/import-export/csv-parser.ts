@@ -69,9 +69,6 @@ export async function parseCSV(
 
     // Ler como ArrayBuffer para fazer conversão manual de encoding
     reader.readAsArrayBuffer(file)
-    } catch {
-      reader.readAsText(file, 'UTF-8')
-    }
   })
 }
 
