@@ -1,0 +1,11 @@
+Relatório de Clientes
+Estabelecimento: Salão Teste
+Data: 29/06/2026
+Total de clientes: 4
+---
+---
+CPF;Origem;Nome;Gênero;Telefone 1;Telefone 2;E-mail;Data de Nascimento;Data de Cadastro;Observações;Pode agendar online;Primeiro agendamento;Último agendamento;Status primeiro agendamento;Status último agendamento;Recebe SMS;Recebe e-mails;Recebe email fidelidade;Pontos de Fidelidade;CEP;Estado;Endereço;Número;Complemento;Bairro;Cidade;Como nos conheceu;Etiquetas;Instagram
+10720247055;Web;Maria Silva Teste;Feminino;11987654321;;maria.teste@email.com;15/03/1990;29/06/2026;Cliente novo para teste;Sim;;;;;;;;0;01310-100;SP;Av Paulista;1000;Sala 10;Bela Vista;São Paulo;;;
+10720247055;Web;Maria Silva Atualizada;Feminino;11987654321;;maria.teste@email.com;15/03/1990;29/06/2026;Mesmo CPF - deve atualizar;Sim;;;;;;;;100;01310-100;SP;Av Paulista;1000;Sala 10;Bela Vista;São Paulo;;;
+;Web;João Santos Email Igual;Masculino;11999887766;;joao.teste@email.com;20/05/1985;29/06/2026;Sem CPF mas email igual;Sim;;;;;;;;0;;;;;;;;;
+;Web;Ana Costa Telefone Igual;Feminino;11987654321;;ana.costa@email.com;10/08/1992;29/06/2026;Só telefone igual - possível duplicado;Sim;;;;;;;;0;;;;;;;;;

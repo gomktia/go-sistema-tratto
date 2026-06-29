@@ -1,0 +1,4 @@
+Nome completo;Apelido;Email;Telefones;CPF;Administrador;Possui agenda;Data de nascimento;Status;Faz Lançamento PAT;Data Inicio;Forma relação profissional;Função
+Carla Mendes;Carlinha;carla.mendes@salao.com;11987651234;94298513068;Não;Sim;15/05/1988;Ativo;Sim;01/01/2024;Parceria;Manicure
+Paula Santos;Paulinha;paula.santos@salao.com;11987654567;12345678901;Sim;Sim;20/08/1985;Ativo;Sim;01/01/2024;CLT;Esteticista
+Roberto Silva;Beto;roberto.silva@salao.com;11987658901;98765432100;Não;Sim;10/03/1990;Ativo;Não;15/03/2024;Parceria;Maquiador(a)

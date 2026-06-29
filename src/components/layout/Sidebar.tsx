@@ -132,6 +132,7 @@ export function Sidebar() {
                                                     : "text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground",
                                                 isLocked && "opacity-60 cursor-not-allowed hover:bg-transparent"
                                             )}
+                                            suppressHydrationWarning
                                         >
                                             <div className="flex items-center gap-3">
                                                 <Icon className={cn("w-4 h-4 transition-colors", isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
