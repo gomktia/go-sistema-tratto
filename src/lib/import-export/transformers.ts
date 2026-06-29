@@ -51,10 +51,10 @@ export function transformCustomerRow(row: any, tenantId: string): any {
 }
 
 /**
- * Transforma linha do CSV de serviços do Trinks para ServiceRecord
+ * Transforma linha do CSV de serviços do Trinks
  */
-export function transformServiceRow(row: any, tenantId: string): Partial<ServiceRecord> {
-  const service: Partial<ServiceRecord> = {
+export function transformServiceRow(row: any, tenantId: string): any {
+  const service: any = {
     tenantId,
     name: row['Nome'] || '',
     description: row['Descrição'] || '',
@@ -88,10 +88,10 @@ export function transformServiceRow(row: any, tenantId: string): Partial<Service
 }
 
 /**
- * Transforma linha do CSV de profissionais do Trinks para EmployeeRecord
+ * Transforma linha do CSV de profissionais do Trinks
  */
-export function transformEmployeeRow(row: any, tenantId: string): Partial<EmployeeRecord> {
-  const employee: Partial<EmployeeRecord> = {
+export function transformEmployeeRow(row: any, tenantId: string): any {
+  const employee: any = {
     tenantId,
     fullName: row['Nome completo'] || '',
     email: normalizeEmail(row['Email']),
