@@ -109,7 +109,6 @@ export function Sidebar() {
                                 {section.items.map((item) => {
                                     const isActive = pathname.startsWith(item.href)
                                     // Subscription Check
-                                    // @ts-expect-error - permission string mapping check
                                     const isLocked = item.permission ? !checkPermission(item.permission) : false
                                     const Icon = item.icon
 
