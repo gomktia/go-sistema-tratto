@@ -10,9 +10,6 @@ import type {
   ImportRowAction,
   ParsedData
 } from '@/types/import'
-import type { Customer } from '@/types/customer'
-import type { ServiceRecord } from '@/types/service'
-import type { EmployeeRecord } from '@/types/employee'
 
 import { parseCSV, detectTrinksFormat } from '@/lib/import-export/csv-parser'
 import { parseXLSX } from '@/lib/import-export/xlsx-parser'
@@ -181,8 +178,8 @@ export function useImport(tenantId: string) {
         let duplicateCheck
         if (type === 'clientes') {
           duplicateCheck = await checkCustomerDuplicate(
-            transformedData as Customer,
-            existingRecords as Customer[]
+            transformedData,
+            existingRecords
           )
         } else if (type === 'servicos') {
           duplicateCheck = await checkServiceDuplicate(
