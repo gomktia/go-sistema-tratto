@@ -22,7 +22,20 @@ export async function parseCSV(
     const reader = new FileReader()
 
     reader.onload = (event) => {
-      const text = event.target?.result as string
+      const arrayBuffer = event.target?.result as ArrayBuffer
+
+      // Converter de ISO-8859-1 para UTF-8 usando TextDecoder
+      const encoding = options?.encoding ?? 'ISO-8859-1'
+      let text: string
+
+      try {
+        const decoder = new TextDecoder(encoding)
+        text = decoder.decode(arrayBuffer)
+      } catch (error) {
+        // Fallback para UTF-8 se ISO-8859-1 falhar
+        const decoder = new TextDecoder('utf-8')
+        text = decoder.decode(arrayBuffer)
+      }
 
       // Detectar número de linhas a pular baseado no tipo
       const skipRows = options?.skipRows ?? (type === 'clientes' ? 6 : 0)
@@ -54,10 +67,8 @@ export async function parseCSV(
       reject(new Error('Erro ao ler arquivo'))
     }
 
-    // Tentar ler como ISO-8859-1 para CSVs do Trinks
-    // Se der erro, fallback para UTF-8
-    try {
-      reader.readAsText(file, options?.encoding ?? 'ISO-8859-1')
+    // Ler como ArrayBuffer para fazer conversão manual de encoding
+    reader.readAsArrayBuffer(file)
     } catch {
       reader.readAsText(file, 'UTF-8')
     }
