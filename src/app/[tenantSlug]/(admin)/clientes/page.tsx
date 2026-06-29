@@ -43,6 +43,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { differenceInDays } from "date-fns"
 import { useTenantCustomers } from "@/hooks/useTenantRecords"
 import { Checkbox } from "@/components/ui/checkbox"
+import { ImportExportButton } from "@/components/import-export/ImportExportButton"
 
 // Mapeamento de cor por status
 const getStatusColor = (status: string) => {
@@ -530,6 +531,11 @@ export default function ClientesPage() {
                         {viewMode === 'grid' ? <ListIcon className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}
                         <span className="hidden sm:inline">{viewMode === 'grid' ? 'Lista' : 'Grade'}</span>
                     </Button>
+                    <ImportExportButton
+                        tenantId={currentTenant.id}
+                        type="clientes"
+                        onImportComplete={refetch}
+                    />
                     <Button className="rounded-2xl gap-2" onClick={() => setShowNewClient(true)}>
                         <Plus className="w-4 h-4" />
                         Novo Cliente
@@ -551,33 +557,6 @@ export default function ClientesPage() {
             </section>
 
 
-            <Card className="rounded-[2rem] border-none shadow-sm bg-white/80 dark:bg-zinc-900/70">
-                <CardHeader>
-                    <CardTitle>Importação & Exportação</CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                        Importe novos clientes via arquivos `.csv` ou `.txt` e exporte sua base atual com um clique.
-                    </p>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                    <div className="flex flex-wrap gap-3">
-                        <Button className="rounded-2xl" onClick={handleImportClick}>
-                            Importar CSV/TXT
-                        </Button>
-                        <Button variant="outline" className="rounded-2xl" onClick={() => handleExport("csv")}>
-                            Exportar CSV
-                        </Button>
-                        <Button variant="outline" className="rounded-2xl" onClick={() => handleExport("txt")}>
-                            Exportar TXT
-                        </Button>
-                    </div>
-                    {importMessage && (
-                        <p className="text-xs font-semibold text-primary">{importMessage}</p>
-                    )}
-                    <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
-                        Formato sugerido: Nome,Email,Telefone
-                    </p>
-                </CardContent>
-            </Card>
 
             {/* Loading State */}
             {isLoading && (

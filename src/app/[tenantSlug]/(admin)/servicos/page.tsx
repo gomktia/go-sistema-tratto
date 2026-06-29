@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select"
 import { FormDialog } from "@/components/ui/form-dialog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { ImportExportButton } from "@/components/import-export/ImportExportButton"
 import {
     Search,
     Plus,
@@ -347,10 +348,17 @@ export default function ServicosPage() {
                     <h2 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">Catálogo</h2>
                     <p className="text-slate-500 dark:text-zinc-400 font-medium">Configurações de serviços e experiências.</p>
                 </div>
-                <Button onClick={() => setShowNewService(true)} className="rounded-xl h-12 px-6 bg-primary text-white font-bold transition-all hover:scale-105 active:scale-95 shadow-lg shadow-primary/20">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Novo Serviço
-                </Button>
+                <div className="flex gap-3">
+                    <ImportExportButton
+                        tenantId={currentTenant.id}
+                        type="servicos"
+                        onImportComplete={refetchServices}
+                    />
+                    <Button onClick={() => setShowNewService(true)} className="rounded-xl h-12 px-6 bg-primary text-white font-bold transition-all hover:scale-105 active:scale-95 shadow-lg shadow-primary/20">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Novo Serviço
+                    </Button>
+                </div>
             </div>
 
             {/* Search & Stats */}

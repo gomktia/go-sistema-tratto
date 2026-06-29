@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
+import { ImportExportButton } from "@/components/import-export/ImportExportButton"
 import {
     Plus,
     Search,
@@ -237,13 +238,20 @@ export default function FuncionariosPage() {
                     <h2 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">Profissionais</h2>
                     <p className="text-slate-500 dark:text-zinc-400 font-medium">Cadastre e gerencie a equipe do salão.</p>
                 </div>
-                <Button
-                    onClick={() => setShowNewEmployee(true)}
-                    className="rounded-xl h-12 px-6 bg-primary text-white font-bold transition-all hover:scale-105 active:scale-95 shadow-lg shadow-primary/20"
-                >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Novo Profissional
-                </Button>
+                <div className="flex gap-3">
+                    <ImportExportButton
+                        tenantId={currentTenant.id}
+                        type="profissionais"
+                        onImportComplete={refetch}
+                    />
+                    <Button
+                        onClick={() => setShowNewEmployee(true)}
+                        className="rounded-xl h-12 px-6 bg-primary text-white font-bold transition-all hover:scale-105 active:scale-95 shadow-lg shadow-primary/20"
+                    >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Novo Profissional
+                    </Button>
+                </div>
             </div>
 
             {/* Search & Stats */}
