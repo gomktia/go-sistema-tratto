@@ -100,8 +100,16 @@ export function exportToCSV(data: any[], headers: string[], filename: string): v
     header: true
   })
 
-  // Criar blob e download
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  // Converter para ISO-8859-1 (Latin1) para compatibilidade com Trinks
+  const latin1 = new Uint8Array(csv.length)
+  for (let i = 0; i < csv.length; i++) {
+    const charCode = csv.charCodeAt(i)
+    // Se o caractere não cabe em Latin1, substitui por '?'
+    latin1[i] = charCode > 255 ? 63 : charCode
+  }
+
+  // Criar blob com encoding ISO-8859-1
+  const blob = new Blob([latin1], { type: 'text/csv;charset=iso-8859-1;' })
   const link = document.createElement('a')
   const url = URL.createObjectURL(blob)
 
