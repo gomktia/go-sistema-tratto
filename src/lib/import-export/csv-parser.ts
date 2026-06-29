@@ -44,7 +44,7 @@ export async function parseCSV(
             delimiter: options?.delimiter ?? ';'
           })
         },
-        error: (error) => {
+        error: (error: Error) => {
           reject(new Error(`Erro ao fazer parse do CSV: ${error.message}`))
         }
       })
