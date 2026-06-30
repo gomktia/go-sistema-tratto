@@ -35,6 +35,13 @@ import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 import { FormDialog } from "@/components/ui/form-dialog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -45,6 +52,7 @@ import { cn } from "@/lib/utils"
 import type { EmployeeRecord } from "@/types/catalog"
 import { UnavailabilityManager } from "@/components/employees/UnavailabilityManager"
 import { CommissionExceptionsManager } from "@/components/employees/CommissionExceptionsManager"
+import { AvatarUpload } from "@/components/employees/AvatarUpload"
 
 const weekDays = [
     { id: 'monday',    label: 'Segunda' },
@@ -60,6 +68,9 @@ type FormData = {
     name: string
     email: string
     phone: string
+    document: string
+    birthdate: string
+    role: string
     specialties: string[]
     workingHours: Record<string, { start: string; end: string }[]>
     commission: number
@@ -70,6 +81,9 @@ const defaultForm: FormData = {
     name: "",
     email: "",
     phone: "",
+    document: "",
+    birthdate: "",
+    role: "",
     specialties: [],
     workingHours: {},
     commission: 40,
@@ -92,6 +106,7 @@ export default function FuncionariosPage() {
     const [showConfirm, setShowConfirm] = useState(false)
     const [selectedEmployee, setSelectedEmployee] = useState<EmployeeRecord | null>(null)
     const [formData, setFormData] = useState<FormData>(defaultForm)
+    const [avatarUrl, setAvatarUrl] = useState<string>("")
 
     const filteredEmployees = employees.filter(emp =>
         emp.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -119,6 +134,10 @@ export default function FuncionariosPage() {
             full_name: formData.name,
             email: formData.email,
             phone: formData.phone,
+            document: formData.document || null,
+            birthdate: formData.birthdate || null,
+            role: formData.role || null,
+            avatar_url: avatarUrl || null,
             specialties: formData.specialties,
             working_hours: formData.workingHours,
             commission_rate: formData.commission,
@@ -151,6 +170,10 @@ export default function FuncionariosPage() {
             full_name: formData.name,
             email: formData.email,
             phone: formData.phone,
+            document: formData.document || null,
+            birthdate: formData.birthdate || null,
+            role: formData.role || null,
+            avatar_url: avatarUrl || null,
             specialties: formData.specialties,
             working_hours: formData.workingHours,
             commission_rate: formData.commission,
@@ -196,16 +219,21 @@ export default function FuncionariosPage() {
             name: employee.fullName,
             email: employee.email,
             phone: employee.phone,
+            document: employee.document ?? '',
+            birthdate: employee.birthdate ?? '',
+            role: employee.role ?? '',
             specialties: employee.specialties ?? [],
             workingHours: employee.workingHours ?? {},
             commission: employee.commissionRate ?? 40,
             acceptsOnlineBooking: employee.acceptsOnlineBooking ?? true,
         })
+        setAvatarUrl(employee.avatarUrl ?? '')
         setShowEditEmployee(true)
     }
 
     const resetForm = () => {
         setFormData(defaultForm)
+        setAvatarUrl('')
         setSelectedEmployee(null)
     }
 
@@ -339,8 +367,16 @@ export default function FuncionariosPage() {
                                 <Card className="group relative overflow-hidden rounded-[2.5rem] border-none shadow-xl bg-white dark:bg-zinc-900 p-8 hover:shadow-2xl transition-all duration-300">
                                     <div className="space-y-6">
                                         <div className="flex justify-between items-start">
-                                            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-black text-2xl group-hover:scale-110 transition-transform">
-                                                {employee.fullName.charAt(0)}
+                                            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-black text-2xl group-hover:scale-110 transition-transform overflow-hidden">
+                                                {employee.avatarUrl ? (
+                                                    <img
+                                                        src={employee.avatarUrl}
+                                                        alt={employee.fullName}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    employee.fullName.charAt(0)
+                                                )}
                                             </div>
                                             <div className="flex gap-2">
                                                 <Button
@@ -443,8 +479,16 @@ export default function FuncionariosPage() {
                                 <TableRow key={employee.id} className="border-slate-50 dark:border-zinc-800/50 hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors">
                                     <TableCell className="pl-8 py-5">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-black">
-                                                {employee.fullName.charAt(0)}
+                                            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-black overflow-hidden">
+                                                {employee.avatarUrl ? (
+                                                    <img
+                                                        src={employee.avatarUrl}
+                                                        alt={employee.fullName}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    employee.fullName.charAt(0)
+                                                )}
                                             </div>
                                             <div className="font-bold text-slate-900 dark:text-white uppercase tracking-tight">{employee.fullName}</div>
                                         </div>
@@ -523,10 +567,21 @@ export default function FuncionariosPage() {
                         </TabsList>
 
                         <TabsContent value="basico" className="space-y-6 max-h-[60vh] overflow-y-auto pr-4 scrollbar-thin mt-4">
-                            {/* Conteúdo da aba de dados básicos */}
-                    {/* Informações Básicas */}
-                    <div className="space-y-4">
-                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Informações Básicas</h4>
+                            {/* Foto do Profissional */}
+                            {selectedEmployee && (
+                                <div className="pb-6 border-b border-slate-100 dark:border-zinc-800">
+                                    <AvatarUpload
+                                        tenantId={currentTenant.id}
+                                        employeeId={selectedEmployee.id}
+                                        currentAvatarUrl={avatarUrl}
+                                        onUploadComplete={(url) => setAvatarUrl(url)}
+                                    />
+                                </div>
+                            )}
+
+                            {/* Informações Básicas */}
+                            <div className="space-y-4">
+                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Informações Básicas</h4>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="col-span-2 space-y-2">
                                 <Label className="text-xs font-bold uppercase">Nome Completo</Label>
@@ -552,6 +607,48 @@ export default function FuncionariosPage() {
                                     className="rounded-xl h-12 bg-slate-50 dark:bg-zinc-800 border-none"
                                 />
                             </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 pt-4">
+                            <div className="space-y-2">
+                                <Label className="text-xs font-bold uppercase">CPF</Label>
+                                <Input
+                                    value={formData.document}
+                                    onChange={(e) => setFormData({ ...formData, document: e.target.value })}
+                                    placeholder="000.000.000-00"
+                                    className="rounded-xl h-12 bg-slate-50 dark:bg-zinc-800 border-none"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-xs font-bold uppercase">Data de Nascimento</Label>
+                                <Input
+                                    type="date"
+                                    value={formData.birthdate}
+                                    onChange={(e) => setFormData({ ...formData, birthdate: e.target.value })}
+                                    className="rounded-xl h-12 bg-slate-50 dark:bg-zinc-800 border-none"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="pt-4 space-y-2">
+                            <Label className="text-xs font-bold uppercase">Cargo/Função</Label>
+                            <Select
+                                value={formData.role}
+                                onValueChange={(value) => setFormData({ ...formData, role: value })}
+                            >
+                                <SelectTrigger className="rounded-xl h-12 bg-slate-50 dark:bg-zinc-800 border-none">
+                                    <SelectValue placeholder="Selecione o cargo" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="gerente">Gerente</SelectItem>
+                                    <SelectItem value="cabeleireira">Cabeleireira</SelectItem>
+                                    <SelectItem value="manicure">Manicure</SelectItem>
+                                    <SelectItem value="esteticista">Esteticista</SelectItem>
+                                    <SelectItem value="recepcionista">Recepcionista</SelectItem>
+                                    <SelectItem value="assistente">Assistente</SelectItem>
+                                    <SelectItem value="outro">Outro</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
 

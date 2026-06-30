@@ -19,6 +19,8 @@ export type EmployeeRecord = {
     fullName: string
     email: string
     phone: string
+    document?: string
+    birthdate?: string
     role?: string
     status: string
     colorTag?: string

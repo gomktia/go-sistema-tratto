@@ -98,6 +98,8 @@ const mapRowToEmployee = (row: any): EmployeeRecord => ({
     fullName: row.full_name,
     email: row.email || '',
     phone: row.phone || '',
+    document: row.document || undefined,
+    birthdate: row.birthdate || undefined,
     role: row.role,
     status: row.status || 'active',
     colorTag: row.color_tag,
