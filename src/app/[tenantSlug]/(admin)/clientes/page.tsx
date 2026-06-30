@@ -44,6 +44,10 @@ import { differenceInDays } from "date-fns"
 import { useTenantCustomers } from "@/hooks/useTenantRecords"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ImportExportButton } from "@/components/import-export/ImportExportButton"
+import { useCustomerFilters } from "@/hooks/useCustomerFilters"
+import { CustomerFilterPanel } from "@/components/customers/CustomerFilterPanel"
+import { CustomerPagination } from "@/components/customers/CustomerPagination"
+import type { CustomerFilters } from "@/types/customer-filters"
 
 // Mapeamento de cor por status
 const getStatusColor = (status: string) => {
@@ -63,24 +67,37 @@ const getStatusColor = (status: string) => {
 const generateClientId = () => Math.random().toString(36).substr(2, 9)
 
 export default function ClientesPage() {
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-    const [searchTerm, setSearchTerm] = useState("")
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('list') // Mudado para lista por padrão
 
     // -------------------------------------------------------------------------
     // STATE & DATA
     // -------------------------------------------------------------------------
     const { currentTenant } = useTenant()
-    const { data: tenantCustomers, loading: isLoading, error: loadError, refetch } = useTenantCustomers(currentTenant.id)
-    const [clientsList, setClientsList] = useState<ClientRecord[]>([])
 
-    // Sync local state with fetched data
-    useEffect(() => {
-        setClientsList(tenantCustomers)
-    }, [tenantCustomers])
+    // Estado de filtros e paginação
+    const [filters, setFilters] = useState<CustomerFilters>({
+        search: "",
+        gender: "all",
+        ageMin: null,
+        ageMax: null,
+        hasService: "all",
+        lastVisitMode: "all",
+        lastVisitDays: null,
+        lastVisitFrom: null,
+        lastVisitTo: null,
+        noFutureAppointment: false
+    })
+    const [currentPage, setCurrentPage] = useState(1)
+    const pageSize = 50
 
-    const [activeSavedFilter, setActiveSavedFilter] = useState<string | null>(null)
-    const fileInputRef = useRef<HTMLInputElement>(null)
-    const [importMessage, setImportMessage] = useState("")
+    // Hook de filtros com paginação
+    const {
+        customers: filteredClients,
+        loading: isLoading,
+        error: loadError,
+        totalCount,
+        refetch
+    } = useCustomerFilters(currentTenant.id, filters, currentPage, pageSize)
 
     const [selectedClients, setSelectedClients] = useState<string[]>([])
 
@@ -97,32 +114,27 @@ export default function ClientesPage() {
     const [selectedClient, setSelectedClient] = useState<ClientRecord | null>(null)
 
     // -------------------------------------------------------------------------
-    // MEMOIZED FILTERS
+    // STATS PARA OS CARDS
     // -------------------------------------------------------------------------
-    const filteredClients = useMemo(() => {
-        return clientsList.filter(client => {
-            const matchesSearch =
-                client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                client.phone.includes(searchTerm)
+    const stats = useMemo(() => {
+        return {
+            total: totalCount,
+            active: filteredClients.filter(c => c.status === 'active').length,
+            inactive: filteredClients.filter(c => c.status !== 'active').length
+        }
+    }, [filteredClients, totalCount])
 
-            let matchesFilter = true
-            if (activeSavedFilter) {
-                // Lógica simulada de filtros salvos
-                if (activeSavedFilter === "Aniversariantes") {
-                    // Exemplo: filtrar quem faz aniversário esse mês (mock)
-                    matchesFilter = true
-                } else if (activeSavedFilter === "Ausentes 30d") {
-                    const days = differenceInDays(new Date(), new Date(client.lastVisit))
-                    matchesFilter = days > 30
-                } else if (activeSavedFilter === "VIPs") {
-                    matchesFilter = client.totalSpent > 1000
-                }
-            }
-
-            return matchesSearch && matchesFilter
-        })
-    }, [clientsList, searchTerm, activeSavedFilter])
+    // Contador de filtros ativos
+    const activeFiltersCount = useMemo(() => {
+        let count = 0
+        if (filters.search) count++
+        if (filters.gender !== "all") count++
+        if (filters.ageMin !== null || filters.ageMax !== null) count++
+        if (filters.hasService !== "all") count++
+        if (filters.lastVisitMode !== "all") count++
+        if (filters.noFutureAppointment) count++
+        return count
+    }, [filters])
 
 
     // -------------------------------------------------------------------------
@@ -266,6 +278,37 @@ export default function ClientesPage() {
         }
     }
 
+    // Handler para aplicar filtros
+    const handleFiltersChange = (newFilters: CustomerFilters) => {
+        setFilters(newFilters)
+        setCurrentPage(1) // Reset para primeira página ao filtrar
+        setSelectedClients([]) // Limpar seleção ao filtrar
+    }
+
+    // Handler para limpar filtros
+    const handleClearFilters = () => {
+        setFilters({
+            search: "",
+            gender: "all",
+            ageMin: null,
+            ageMax: null,
+            hasService: "all",
+            lastVisitMode: "all",
+            lastVisitDays: null,
+            lastVisitFrom: null,
+            lastVisitTo: null,
+            noFutureAppointment: false
+        })
+        setCurrentPage(1)
+        setSelectedClients([])
+    }
+
+    // Handler para mudança de página
+    const handlePageChange = (page: number) => {
+        setCurrentPage(page)
+        setSelectedClients([]) // Limpar seleção ao mudar de página
+    }
+
     const handleSelectOne = (checked: boolean, clientId: string) => {
         if (checked) {
             setSelectedClients(prev => [...prev, clientId])
@@ -274,94 +317,9 @@ export default function ClientesPage() {
         }
     }
 
-    const handleImportClick = () => {
-        fileInputRef.current?.click()
-    }
+    // Importação gerenciada por ImportExportButton
 
-    const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0]
-        event.target.value = ""
-        if (!file) return
-
-        const reader = new FileReader()
-        reader.onload = async () => {
-            const text = reader.result?.toString() ?? ""
-            const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean)
-
-            // Basic CSV/TXT parsing: Name, Email, Phone
-            const imported = lines.map(line => {
-                const parts = line.split(/[;,]/) // Split by comma or semicolon
-                // Simple heuristic
-                const name = parts[0]?.trim()
-                const email = parts[1]?.trim()
-                const phone = parts[2]?.trim()
-
-                if (!name) return null
-
-                return {
-                    tenant_id: currentTenant.id,
-                    full_name: name,
-                    email: email || null,
-                    phone: phone || null,
-                    status: 'active',
-                    last_visit_at: new Date().toISOString(),
-                    total_spent: 0
-                }
-            }).filter(Boolean)
-
-            if (imported.length === 0) {
-                toast.error("Nenhum cliente válido encontrado no arquivo.")
-                return
-            }
-
-            const supabase = getSupabaseBrowserClient()
-            if (!supabase) return
-
-            // Bulk insert
-            const { error } = await supabase.from('customers').insert(imported)
-
-            if (error) {
-                toast.error("Erro ao salvar clientes importados.")
-                console.error(error)
-                return
-            }
-
-            toast.success(`${imported.length} cliente(s) importado(s) e salvos com sucesso.`)
-            refetch()
-        }
-        reader.onerror = () => toast.error("Não foi possível ler o arquivo selecionado.")
-        reader.readAsText(file, "utf-8")
-    }
-
-    const handleExport = (format: "csv" | "txt") => {
-        if (clientsList.length === 0) return
-
-        let content = ""
-        const mimeType = format === "csv" ? "text/csv" : "text/plain"
-        const extension = format
-
-        if (format === "csv") {
-            content = "Nome,Email,Telefone,Status,Última Visita,Total Gasto\n"
-            clientsList.forEach(c => {
-                content += `"${c.name}","${c.email}","${c.phone}","${c.status}","${c.lastVisit}","${c.totalSpent}"\n`
-            })
-        } else {
-            clientsList.forEach(c => {
-                content += `${c.name} | ${c.email} | ${c.phone}\n`
-            })
-        }
-
-        const blob = new Blob([content], { type: mimeType })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement("a")
-        a.href = url
-        a.download = `clientes_export.${extension}`
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-
-        toast.success("Exportação concluída!")
-    }
+    // Exportação gerenciada por ImportExportButton
 
     // -------------------------------------------------------------------------
     // RENDER
@@ -397,13 +355,6 @@ export default function ClientesPage() {
                     </div>
                 </div>
             )}
-            <input
-                ref={fileInputRef}
-                type="file"
-                accept=".csv,.txt"
-                className="hidden"
-                onChange={handleFileImport}
-            />
 
             <Dialog open={showNewClient} onOpenChange={setShowNewClient}>
                 <DialogContent>
@@ -507,53 +458,38 @@ export default function ClientesPage() {
             </div>
 
             <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <StatCard label="Total de Clientes" value={clientsList.length} helper="Base atual" />
-                <StatCard label="Ativos" value={clientsList.filter(c => c.status === 'active').length} helper="Clientes ativos" />
-                <StatCard label="Inativos" value={clientsList.filter(c => c.status !== 'active').length} helper="Requerem atenção" />
+                <StatCard label="Total de Clientes" value={stats.total} helper="Base atual" />
+                <StatCard label="Ativos" value={stats.active} helper="Clientes ativos" />
+                <StatCard label="Inativos" value={stats.inactive} helper="Requerem atenção" />
             </section>
 
-            <section className="space-y-4">
-                <div className="flex flex-col sm:flex-row gap-4">
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Buscar por nome, email ou telefone..."
-                            className="pl-9 rounded-2xl bg-white/50 border-transparent hover:bg-white hover:border-black/5 focus:bg-white transition-all dark:bg-zinc-900/50 dark:hover:bg-zinc-900 dark:hover:border-white/5 dark:focus:bg-zinc-900"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </div>
-                    <Button
-                        variant="outline"
-                        className="gap-2 rounded-2xl bg-white/50 border-transparent hover:bg-white hover:border-black/5 dark:bg-zinc-900/50 dark:hover:bg-zinc-900 dark:hover:border-white/5"
-                        onClick={() => setViewMode(prev => prev === 'grid' ? 'list' : 'grid')}
-                    >
-                        {viewMode === 'grid' ? <ListIcon className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}
-                        <span className="hidden sm:inline">{viewMode === 'grid' ? 'Lista' : 'Grade'}</span>
-                    </Button>
-                    <ImportExportButton
-                        tenantId={currentTenant.id}
-                        type="clientes"
-                        onImportComplete={refetch}
-                    />
-                    <Button className="rounded-2xl gap-2" onClick={() => setShowNewClient(true)}>
-                        <Plus className="w-4 h-4" />
-                        Novo Cliente
-                    </Button>
-                </div>
+            {/* Painel de Filtros */}
+            <CustomerFilterPanel
+                filters={filters}
+                onFiltersChange={handleFiltersChange}
+                onApply={refetch}
+            />
 
-                <div className="flex flex-wrap gap-2 pb-2">
-                    {["Todos", "Aniversariantes", "Ausentes 30d", "VIPs"].map((filter) => (
-                        <Badge
-                            key={filter}
-                            variant={activeSavedFilter === filter ? "default" : "outline"}
-                            className="cursor-pointer rounded-full h-8 px-4 hover:bg-primary/5 hover:text-primary transition-colors"
-                            onClick={() => setActiveSavedFilter(activeSavedFilter === filter ? null : filter)}
-                        >
-                            {filter}
-                        </Badge>
-                    ))}
-                </div>
+            {/* Barra de Ações */}
+            <section className="flex flex-col sm:flex-row gap-4">
+                <Button
+                    variant="outline"
+                    className="gap-2 rounded-2xl bg-white/50 border-transparent hover:bg-white hover:border-black/5 dark:bg-zinc-900/50 dark:hover:bg-zinc-900 dark:hover:border-white/5"
+                    onClick={() => setViewMode(prev => prev === 'grid' ? 'list' : 'grid')}
+                >
+                    {viewMode === 'grid' ? <ListIcon className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}
+                    <span className="hidden sm:inline">{viewMode === 'grid' ? 'Lista' : 'Grade'}</span>
+                </Button>
+                <div className="flex-1" />
+                <ImportExportButton
+                    tenantId={currentTenant.id}
+                    type="clientes"
+                    onImportComplete={refetch}
+                />
+                <Button className="rounded-2xl gap-2" onClick={() => setShowNewClient(true)}>
+                    <Plus className="w-4 h-4" />
+                    Novo Cliente
+                </Button>
             </section>
 
 
@@ -586,7 +522,7 @@ export default function ClientesPage() {
             )}
 
             {/* Empty State */}
-            {!isLoading && !loadError && clientsList.length === 0 && (
+            {!isLoading && !loadError && filteredClients.length === 0 && totalCount === 0 && (
                 <Card className="rounded-2xl border-dashed">
                     <CardContent className="flex flex-col items-center justify-center py-16 space-y-4">
                         <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center">
@@ -605,7 +541,7 @@ export default function ClientesPage() {
             )}
 
             {/* Content View - Only show when we have data */}
-            {!isLoading && !loadError && clientsList.length > 0 && (viewMode === 'list' ? (
+            {!isLoading && !loadError && filteredClients.length > 0 && (viewMode === 'list' ? (
                 <>
                     <div className="hidden md:block rounded-2xl border border-black/5 dark:border-white/5 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xl shadow-sm overflow-hidden">
                         <Table>
@@ -734,6 +670,17 @@ export default function ClientesPage() {
                     ))}
                 </div>
             ))}
+
+            {/* Paginação */}
+            {!isLoading && !loadError && filteredClients.length > 0 && (
+                <CustomerPagination
+                    currentPage={currentPage}
+                    totalCount={totalCount}
+                    pageSize={pageSize}
+                    onPageChange={handlePageChange}
+                />
+            )}
+
             <div className="md:hidden fixed bottom-4 left-4 right-4 flex items-center gap-2 bg-white/90 dark:bg-zinc-900/90 border border-slate-200 dark:border-zinc-800 shadow-2xl rounded-2xl p-3">
                 <Button className="flex-1 rounded-xl" onClick={() => setShowNewClient(true)}>
                     <Plus className="w-4 h-4 mr-2" />
