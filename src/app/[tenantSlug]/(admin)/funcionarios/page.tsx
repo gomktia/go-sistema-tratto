@@ -37,11 +37,14 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
 import { FormDialog } from "@/components/ui/form-dialog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useTenantEmployees, useTenantServices } from "@/hooks/useTenantRecords"
 import { useTenant } from "@/contexts/tenant-context"
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 import type { EmployeeRecord } from "@/types/catalog"
+import { UnavailabilityManager } from "@/components/employees/UnavailabilityManager"
+import { CommissionExceptionsManager } from "@/components/employees/CommissionExceptionsManager"
 
 const weekDays = [
     { id: 'monday',    label: 'Segunda' },
@@ -511,7 +514,16 @@ export default function FuncionariosPage() {
                 onSubmit={showNewEmployee ? handleCreateEmployee : handleEditEmployee}
                 submitLabel={saving ? "Salvando..." : showNewEmployee ? "Concluir Cadastro" : "Salvar Alterações"}
             >
-                <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-4 scrollbar-thin">
+                {showEditEmployee && selectedEmployee ? (
+                    <Tabs defaultValue="basico" className="w-full">
+                        <TabsList className="grid w-full grid-cols-3">
+                            <TabsTrigger value="basico">Dados Básicos</TabsTrigger>
+                            <TabsTrigger value="bloqueios">Bloqueios</TabsTrigger>
+                            <TabsTrigger value="comissoes">Exceções Comissão</TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="basico" className="space-y-6 max-h-[60vh] overflow-y-auto pr-4 scrollbar-thin mt-4">
+                            {/* Conteúdo da aba de dados básicos */}
                     {/* Informações Básicas */}
                     <div className="space-y-4">
                         <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Informações Básicas</h4>
@@ -631,7 +643,146 @@ export default function FuncionariosPage() {
                             </div>
                         </div>
                     </div>
-                </div>
+                        </TabsContent>
+
+                        <TabsContent value="bloqueios" className="mt-4">
+                            <UnavailabilityManager
+                                tenantId={currentTenant.id}
+                                employeeId={selectedEmployee.id}
+                            />
+                        </TabsContent>
+
+                        <TabsContent value="comissoes" className="mt-4">
+                            <CommissionExceptionsManager
+                                tenantId={currentTenant.id}
+                                employeeId={selectedEmployee.id}
+                                defaultCommissionRate={selectedEmployee.commissionRate ?? 40}
+                            />
+                        </TabsContent>
+                    </Tabs>
+                ) : (
+                    <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-4 scrollbar-thin">
+                        {/* Informações Básicas */}
+                        <div className="space-y-4">
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Informações Básicas</h4>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="col-span-2 space-y-2">
+                                    <Label className="text-xs font-bold uppercase">Nome Completo</Label>
+                                    <Input
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        className="rounded-xl h-12 bg-slate-50 dark:bg-zinc-800 border-none"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-bold uppercase">Email</Label>
+                                    <Input
+                                        value={formData.email}
+                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                        className="rounded-xl h-12 bg-slate-50 dark:bg-zinc-800 border-none"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-bold uppercase">Telefone</Label>
+                                    <Input
+                                        value={formData.phone}
+                                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                        className="rounded-xl h-12 bg-slate-50 dark:bg-zinc-800 border-none"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Especialidades */}
+                        <div className="space-y-4 pt-6 border-t border-slate-100 dark:border-zinc-800">
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Especialidades</h4>
+                            <div className="grid grid-cols-2 gap-3">
+                                {services.map(service => (
+                                    <div key={service.id} className="flex items-center space-x-2 p-3 bg-slate-50 dark:bg-zinc-800 rounded-xl">
+                                        <Checkbox
+                                            id={service.id}
+                                            checked={formData.specialties.includes(service.id)}
+                                            onCheckedChange={() => toggleSpecialty(service.id)}
+                                        />
+                                        <label htmlFor={service.id} className="text-sm font-medium leading-none">
+                                            {service.name}
+                                        </label>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Horários de Atendimento */}
+                        <div className="space-y-4 pt-6 border-t border-slate-100 dark:border-zinc-800">
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Horários de Atendimento</h4>
+                            <div className="space-y-3">
+                                {weekDays.map(day => {
+                                    const hours = formData.workingHours[day.id]?.[0]
+                                    return (
+                                        <div key={day.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-zinc-800 rounded-2xl">
+                                            <div className="flex items-center gap-3">
+                                                <Switch
+                                                    checked={!!hours}
+                                                    onCheckedChange={(checked) => {
+                                                        if (checked) setWorkingHours(day.id, "09:00", "18:00")
+                                                        else removeWorkingDay(day.id)
+                                                    }}
+                                                />
+                                                <span className="text-sm font-bold uppercase tracking-tight w-20">{day.label}</span>
+                                            </div>
+                                            {hours && (
+                                                <div className="flex items-center gap-2">
+                                                    <Input
+                                                        type="time"
+                                                        value={hours.start}
+                                                        onChange={(e) => setWorkingHours(day.id, e.target.value, hours.end)}
+                                                        className="w-24 h-9 rounded-lg bg-white dark:bg-zinc-900 border-none text-xs font-bold"
+                                                    />
+                                                    <span className="text-slate-400 font-bold">às</span>
+                                                    <Input
+                                                        type="time"
+                                                        value={hours.end}
+                                                        onChange={(e) => setWorkingHours(day.id, hours.start, e.target.value)}
+                                                        className="w-24 h-9 rounded-lg bg-white dark:bg-zinc-900 border-none text-xs font-bold"
+                                                    />
+                                                </div>
+                                            )}
+                                            {!hours && <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pr-4">Folga</span>}
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Preferências & Financeiro */}
+                        <div className="space-y-4 pt-6 border-t border-slate-100 dark:border-zinc-800">
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Preferências & Financeiro</h4>
+                            <div className="grid grid-cols-1 gap-4">
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-bold uppercase">Comissão (%)</Label>
+                                    <Input
+                                        type="number"
+                                        min={0}
+                                        max={100}
+                                        value={formData.commission}
+                                        onChange={(e) => setFormData({ ...formData, commission: Number(e.target.value) })}
+                                        className="rounded-xl h-12 bg-slate-50 dark:bg-zinc-800 border-none"
+                                    />
+                                </div>
+                                <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-zinc-800 rounded-2xl">
+                                    <div>
+                                        <p className="text-sm font-bold">Reserva Online</p>
+                                        <p className="text-[10px] text-slate-400">Permitir que clientes agendem com este profissional</p>
+                                    </div>
+                                    <Switch
+                                        checked={formData.acceptsOnlineBooking}
+                                        onCheckedChange={(checked) => setFormData({ ...formData, acceptsOnlineBooking: checked })}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </FormDialog>
 
             <ConfirmDialog

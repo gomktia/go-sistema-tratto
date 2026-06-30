@@ -94,13 +94,31 @@ export function CompleteAppointmentModal({
 
                 // 2. Calcular e persistir comissão (se houver profissional)
                 if (appointment.employeeId) {
+                    // 2.1 Buscar comissão padrão do profissional
                     const { data: empRow } = await supabase
                         .from("employees")
                         .select("commission_rate")
                         .eq("id", appointment.employeeId)
                         .single()
 
-                    const commissionRate  = empRow?.commission_rate ?? 0
+                    const defaultCommissionRate = empRow?.commission_rate ?? 0
+
+                    // 2.2 Verificar se existe exceção de comissão para este serviço
+                    let commissionRate = defaultCommissionRate
+                    if (appointment.serviceId) {
+                        const { data: exceptionRow } = await supabase
+                            .from("employee_service_commissions")
+                            .select("commission_rate")
+                            .eq("employee_id", appointment.employeeId)
+                            .eq("service_id", appointment.serviceId)
+                            .single()
+
+                        // Regra hierárquica: exceção profissional+serviço > comissão padrão
+                        if (exceptionRow) {
+                            commissionRate = exceptionRow.commission_rate
+                        }
+                    }
+
                     const baseAmount      = netValue  // final_price - discount
                     const commissionAmt   = baseAmount * (commissionRate / 100)
 

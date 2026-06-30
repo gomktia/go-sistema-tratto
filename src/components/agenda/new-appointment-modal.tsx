@@ -98,8 +98,54 @@ export function NewAppointmentModal({ isOpen, onClose, onSuccess, tenantId, appo
 
             const endAt = new Date(startAt.getTime() + duration * 60000)
 
-            // Verificar conflito de horário antes de salvar
+            // Verificar bloqueios de agenda do profissional
             setConflictError(null)
+            const dateStr = formData.date
+            const startTimeStr = formData.time
+
+            const { data: unavailabilities } = await supabase
+                .from("employee_unavailability")
+                .select("*")
+                .eq("employee_id", formData.employeeId)
+                .lte("start_date", dateStr)
+                .gte("end_date", dateStr)
+
+            if (unavailabilities && unavailabilities.length > 0) {
+                for (const unavail of unavailabilities) {
+                    if (unavail.all_day) {
+                        // Dia inteiro bloqueado
+                        const reasonLabels: Record<string, string> = {
+                            ferias: 'Férias',
+                            folga: 'Folga',
+                            atestado: 'Atestado',
+                            bloqueio_manual: 'Bloqueio'
+                        }
+                        const reasonLabel = reasonLabels[unavail.reason] || 'Bloqueio'
+                        setConflictError(
+                            `${reasonLabel}: este profissional está indisponível neste dia.`
+                        )
+                        setLoading(false)
+                        return
+                    } else if (unavail.start_time && unavail.end_time) {
+                        // Verificar se o horário do agendamento conflita com o bloqueio parcial
+                        const unavailStart = unavail.start_time
+                        const unavailEnd = unavail.end_time
+                        const aptStart = startTimeStr
+                        const aptEnd = format(endAt, "HH:mm")
+
+                        // Conflito se horários se sobrepõem
+                        if (aptStart < unavailEnd && aptEnd > unavailStart) {
+                            setConflictError(
+                                `Bloqueio: profissional indisponível das ${unavailStart} às ${unavailEnd}.`
+                            )
+                            setLoading(false)
+                            return
+                        }
+                    }
+                }
+            }
+
+            // Verificar conflito de horário com outros agendamentos
             const conflictQuery = supabase
                 .from("appointments")
                 .select("id, start_at, end_at, notes")
