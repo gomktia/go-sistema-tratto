@@ -28,10 +28,42 @@ CREATE INDEX IF NOT EXISTS idx_employee_service_commissions_service ON employee_
 -- RLS (Row Level Security)
 ALTER TABLE employee_service_commissions ENABLE ROW LEVEL SECURITY;
 
--- Policy: tenant isolation
-CREATE POLICY "tenant_isolation_employee_service_commissions"
-    ON employee_service_commissions
-    USING (true);
+-- Tenant Isolation Policies
+-- Leitura: autenticado vê apenas o próprio tenant (ou super_admin vê tudo)
+CREATE POLICY "employee_service_commissions_select_tenant" ON employee_service_commissions
+  FOR SELECT TO authenticated
+  USING (
+    tenant_id = (auth.jwt() -> 'user_metadata' ->> 'tenant_id')::uuid
+    OR (auth.jwt() -> 'user_metadata' ->> 'role') = 'super_admin'
+  );
+
+-- Insert: só pode inserir exceção no próprio tenant
+CREATE POLICY "employee_service_commissions_insert_tenant" ON employee_service_commissions
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    tenant_id = (auth.jwt() -> 'user_metadata' ->> 'tenant_id')::uuid
+    OR (auth.jwt() -> 'user_metadata' ->> 'role') = 'super_admin'
+  );
+
+-- Update: só pode alterar exceção do próprio tenant
+CREATE POLICY "employee_service_commissions_update_tenant" ON employee_service_commissions
+  FOR UPDATE TO authenticated
+  USING (
+    tenant_id = (auth.jwt() -> 'user_metadata' ->> 'tenant_id')::uuid
+    OR (auth.jwt() -> 'user_metadata' ->> 'role') = 'super_admin'
+  )
+  WITH CHECK (
+    tenant_id = (auth.jwt() -> 'user_metadata' ->> 'tenant_id')::uuid
+    OR (auth.jwt() -> 'user_metadata' ->> 'role') = 'super_admin'
+  );
+
+-- Delete: só pode remover exceção do próprio tenant
+CREATE POLICY "employee_service_commissions_delete_tenant" ON employee_service_commissions
+  FOR DELETE TO authenticated
+  USING (
+    tenant_id = (auth.jwt() -> 'user_metadata' ->> 'tenant_id')::uuid
+    OR (auth.jwt() -> 'user_metadata' ->> 'role') = 'super_admin'
+  );
 
 -- Comentários
 COMMENT ON TABLE employee_service_commissions IS 'Exceções de comissão: taxas específicas por profissional+serviço que sobrescrevem a taxa padrão';
