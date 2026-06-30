@@ -17,14 +17,17 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import type { CustomerFilters } from '@/types/customer-filters'
 import { DEFAULT_FILTERS, getActiveFilterCount } from '@/types/customer-filters'
+import { SegmentManager } from './SegmentManager'
 
 interface CustomerFilterPanelProps {
+  tenantId: string
   filters: CustomerFilters
   onFiltersChange: (filters: CustomerFilters) => void
   onApply: () => void
 }
 
 export function CustomerFilterPanel({
+  tenantId,
   filters,
   onFiltersChange,
   onApply
@@ -44,9 +47,14 @@ export function CustomerFilterPanel({
     onFiltersChange({ ...filters, [key]: value })
   }
 
+  const handleApplySegment = (segmentFilters: CustomerFilters) => {
+    onFiltersChange(segmentFilters)
+    onApply()
+  }
+
   return (
     <div className="space-y-4">
-      {/* Busca sempre visível */}
+      {/* Busca e Segmentos */}
       <div className="flex items-center gap-3">
         <Input
           placeholder="Buscar por nome, telefone ou e-mail..."
@@ -54,6 +62,13 @@ export function CustomerFilterPanel({
           onChange={(e) => updateFilter('search', e.target.value)}
           className="flex-1"
         />
+
+        <SegmentManager
+          tenantId={tenantId}
+          currentFilters={filters}
+          onApplySegment={handleApplySegment}
+        />
+
         <Button
           variant="outline"
           onClick={() => setExpanded(!expanded)}

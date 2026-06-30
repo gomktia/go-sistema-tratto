@@ -465,6 +465,7 @@ export default function ClientesPage() {
 
             {/* Painel de Filtros */}
             <CustomerFilterPanel
+                tenantId={currentTenant.id}
                 filters={filters}
                 onFiltersChange={handleFiltersChange}
                 onApply={refetch}
