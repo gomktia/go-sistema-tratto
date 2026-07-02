@@ -44,6 +44,7 @@ export function CommissionExceptionsManager({
   const {
     data: exceptions,
     loading,
+    error: hookError,
     createCommissionException,
     updateCommissionException,
     deleteCommissionException,
@@ -93,20 +94,31 @@ export function CommissionExceptionsManager({
   }
 
   const handleSave = async () => {
-    if (!formData.serviceId) return
+    if (!formData.serviceId) {
+      return
+    }
 
     setSaving(true)
     try {
+      let result
       if (editingItem) {
-        await updateCommissionException(editingItem.id, {
+        result = await updateCommissionException(editingItem.id, {
           commissionRate: formData.commissionRate,
           notes: formData.notes
         })
       } else {
-        await createCommissionException(formData)
+        result = await createCommissionException(formData)
       }
+
+      if (!result) {
+        alert('Erro ao salvar exceção de comissão.')
+        return
+      }
+
       setShowDialog(false)
       resetForm()
+    } catch (err) {
+      alert('Erro ao salvar: ' + (err as Error).message)
     } finally {
       setSaving(false)
     }
