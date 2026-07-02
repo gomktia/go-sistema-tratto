@@ -150,7 +150,7 @@ export function UnavailabilityManager({ tenantId, employeeId }: UnavailabilityMa
           <h4 className="text-sm font-bold">Bloqueios de Agenda</h4>
           <p className="text-xs text-muted-foreground">Férias, folgas e indisponibilidades</p>
         </div>
-        <Button onClick={openCreateDialog} size="sm" className="gap-2">
+        <Button type="button" onClick={openCreateDialog} size="sm" className="gap-2">
           <Plus className="w-4 h-4" />
           Adicionar Bloqueio
         </Button>
@@ -195,6 +195,7 @@ export function UnavailabilityManager({ tenantId, employeeId }: UnavailabilityMa
               </div>
               <div className="flex items-center gap-1">
                 <Button
+                  type="button"
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8"
@@ -203,6 +204,7 @@ export function UnavailabilityManager({ tenantId, employeeId }: UnavailabilityMa
                   <Edit2 className="w-4 h-4" />
                 </Button>
                 <Button
+                  type="button"
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -310,10 +312,10 @@ export function UnavailabilityManager({ tenantId, employeeId }: UnavailabilityMa
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDialog(false)}>
+            <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleSave} disabled={saving || !formData.startDate || !formData.endDate}>
+            <Button type="button" onClick={handleSave} disabled={saving || !formData.startDate || !formData.endDate}>
               {saving ? 'Salvando...' : editingItem ? 'Salvar' : 'Criar'}
             </Button>
           </DialogFooter>
@@ -330,10 +332,10 @@ export function UnavailabilityManager({ tenantId, employeeId }: UnavailabilityMa
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+            <Button type="button" variant="outline" onClick={() => setShowDeleteDialog(false)}>
               Cancelar
             </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={saving}>
+            <Button type="button" variant="destructive" onClick={handleDelete} disabled={saving}>
               {saving ? 'Excluindo...' : 'Excluir'}
             </Button>
           </DialogFooter>

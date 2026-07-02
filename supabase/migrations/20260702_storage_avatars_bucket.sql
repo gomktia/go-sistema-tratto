@@ -24,21 +24,13 @@ TO public
 USING (bucket_id = 'avatars');
 
 -- Policy: Permitir upload apenas para usuários autenticados do mesmo tenant
--- Path structure: {tenant_id}/{employee_id}/avatar.{ext}
+-- Path structure: {tenant_id}/{employee_id}-timestamp.{ext}
 CREATE POLICY IF NOT EXISTS "Users can upload avatars to their tenant"
 ON storage.objects FOR INSERT
 TO authenticated
 WITH CHECK (
     bucket_id = 'avatars'
-    AND (storage.foldername(name))[1] IN (
-        SELECT tenant_id::text
-        FROM tenants
-        WHERE EXISTS (
-            SELECT 1 FROM profiles
-            WHERE profiles.id = auth.uid()
-            AND profiles.tenant_id = tenants.id
-        )
-    )
+    AND (storage.foldername(name))[1] = auth_tenant_id()::text
 );
 
 -- Policy: Permitir update apenas para usuários autenticados do mesmo tenant
@@ -47,27 +39,11 @@ ON storage.objects FOR UPDATE
 TO authenticated
 USING (
     bucket_id = 'avatars'
-    AND (storage.foldername(name))[1] IN (
-        SELECT tenant_id::text
-        FROM tenants
-        WHERE EXISTS (
-            SELECT 1 FROM profiles
-            WHERE profiles.id = auth.uid()
-            AND profiles.tenant_id = tenants.id
-        )
-    )
+    AND (storage.foldername(name))[1] = auth_tenant_id()::text
 )
 WITH CHECK (
     bucket_id = 'avatars'
-    AND (storage.foldername(name))[1] IN (
-        SELECT tenant_id::text
-        FROM tenants
-        WHERE EXISTS (
-            SELECT 1 FROM profiles
-            WHERE profiles.id = auth.uid()
-            AND profiles.tenant_id = tenants.id
-        )
-    )
+    AND (storage.foldername(name))[1] = auth_tenant_id()::text
 );
 
 -- Policy: Permitir delete apenas para usuários autenticados do mesmo tenant
@@ -76,15 +52,7 @@ ON storage.objects FOR DELETE
 TO authenticated
 USING (
     bucket_id = 'avatars'
-    AND (storage.foldername(name))[1] IN (
-        SELECT tenant_id::text
-        FROM tenants
-        WHERE EXISTS (
-            SELECT 1 FROM profiles
-            WHERE profiles.id = auth.uid()
-            AND profiles.tenant_id = tenants.id
-        )
-    )
+    AND (storage.foldername(name))[1] = auth_tenant_id()::text
 );
 
 -- Comentários

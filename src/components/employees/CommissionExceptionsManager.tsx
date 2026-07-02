@@ -164,6 +164,7 @@ export function CommissionExceptionsManager({
           </p>
         </div>
         <Button
+          type="button"
           onClick={openCreateDialog}
           size="sm"
           className="gap-2"
@@ -229,6 +230,7 @@ export function CommissionExceptionsManager({
                 </div>
                 <div className="flex items-center gap-1">
                   <Button
+                    type="button"
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8"
@@ -237,6 +239,7 @@ export function CommissionExceptionsManager({
                     <Edit2 className="w-4 h-4" />
                   </Button>
                   <Button
+                    type="button"
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -321,10 +324,10 @@ export function CommissionExceptionsManager({
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDialog(false)}>
+            <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleSave} disabled={saving || !formData.serviceId}>
+            <Button type="button" onClick={handleSave} disabled={saving || !formData.serviceId}>
               {saving ? 'Salvando...' : editingItem ? 'Salvar' : 'Criar'}
             </Button>
           </DialogFooter>
@@ -341,10 +344,10 @@ export function CommissionExceptionsManager({
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+            <Button type="button" variant="outline" onClick={() => setShowDeleteDialog(false)}>
               Cancelar
             </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={saving}>
+            <Button type="button" variant="destructive" onClick={handleDelete} disabled={saving}>
               {saving ? 'Excluindo...' : 'Excluir'}
             </Button>
           </DialogFooter>
