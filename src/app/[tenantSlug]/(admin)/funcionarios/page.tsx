@@ -561,9 +561,9 @@ export default function FuncionariosPage() {
                 {showEditEmployee && selectedEmployee ? (
                     <Tabs defaultValue="basico" className="w-full">
                         <TabsList className="grid w-full grid-cols-3">
-                            <TabsTrigger value="basico">Dados Básicos</TabsTrigger>
-                            <TabsTrigger value="bloqueios">Bloqueios</TabsTrigger>
-                            <TabsTrigger value="comissoes">Exceções Comissão</TabsTrigger>
+                            <TabsTrigger value="basico" type="button">Dados Básicos</TabsTrigger>
+                            <TabsTrigger value="bloqueios" type="button">Bloqueios</TabsTrigger>
+                            <TabsTrigger value="comissoes" type="button">Exceções Comissão</TabsTrigger>
                         </TabsList>
 
                         <TabsContent value="basico" className="space-y-6 max-h-[60vh] overflow-y-auto pr-4 scrollbar-thin mt-4">

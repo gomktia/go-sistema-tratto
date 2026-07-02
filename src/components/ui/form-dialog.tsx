@@ -36,39 +36,57 @@ export function FormDialog({
     cancelLabel = "Cancelar",
     isLoading = false
 }: FormDialogProps) {
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault()
-        onSubmit()
-    }
-
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[600px]">
-                <form onSubmit={handleSubmit}>
-                    <DialogHeader>
-                        <DialogTitle>{title}</DialogTitle>
-                        {description && <DialogDescription>{description}</DialogDescription>}
-                    </DialogHeader>
-                    <div className="py-4">
-                        {children}
-                    </div>
-                    <DialogFooter>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => {
-                                onCancel?.()
-                                onOpenChange(false)
-                            }}
-                            disabled={isLoading}
-                        >
-                            {cancelLabel}
-                        </Button>
-                        <Button type="submit" disabled={isLoading}>
-                            {isLoading ? "Salvando..." : submitLabel}
-                        </Button>
-                    </DialogFooter>
-                </form>
+        <Dialog
+            open={open}
+            onOpenChange={(newOpen) => {
+                // Só permite fechar via botão Cancelar, não por cliques externos
+            }}
+            modal={true}
+        >
+            <DialogContent
+                className="sm:max-w-[600px]"
+                onPointerDownOutside={(e) => {
+                    e.preventDefault()
+                }}
+                onInteractOutside={(e) => {
+                    e.preventDefault()
+                }}
+                onEscapeKeyDown={(e) => {
+                    e.preventDefault()
+                }}
+            >
+                <DialogHeader>
+                    <DialogTitle>{title}</DialogTitle>
+                    {description && <DialogDescription>{description}</DialogDescription>}
+                </DialogHeader>
+                <div className="py-4">
+                    {children}
+                </div>
+                <DialogFooter>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                            onCancel?.()
+                            onOpenChange(false)
+                        }}
+                        disabled={isLoading}
+                    >
+                        {cancelLabel}
+                    </Button>
+                    <Button
+                        type="button"
+                        onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            onSubmit()
+                        }}
+                        disabled={isLoading}
+                    >
+                        {isLoading ? "Salvando..." : submitLabel}
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     )
