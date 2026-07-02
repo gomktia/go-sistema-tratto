@@ -25,12 +25,15 @@ USING (bucket_id = 'avatars');
 
 -- Policy: Permitir upload apenas para usuários autenticados do mesmo tenant
 -- Path structure: {tenant_id}/{employee_id}-timestamp.{ext}
+-- Verifica se o auth.uid() tem employee no tenant do path
 CREATE POLICY IF NOT EXISTS "Users can upload avatars to their tenant"
 ON storage.objects FOR INSERT
 TO authenticated
 WITH CHECK (
     bucket_id = 'avatars'
-    AND (storage.foldername(name))[1] = auth_tenant_id()::text
+    AND (storage.foldername(name))[1]::uuid IN (
+        SELECT tenant_id FROM employees WHERE user_id = auth.uid()
+    )
 );
 
 -- Policy: Permitir update apenas para usuários autenticados do mesmo tenant
@@ -39,11 +42,15 @@ ON storage.objects FOR UPDATE
 TO authenticated
 USING (
     bucket_id = 'avatars'
-    AND (storage.foldername(name))[1] = auth_tenant_id()::text
+    AND (storage.foldername(name))[1]::uuid IN (
+        SELECT tenant_id FROM employees WHERE user_id = auth.uid()
+    )
 )
 WITH CHECK (
     bucket_id = 'avatars'
-    AND (storage.foldername(name))[1] = auth_tenant_id()::text
+    AND (storage.foldername(name))[1]::uuid IN (
+        SELECT tenant_id FROM employees WHERE user_id = auth.uid()
+    )
 );
 
 -- Policy: Permitir delete apenas para usuários autenticados do mesmo tenant
@@ -52,7 +59,9 @@ ON storage.objects FOR DELETE
 TO authenticated
 USING (
     bucket_id = 'avatars'
-    AND (storage.foldername(name))[1] = auth_tenant_id()::text
+    AND (storage.foldername(name))[1]::uuid IN (
+        SELECT tenant_id FROM employees WHERE user_id = auth.uid()
+    )
 );
 
 -- Comentários
