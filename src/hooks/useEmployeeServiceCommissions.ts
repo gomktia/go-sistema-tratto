@@ -39,7 +39,7 @@ export function useEmployeeServiceCommissions(tenantId: string, employeeId: stri
       .from("employee_service_commissions")
       .select(`
         *,
-        services (
+        services!fk_service (
           name
         )
       `)
@@ -48,23 +48,24 @@ export function useEmployeeServiceCommissions(tenantId: string, employeeId: stri
       .order("created_at", { ascending: false })
       .then(({ data: rows, error: fetchError }) => {
         if (!isMounted) return
+
         if (fetchError) {
           setError(fetchError.message)
           setData([])
         } else {
-          setData(
-            rows?.map(row => ({
-              id: row.id,
-              tenantId: row.tenant_id,
-              employeeId: row.employee_id,
-              serviceId: row.service_id,
-              serviceName: (row.services as any)?.name ?? undefined,
-              commissionRate: row.commission_rate,
-              notes: row.notes ?? undefined,
-              createdAt: row.created_at,
-              updatedAt: row.updated_at
-            })) || []
-          )
+          const mapped = rows?.map(row => ({
+            id: row.id,
+            tenantId: row.tenant_id,
+            employeeId: row.employee_id,
+            serviceId: row.service_id,
+            serviceName: (row.services as any)?.name ?? undefined,
+            commissionRate: row.commission_rate,
+            notes: row.notes ?? undefined,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at
+          })) || []
+
+          setData(mapped)
         }
         setLoading(false)
       })
@@ -74,20 +75,26 @@ export function useEmployeeServiceCommissions(tenantId: string, employeeId: stri
 
   // Create
   const createCommissionException = useCallback(async (input: CreateEmployeeServiceCommissionInput) => {
-    if (!isSupabaseConfigured || !tenantId || !employeeId) return null
+    if (!isSupabaseConfigured || !tenantId || !employeeId) {
+      return null
+    }
 
     const supabase = getSupabaseBrowserClient()
-    if (!supabase) return null
+    if (!supabase) {
+      return null
+    }
+
+    const insertData = {
+      tenant_id: tenantId,
+      employee_id: employeeId,
+      service_id: input.serviceId,
+      commission_rate: input.commissionRate,
+      notes: input.notes ?? null
+    }
 
     const { data: created, error: createError } = await supabase
       .from("employee_service_commissions")
-      .insert({
-        tenant_id: tenantId,
-        employee_id: employeeId,
-        service_id: input.serviceId,
-        commission_rate: input.commissionRate,
-        notes: input.notes ?? null
-      })
+      .insert(insertData)
       .select()
       .single()
 

@@ -33,10 +33,42 @@ CREATE INDEX IF NOT EXISTS idx_employee_unavailability_dates ON employee_unavail
 -- RLS (Row Level Security)
 ALTER TABLE employee_unavailability ENABLE ROW LEVEL SECURITY;
 
--- Policy: tenant isolation
-CREATE POLICY "tenant_isolation_employee_unavailability"
-    ON employee_unavailability
-    USING (true);
+-- Tenant Isolation Policies
+-- Leitura: autenticado vê apenas o próprio tenant (ou super_admin vê tudo)
+CREATE POLICY "employee_unavailability_select_tenant" ON employee_unavailability
+  FOR SELECT TO authenticated
+  USING (
+    tenant_id = (auth.jwt() -> 'user_metadata' ->> 'tenant_id')::uuid
+    OR (auth.jwt() -> 'user_metadata' ->> 'role') = 'super_admin'
+  );
+
+-- Insert: só pode inserir bloqueio no próprio tenant
+CREATE POLICY "employee_unavailability_insert_tenant" ON employee_unavailability
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    tenant_id = (auth.jwt() -> 'user_metadata' ->> 'tenant_id')::uuid
+    OR (auth.jwt() -> 'user_metadata' ->> 'role') = 'super_admin'
+  );
+
+-- Update: só pode alterar bloqueio do próprio tenant
+CREATE POLICY "employee_unavailability_update_tenant" ON employee_unavailability
+  FOR UPDATE TO authenticated
+  USING (
+    tenant_id = (auth.jwt() -> 'user_metadata' ->> 'tenant_id')::uuid
+    OR (auth.jwt() -> 'user_metadata' ->> 'role') = 'super_admin'
+  )
+  WITH CHECK (
+    tenant_id = (auth.jwt() -> 'user_metadata' ->> 'tenant_id')::uuid
+    OR (auth.jwt() -> 'user_metadata' ->> 'role') = 'super_admin'
+  );
+
+-- Delete: só pode remover bloqueio do próprio tenant
+CREATE POLICY "employee_unavailability_delete_tenant" ON employee_unavailability
+  FOR DELETE TO authenticated
+  USING (
+    tenant_id = (auth.jwt() -> 'user_metadata' ->> 'tenant_id')::uuid
+    OR (auth.jwt() -> 'user_metadata' ->> 'role') = 'super_admin'
+  );
 
 -- Comentários
 COMMENT ON TABLE employee_unavailability IS 'Bloqueios de agenda dos profissionais (férias, folgas, atestados)';
