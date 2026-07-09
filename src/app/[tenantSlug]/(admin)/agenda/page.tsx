@@ -236,7 +236,7 @@ export default function AgendaPage() {
         const color = getStatusColor(status)
         return {
             borderLeftColor: color,
-            backgroundColor: `${color}15`, // 15 = ~8% opacity
+            backgroundColor: `${color}D9`, // D9 = 85% opacity (mais sólido como no Trinks)
         }
     }
 
@@ -378,7 +378,7 @@ export default function AgendaPage() {
                                                                     style={getStatusStyles(apt.status)}
                                                                 />
 
-                                                                <div className="relative h-full flex flex-col p-4">
+                                                                <div className="relative h-full flex flex-col p-4 text-white">
                                                                     <div className="flex items-center justify-between gap-2 mb-2">
                                                                         <span className="text-xs font-bold">
                                                                             {startLabel} - {endLabel}
@@ -386,7 +386,7 @@ export default function AgendaPage() {
                                                                         <div className="flex items-center gap-1">
                                                                             <Badge
                                                                                 variant="outline"
-                                                                                className="h-5 text-[10px] font-bold px-1.5"
+                                                                                className="h-5 text-[10px] font-bold px-1.5 bg-white/90"
                                                                                 style={{
                                                                                     borderColor: getStatusColor(apt.status),
                                                                                     color: getStatusColor(apt.status)
@@ -394,7 +394,7 @@ export default function AgendaPage() {
                                                                             >
                                                                                 {getStatusLabel(apt.status)}
                                                                             </Badge>
-                                                                            <Badge variant="outline" className="h-5 text-xs font-bold border-current">
+                                                                            <Badge variant="outline" className="h-5 text-xs font-bold border-white/70 bg-white/20 text-white">
                                                                                 {apt.duration}m
                                                                             </Badge>
                                                                         </div>
