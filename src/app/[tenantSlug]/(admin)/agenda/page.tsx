@@ -47,7 +47,7 @@ import {
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { useTenantAppointments, useTenantEmployees, useTenantServices } from "@/hooks/useTenantRecords"
-import type { AppointmentRecord, ServiceRecord } from "@/types/catalog"
+import type { AppointmentRecord, AppointmentStatus, ServiceRecord } from "@/types/catalog"
 import { motion, AnimatePresence } from "framer-motion"
 import { NewAppointmentModal } from "@/components/agenda/new-appointment-modal"
 import { CompleteAppointmentModal } from "@/components/agenda/complete-appointment-modal"
@@ -206,33 +206,39 @@ export default function AgendaPage() {
         }
     }
 
-    const STATUS_STYLES: Record<string, string> = {
-        scheduled:  'bg-amber-100/40 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-200/50 dark:border-amber-500/50 after:bg-amber-500',
-        pending:    'bg-amber-100/40 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-200/50 dark:border-amber-500/50 after:bg-amber-500',
-        confirmed:  'bg-emerald-100/40 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-200/50 dark:border-emerald-500/50 after:bg-emerald-500',
-        checked_in: 'bg-blue-100/40 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-200/50 dark:border-blue-500/50 after:bg-blue-500',
-        completed:  'bg-slate-100/40 dark:bg-slate-500/20 text-slate-700 dark:text-slate-300 border-slate-200/50 dark:border-slate-500/50 after:bg-slate-500',
-        no_show:    'bg-orange-100/40 dark:bg-orange-500/20 text-orange-700 dark:text-orange-300 border-orange-200/50 dark:border-orange-500/50 after:bg-orange-500',
-        cancelled:  'bg-rose-100/40 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-200/50 dark:border-rose-500/50 after:bg-rose-500',
-        blocked:    'bg-zinc-100/40 dark:bg-zinc-500/20 text-zinc-700 dark:text-zinc-300 border-zinc-200/50 dark:border-zinc-500/50 after:bg-zinc-500',
+    const STATUS_COLORS: Record<string, string> = {
+        staff_unavailable: '#D1D1D1',
+        pending:          '#EC9F73',
+        confirmed:        '#64A500',
+        no_show:          '#949494',
+        in_progress:      '#65DDC8',
+        completed:        '#88B2D5',
+        cancelled:        '#DA9CE0',
     }
 
     const STATUS_LABELS: Record<string, string> = {
-        scheduled:  'Agendado',
-        pending:    'Pendente',
-        confirmed:  'Confirmado',
-        checked_in: 'Presente',
-        completed:  'Concluído',
-        no_show:    'Faltou',
-        cancelled:  'Cancelado',
-        blocked:    'Bloqueado',
+        staff_unavailable: 'Ausência de profissional',
+        pending:          'Aguardando confirmação',
+        confirmed:        'Confirmado',
+        no_show:          'Cliente não compareceu',
+        in_progress:      'Em atendimento',
+        completed:        'Finalizado',
+        cancelled:        'Cancelado',
     }
 
-    const getStatusStyles = (status: string) =>
-        STATUS_STYLES[status] ?? STATUS_STYLES.pending
+    const getStatusColor = (status: string) =>
+        STATUS_COLORS[status] ?? STATUS_COLORS.pending
 
     const getStatusLabel = (status: string) =>
         STATUS_LABELS[status] ?? status
+
+    const getStatusStyles = (status: string) => {
+        const color = getStatusColor(status)
+        return {
+            borderLeftColor: color,
+            backgroundColor: `${color}15`, // 15 = ~8% opacity
+        }
+    }
 
     const updateAppointmentStatus = async (appointmentId: string, newStatus: string) => {
         if (isSupabaseConfigured) {
@@ -367,10 +373,10 @@ export default function AgendaPage() {
                                                                     zIndex: 5
                                                                 }}
                                                             >
-                                                                <div className={cn(
-                                                                    "absolute inset-0 border-l-4 border backdrop-blur-sm transition-all duration-300",
-                                                                    getStatusStyles(apt.status)
-                                                                )} />
+                                                                <div
+                                                                    className="absolute inset-0 border-l-4 backdrop-blur-sm transition-all duration-300"
+                                                                    style={getStatusStyles(apt.status)}
+                                                                />
 
                                                                 <div className="relative h-full flex flex-col p-4">
                                                                     <div className="flex items-center justify-between gap-2 mb-2">
@@ -378,7 +384,14 @@ export default function AgendaPage() {
                                                                             {startLabel} - {endLabel}
                                                                         </span>
                                                                         <div className="flex items-center gap-1">
-                                                                            <Badge variant="outline" className="h-5 text-[10px] font-bold border-current px-1.5">
+                                                                            <Badge
+                                                                                variant="outline"
+                                                                                className="h-5 text-[10px] font-bold px-1.5"
+                                                                                style={{
+                                                                                    borderColor: getStatusColor(apt.status),
+                                                                                    color: getStatusColor(apt.status)
+                                                                                }}
+                                                                            >
                                                                                 {getStatusLabel(apt.status)}
                                                                             </Badge>
                                                                             <Badge variant="outline" className="h-5 text-xs font-bold border-current">
@@ -393,35 +406,61 @@ export default function AgendaPage() {
                                                                         {service?.name ?? apt.serviceName ?? "Serviço"}
                                                                     </p>
                                                                     <div className="flex flex-wrap gap-1 mt-2">
-                                                                        {apt.status !== 'confirmed' && apt.status !== 'completed' && apt.status !== 'cancelled' && apt.status !== 'no_show' && (
+                                                                        {/* Aguardando → Confirmar */}
+                                                                        {apt.status === 'pending' && (
                                                                             <button
                                                                                 onClick={e => { e.stopPropagation(); updateAppointmentStatus(apt.id, 'confirmed') }}
-                                                                                className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/40 transition-colors"
-                                                                            >Confirmar</button>
+                                                                                className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#64A500]/20 hover:bg-[#64A500]/40 transition-colors"
+                                                                                style={{ color: '#64A500' }}
+                                                                            >
+                                                                                Confirmar
+                                                                            </button>
                                                                         )}
-                                                                        {apt.status !== 'checked_in' && apt.status !== 'completed' && apt.status !== 'cancelled' && apt.status !== 'no_show' && (
+
+                                                                        {/* Confirmado → Iniciar atendimento */}
+                                                                        {apt.status === 'confirmed' && (
                                                                             <button
-                                                                                onClick={e => { e.stopPropagation(); updateAppointmentStatus(apt.id, 'checked_in') }}
-                                                                                className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-700 dark:text-blue-300 hover:bg-blue-500/40 transition-colors"
-                                                                            >Compareceu</button>
+                                                                                onClick={e => { e.stopPropagation(); updateAppointmentStatus(apt.id, 'in_progress') }}
+                                                                                className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#65DDC8]/20 hover:bg-[#65DDC8]/40 transition-colors"
+                                                                                style={{ color: '#65DDC8' }}
+                                                                            >
+                                                                                Iniciar
+                                                                            </button>
                                                                         )}
-                                                                        {apt.status !== 'completed' && apt.status !== 'cancelled' && apt.status !== 'no_show' && (
+
+                                                                        {/* Em atendimento → Finalizar (abre modal) */}
+                                                                        {apt.status === 'in_progress' && (
                                                                             <button
-                                                                                onClick={e => { e.stopPropagation(); setAppointmentToComplete(apt); setShowCompleteModal(true) }}
-                                                                                className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-500/20 text-slate-700 dark:text-slate-300 hover:bg-slate-500/40 transition-colors"
-                                                                            >Concluir</button>
+                                                                                onClick={e => {
+                                                                                    e.stopPropagation();
+                                                                                    setAppointmentToComplete(apt);
+                                                                                    setShowCompleteModal(true);
+                                                                                }}
+                                                                                className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#88B2D5]/20 hover:bg-[#88B2D5]/40 transition-colors"
+                                                                                style={{ color: '#88B2D5' }}
+                                                                            >
+                                                                                Finalizar
+                                                                            </button>
                                                                         )}
-                                                                        {apt.status !== 'no_show' && apt.status !== 'completed' && apt.status !== 'cancelled' && (
-                                                                            <button
-                                                                                onClick={e => { e.stopPropagation(); updateAppointmentStatus(apt.id, 'no_show') }}
-                                                                                className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-700 dark:text-orange-300 hover:bg-orange-500/40 transition-colors"
-                                                                            >Faltou</button>
-                                                                        )}
-                                                                        {apt.status !== 'cancelled' && apt.status !== 'completed' && (
-                                                                            <button
-                                                                                onClick={e => { e.stopPropagation(); updateAppointmentStatus(apt.id, 'cancelled') }}
-                                                                                className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-700 dark:text-rose-300 hover:bg-rose-500/40 transition-colors"
-                                                                            >Cancelar</button>
+
+                                                                        {/* Opções sempre disponíveis */}
+                                                                        {apt.status !== 'cancelled' && apt.status !== 'no_show' && apt.status !== 'completed' && (
+                                                                            <>
+                                                                                <button
+                                                                                    onClick={e => { e.stopPropagation(); updateAppointmentStatus(apt.id, 'no_show') }}
+                                                                                    className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#949494]/20 hover:bg-[#949494]/40 transition-colors"
+                                                                                    style={{ color: '#949494' }}
+                                                                                >
+                                                                                    Não compareceu
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={e => { e.stopPropagation(); updateAppointmentStatus(apt.id, 'cancelled') }}
+                                                                                    className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#DA9CE0]/20 hover:bg-[#DA9CE0]/40 transition-colors"
+                                                                                    style={{ color: '#DA9CE0' }}
+                                                                                >
+                                                                                    Cancelar
+                                                                                </button>
+                                                                            </>
                                                                         )}
                                                                     </div>
                                                                 </div>
@@ -539,35 +578,61 @@ export default function AgendaPage() {
                                                         </p>
                                                     )}
                                                     <div className="flex flex-wrap gap-0.5 mt-1.5">
-                                                        {apt.status !== 'confirmed' && apt.status !== 'completed' && apt.status !== 'cancelled' && apt.status !== 'no_show' && (
+                                                        {/* Aguardando → Confirmar */}
+                                                        {apt.status === 'pending' && (
                                                             <button
                                                                 onClick={e => { e.stopPropagation(); updateAppointmentStatus(apt.id, 'confirmed') }}
-                                                                className="text-[8px] font-bold px-1 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/40 transition-colors"
-                                                            >Confirmar</button>
+                                                                className="text-[8px] font-bold px-1 py-0.5 rounded bg-[#64A500]/20 hover:bg-[#64A500]/40 transition-colors"
+                                                                style={{ color: '#64A500' }}
+                                                            >
+                                                                Confirmar
+                                                            </button>
                                                         )}
-                                                        {apt.status !== 'checked_in' && apt.status !== 'completed' && apt.status !== 'cancelled' && apt.status !== 'no_show' && (
+
+                                                        {/* Confirmado → Iniciar atendimento */}
+                                                        {apt.status === 'confirmed' && (
                                                             <button
-                                                                onClick={e => { e.stopPropagation(); updateAppointmentStatus(apt.id, 'checked_in') }}
-                                                                className="text-[8px] font-bold px-1 py-0.5 rounded bg-blue-500/20 text-blue-700 dark:text-blue-300 hover:bg-blue-500/40 transition-colors"
-                                                            >Compareceu</button>
+                                                                onClick={e => { e.stopPropagation(); updateAppointmentStatus(apt.id, 'in_progress') }}
+                                                                className="text-[8px] font-bold px-1 py-0.5 rounded bg-[#65DDC8]/20 hover:bg-[#65DDC8]/40 transition-colors"
+                                                                style={{ color: '#65DDC8' }}
+                                                            >
+                                                                Iniciar
+                                                            </button>
                                                         )}
-                                                        {apt.status !== 'completed' && apt.status !== 'cancelled' && apt.status !== 'no_show' && (
+
+                                                        {/* Em atendimento → Finalizar (abre modal) */}
+                                                        {apt.status === 'in_progress' && (
                                                             <button
-                                                                onClick={e => { e.stopPropagation(); setAppointmentToComplete(apt); setShowCompleteModal(true) }}
-                                                                className="text-[8px] font-bold px-1 py-0.5 rounded bg-slate-500/20 text-slate-700 dark:text-slate-300 hover:bg-slate-500/40 transition-colors"
-                                                            >Concluir</button>
+                                                                onClick={e => {
+                                                                    e.stopPropagation();
+                                                                    setAppointmentToComplete(apt);
+                                                                    setShowCompleteModal(true);
+                                                                }}
+                                                                className="text-[8px] font-bold px-1 py-0.5 rounded bg-[#88B2D5]/20 hover:bg-[#88B2D5]/40 transition-colors"
+                                                                style={{ color: '#88B2D5' }}
+                                                            >
+                                                                Finalizar
+                                                            </button>
                                                         )}
-                                                        {apt.status !== 'no_show' && apt.status !== 'completed' && apt.status !== 'cancelled' && (
-                                                            <button
-                                                                onClick={e => { e.stopPropagation(); updateAppointmentStatus(apt.id, 'no_show') }}
-                                                                className="text-[8px] font-bold px-1 py-0.5 rounded bg-orange-500/20 text-orange-700 dark:text-orange-300 hover:bg-orange-500/40 transition-colors"
-                                                            >Faltou</button>
-                                                        )}
-                                                        {apt.status !== 'cancelled' && apt.status !== 'completed' && (
-                                                            <button
-                                                                onClick={e => { e.stopPropagation(); updateAppointmentStatus(apt.id, 'cancelled') }}
-                                                                className="text-[8px] font-bold px-1 py-0.5 rounded bg-rose-500/20 text-rose-700 dark:text-rose-300 hover:bg-rose-500/40 transition-colors"
-                                                            >Cancelar</button>
+
+                                                        {/* Opções sempre disponíveis */}
+                                                        {apt.status !== 'cancelled' && apt.status !== 'no_show' && apt.status !== 'completed' && (
+                                                            <>
+                                                                <button
+                                                                    onClick={e => { e.stopPropagation(); updateAppointmentStatus(apt.id, 'no_show') }}
+                                                                    className="text-[8px] font-bold px-1 py-0.5 rounded bg-[#949494]/20 hover:bg-[#949494]/40 transition-colors"
+                                                                    style={{ color: '#949494' }}
+                                                                >
+                                                                    Não compareceu
+                                                                </button>
+                                                                <button
+                                                                    onClick={e => { e.stopPropagation(); updateAppointmentStatus(apt.id, 'cancelled') }}
+                                                                    className="text-[8px] font-bold px-1 py-0.5 rounded bg-[#DA9CE0]/20 hover:bg-[#DA9CE0]/40 transition-colors"
+                                                                    style={{ color: '#DA9CE0' }}
+                                                                >
+                                                                    Cancelar
+                                                                </button>
+                                                            </>
                                                         )}
                                                     </div>
                                                 </motion.div>
@@ -640,7 +705,7 @@ export default function AgendaPage() {
     const stats = useMemo(() => {
         const total = filteredAppointments.length
         const confirmed = filteredAppointments.filter(a => a.status === 'confirmed').length
-        const scheduled = filteredAppointments.filter(a => a.status === 'scheduled' || a.status === 'pending').length
+        const scheduled = filteredAppointments.filter(a => a.status === 'pending').length
         const completed = filteredAppointments.filter(a => a.status === 'completed').length
 
         return { total, confirmed, scheduled, completed }

@@ -40,6 +40,15 @@ export type StaffAvailabilityRecord = {
     endTime: string
 }
 
+export type AppointmentStatus =
+    | 'staff_unavailable'
+    | 'pending'
+    | 'confirmed'
+    | 'no_show'
+    | 'in_progress'
+    | 'completed'
+    | 'cancelled'
+
 export type AppointmentRecord = {
     id: string
     tenantId: string
@@ -54,7 +63,7 @@ export type AppointmentRecord = {
     price?: number
     currency: string
     channel?: string
-    status: string
+    status: AppointmentStatus
     notes?: string
     // Campos de conclusão/pagamento (PR 3)
     finalPrice?: number

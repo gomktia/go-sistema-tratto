@@ -66,7 +66,7 @@ export function NewAppointmentModal({ isOpen, onClose, onSuccess, tenantId, appo
         }
 
         const startAt = new Date(appointment.startAt)
-        setAppointmentType(appointment.status === "blocked" ? "blocked" : "appointment")
+        setAppointmentType(appointment.status === "staff_unavailable" ? "blocked" : "appointment")
         setFormData({
             customerId: appointment.customerId ?? "",
             serviceId: appointment.serviceId ?? "",
@@ -178,7 +178,7 @@ export function NewAppointmentModal({ isOpen, onClose, onSuccess, tenantId, appo
                 end_at: endAt.toISOString(),
                 duration_minutes: duration,
                 price,
-                status: isBlocked ? "blocked" : "confirmed",
+                status: isBlocked ? "staff_unavailable" : "pending",
                 channel: "admin",
                 notes: formData.notes || null,
             }

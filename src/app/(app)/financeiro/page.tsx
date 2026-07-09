@@ -40,7 +40,7 @@ export default function FinanceiroPage() {
         if (!appointments) return { totalRevenue: 0, pending: 0, commissions: 0, netProfit: 0, growth: "+0%" }
 
         const completed = appointments.filter(a => a.status === 'completed' || a.status === 'confirmed')
-        const pending = appointments.filter(a => a.status === 'scheduled')
+        const pending = appointments.filter(a => a.status === 'pending')
 
         // Revenue (Completed/Confirmed)
         const totalRevenue = completed.reduce((sum, a) => sum + (a.price || 0), 0)
