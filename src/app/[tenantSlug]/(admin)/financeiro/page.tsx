@@ -14,12 +14,7 @@ import {
     Users,
     Percent,
     AlertCircle,
-    Wallet,
-    Landmark,
-    CheckCircle2,
-    ArrowRight,
-    Loader2,
-    Briefcase
+    Wallet
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -43,10 +38,6 @@ export default function FinancialPage() {
 
     // --- FILTRO DE PERÍODO ---
     const [selectedPeriod, setSelectedPeriod] = useState<PeriodFilter>('month')
-
-    // --- STRIPE STATES ---
-    const [isStripeConnected, setIsStripeConnected] = useState(false)
-    const [isConnecting, setIsConnecting] = useState(false)
 
     // --- CONFIGURAÇÕES DE COMISSÃO (Estado Local Mockado) ---
     const [settings, setSettings] = useState({
@@ -128,16 +119,6 @@ export default function FinancialPage() {
             profitMargin: revenue > 0 ? ((profit / revenue) * 100).toFixed(0) : '0'
         }
     }, [allAppointments, commissionRows, selectedPeriod])
-
-    const handleConnectStripe = () => {
-        setIsConnecting(true)
-        // Simulate OAuth flow
-        setTimeout(() => {
-            setIsConnecting(false)
-            setIsStripeConnected(true)
-            toast.success("Conta Stripe conectada com sucesso!")
-        }, 2000)
-    }
 
     // --- COMISSÕES PERSISTIDAS (appointment_commissions) ---
     const commissions = employees.flatMap(emp => {
@@ -248,20 +229,14 @@ export default function FinancialPage() {
             </div>
 
             <Tabs defaultValue="commissions" className="space-y-6">
-                <TabsList className="bg-slate-100 dark:bg-zinc-800 p-1 rounded-xl w-full flex flex-wrap h-auto gap-2">
-                    <div className="flex gap-1 flex-1 min-w-[300px]">
-                        <TabsTrigger value="commissions" className="flex-1 rounded-lg gap-2 data-[state=active]:bg-white">
-                            <Users className="w-4 h-4" />
-                            Pagamento de Comissões
-                        </TabsTrigger>
-                        <TabsTrigger value="settings" className="flex-1 rounded-lg gap-2 data-[state=active]:bg-white">
-                            <Percent className="w-4 h-4" />
-                            Configurar Taxas
-                        </TabsTrigger>
-                    </div>
-                    <TabsTrigger value="online_payments" className="rounded-lg gap-2 data-[state=active]:bg-white data-[state=active]:text-indigo-600 min-w-[180px]">
-                        <Landmark className="w-4 h-4" />
-                        Pagamentos Online
+                <TabsList className="bg-slate-100 dark:bg-zinc-800 p-1 rounded-xl">
+                    <TabsTrigger value="commissions" className="flex-1 rounded-lg gap-2 data-[state=active]:bg-white">
+                        <Users className="w-4 h-4" />
+                        Pagamento de Comissões
+                    </TabsTrigger>
+                    <TabsTrigger value="settings" className="flex-1 rounded-lg gap-2 data-[state=active]:bg-white">
+                        <Percent className="w-4 h-4" />
+                        Configurar Taxas
                     </TabsTrigger>
                 </TabsList>
 
@@ -414,130 +389,6 @@ export default function FinancialPage() {
                             </CardContent>
                         </Card>
                     </div>
-                </TabsContent>
-
-                <TabsContent value="online_payments">
-                    {!isStripeConnected ? (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-                            <div className="space-y-6">
-                                <Badge className="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border-none">Pagamentos Automatizados</Badge>
-                                <h2 className="text-4xl font-black text-slate-900 tracking-tight">Receba enquanto dorme. Integrado com Stripe.</h2>
-                                <p className="text-lg text-slate-500 leading-relaxed">
-                                    Pare de cobrar manualmente no balcão. Com o Stripe Connect, seu cliente paga no agendamento e o dinheiro cai direto na sua conta bancária.
-                                </p>
-                                <ul className="space-y-4">
-                                    <li className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600"><CheckCircle2 className="w-5 h-5" /></div>
-                                        <span className="font-medium text-slate-700">Recebimento via Cartão de Crédito, Débito e Pix</span>
-                                    </li>
-                                    <li className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600"><Briefcase className="w-5 h-5" /></div>
-                                        <span className="font-medium text-slate-700">Split de Pagamento Automático (Salão / Profissional)</span>
-                                    </li>
-                                    <li className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600"><Wallet className="w-5 h-5" /></div>
-                                        <span className="font-medium text-slate-700">Saques diários para sua conta bancária</span>
-                                    </li>
-                                </ul>
-                                <div className="pt-4">
-                                    <Button
-                                        onClick={handleConnectStripe}
-                                        disabled={isConnecting}
-                                        className="h-14 px-8 rounded-full bg-[#635BFF] hover:bg-[#5851E1] text-white font-bold text-lg shadow-xl shadow-[#635BFF]/30 transition-all hover:scale-105"
-                                    >
-                                        {isConnecting ? (
-                                            <>
-                                                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                                                Conectando...
-                                            </>
-                                        ) : (
-                                            <>
-                                                Conectar com Stripe
-                                                <ArrowRight className="w-5 h-5 ml-2" />
-                                            </>
-                                        )}
-                                    </Button>
-                                    <p className="text-xs text-slate-400 mt-3 pl-2">Taxas a partir de 3.99% + R$ 0,39 por transação.</p>
-                                </div>
-                            </div>
-                            <div className="relative">
-                                {/* Decorative Mockup */}
-                                <div className="absolute inset-0 bg-gradient-to-tr from-[#635BFF]/20 to-transparent rounded-[3rem] blur-3xl -z-10" />
-                                <Card className="border-none shadow-2xl bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl p-8 rounded-[2rem] relative overflow-hidden">
-                                    {/* Mock Stripe Login */}
-                                    <div className="space-y-6">
-                                        <div className="flex items-center justify-between border-b pb-4">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-6 h-6 bg-[#635BFF] rounded-md flex items-center justify-center text-white font-black text-xs">S</div>
-                                                <span className="font-bold text-slate-900">Stripe</span>
-                                            </div>
-                                            <div className="text-xs text-slate-400">Ambiente Seguro</div>
-                                        </div>
-                                        <div className="space-y-4">
-                                            <div className="h-2 w-1/3 bg-slate-200 rounded animate-pulse" />
-                                            <div className="h-10 w-full bg-slate-100 rounded-lg animate-pulse" />
-                                            <div className="h-10 w-full bg-slate-100 rounded-lg animate-pulse" />
-                                            <div className="h-12 w-full bg-[#635BFF]/20 rounded-lg animate-pulse" />
-                                        </div>
-                                    </div>
-                                </Card>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="space-y-6">
-                            <Card className="bg-[#635BFF] text-white border-none shadow-2xl relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-16" />
-                                <CardHeader>
-                                    <div className="flex justify-between items-start z-10">
-                                        <div>
-                                            <Badge className="bg-white/20 hover:bg-white/30 text-white border-none mb-2">Conta Conectada</Badge>
-                                            <CardTitle className="text-3xl font-black">Saldo Disponível</CardTitle>
-                                        </div>
-                                        <Landmark className="w-8 h-8 text-white/80" />
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="z-10 relative">
-                                    <div className="text-5xl font-black tracking-tight mb-2">R$ 0,00</div>
-                                    <p className="text-white/60 text-sm">Próximo pagamento automático: Amanhã</p>
-                                </CardContent>
-                                <CardFooter className="bg-black/10 p-4 flex gap-4 z-10 relative">
-                                    <Button variant="secondary" className="flex-1 bg-white text-[#635BFF] hover:bg-white/90 border-none font-bold">
-                                        Ver no Dashboard Stripe
-                                    </Button>
-                                    <Button variant="outline" className="flex-1 border-white/30 text-white hover:bg-white/10 hover:text-white">
-                                        Configurações de Saque
-                                    </Button>
-                                </CardFooter>
-                            </Card>
-
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <Card>
-                                    <CardHeader className="pb-2">
-                                        <CardTitle className="text-sm text-slate-500">Volume Bruto (Mês)</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-2xl font-bold text-slate-900">R$ 0,00</div>
-                                    </CardContent>
-                                </Card>
-                                <Card>
-                                    <CardHeader className="pb-2">
-                                        <CardTitle className="text-sm text-slate-500">Taxas Stripe</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-2xl font-bold text-red-500">- R$ 0,00</div>
-                                    </CardContent>
-                                </Card>
-                                <Card>
-                                    <CardHeader className="pb-2">
-                                        <CardTitle className="text-sm text-slate-500">Líquido Estimado</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-2xl font-bold text-emerald-600">R$ 0,00</div>
-                                    </CardContent>
-                                </Card>
-                            </div>
-                        </div>
-                    )}
                 </TabsContent>
             </Tabs>
         </div>
