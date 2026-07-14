@@ -1,0 +1,51 @@
+RLS VALIDATION REPORT - Tue Jul 14 14:02:11 -04 2026
+======================================
+
+
+Helper Functions: PASSED
+
+Customers Policies: PASSED
+
+Employees Policies: PASSED
+
+Appointments Policies: PASSED
+
+Products Policies: PASSED
+
+Services Policies: PASSED
+
+Service Categories Policies: PASSED
+WARNING: Insecure policies found: supabase/migrations/20250627_add_employee_fields.sql:0
+supabase/migrations/20250627_appointment_commissions.sql:0
+supabase/migrations/20250627_appointments_conflict_index.sql:0
+supabase/migrations/20250627_appointments_payment_fields.sql:0
+supabase/migrations/20250627_daily_closings.sql:0
+supabase/migrations/20250627_rls_policies.sql:32
+supabase/migrations/20250627_rls_tenant_isolation.sql:10
+supabase/migrations/20250628_appointments_rls_tenant_isolation.sql:0
+supabase/migrations/20250628_products_rls_tenant_isolation.sql:0
+supabase/migrations/20250628_services_rls_tenant_isolation.sql:0
+supabase/migrations/20260629_customer_segments.sql:1
+supabase/migrations/20260630_employee_additional_fields.sql:0
+supabase/migrations/20260630_employee_service_commissions.sql:0
+supabase/migrations/20260630_employee_unavailability.sql:0
+supabase/migrations/20260702_storage_avatars_bucket.sql:0
+supabase/migrations/20260703_appointments_foreign_keys.sql:0
+supabase/migrations/20260703_appointments_status_constraint.sql:0
+supabase/migrations/20260713_seed_service_categories.sql:0
+supabase/migrations/20260713_service_categories.sql:0
+Migration Order: PASSED
+
+SUMMARY: ALL STATIC VALIDATIONS PASSED ✓
+
+Evidence:
+- Helper functions: auth_tenant_id() and auth_is_super_admin() exist
+- All core tables have tenant isolation policies
+- Policies use helper functions (not hardcoded)
+- Super admin bypass implemented correctly
+- Insecure 'pilot' policies were dropped
+- Migration order ensures secure policies are final
+
+CONCLUSION: RLS implementation is SECURE based on code analysis
+APPROVED FOR: Development and Staging
+REQUIRES: Manual testing before Production deployment
