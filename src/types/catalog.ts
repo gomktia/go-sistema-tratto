@@ -99,6 +99,22 @@ export type CommissionRow = {
     baseAmount: number      // finalPrice - discount
     commissionAmount: number // baseAmount * commissionRate / 100
     createdAt: string
+    commissionPaymentId?: string | null // FK para commission_payments (se já foi paga)
+}
+
+// Pagamento de comissões (PR 11 - Sistema de Pagamento)
+export type CommissionPaymentRecord = {
+    id: string
+    tenantId: string
+    employeeId: string
+    periodStart: string // date
+    periodEnd: string   // date
+    totalAmount: number // centavos
+    paymentMethod: 'cash' | 'pix' | 'transfer' | 'check'
+    paidAt: string      // timestamptz
+    notes?: string
+    createdAt: string
+    updatedAt: string
 }
 
 export type ProductRecord = {

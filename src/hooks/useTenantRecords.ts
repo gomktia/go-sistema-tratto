@@ -607,6 +607,62 @@ export function useTenantCommissions(tenantId?: string) {
                         baseAmount: r.base_amount,
                         commissionAmount: r.commission_amount,
                         createdAt: r.created_at,
+                        commissionPaymentId: r.commission_payment_id,
+                    })))
+                }
+                setLoading(false)
+            })
+
+        return () => { isMounted = false }
+    }, [tenantId, trigger])
+
+    return { data, loading, refetch }
+}
+
+// --------------------------------------------------------------------------
+// useTenantCommissionPayments — PR 11 (Sistema de Pagamento de Comissões)
+// --------------------------------------------------------------------------
+export function useTenantCommissionPayments(tenantId?: string) {
+    const [data, setData] = useState<import("@/types/catalog").CommissionPaymentRecord[]>([])
+    const [loading, setLoading] = useState<boolean>(isSupabaseConfigured && !!tenantId)
+    const [trigger, setTrigger] = useState(0)
+
+    const refetch = () => setTrigger(prev => prev + 1)
+
+    useEffect(() => {
+        const supabase = getSupabaseBrowserClient()
+        if (!isSupabaseConfigured || !supabase || !tenantId) {
+            setLoading(false)
+            setData([])
+            return
+        }
+
+        let isMounted = true
+        setLoading(true)
+
+        supabase
+            .from("commission_payments")
+            .select("*")
+            .eq("tenant_id", tenantId)
+            .order("paid_at", { ascending: false })
+            .then(({ data: rows, error }) => {
+                if (!isMounted) return
+                if (error) {
+                    console.error("[useTenantCommissionPayments] Erro ao carregar pagamentos:", error.message)
+                    setData([])
+                } else {
+                    setData((rows ?? []).map(r => ({
+                        id: r.id,
+                        tenantId: r.tenant_id,
+                        employeeId: r.employee_id,
+                        periodStart: r.period_start,
+                        periodEnd: r.period_end,
+                        totalAmount: r.total_amount,
+                        paymentMethod: r.payment_method,
+                        paidAt: r.paid_at,
+                        notes: r.notes,
+                        createdAt: r.created_at,
+                        updatedAt: r.updated_at,
                     })))
                 }
                 setLoading(false)
