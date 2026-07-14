@@ -45,26 +45,32 @@ const mapMockCombo = (combo: typeof comboMocks[number]): ComboRecord => ({
 // --------------------------------------------------------------------------
 
 // Appointments (with relational data from customers and services)
-const mapRowToAppointment = (row: any): AppointmentRecord => ({
-    id: row.id,
-    tenantId: row.tenant_id,
-    serviceId: row.service_id ?? undefined,
-    employeeId: row.employee_id ?? undefined,
-    customerId: row.customer_id ?? undefined,
-    customerName: row.customers?.full_name ?? undefined,
-    serviceName: row.services?.name ?? undefined,
-    startAt: row.start_at,
-    endAt: row.end_at ?? undefined,
-    durationMinutes: row.duration_minutes ?? undefined,
-    price: row.price ?? undefined,
-    currency: row.currency ?? "BRL",
-    channel: row.channel ?? undefined,
-    status: row.status,
-    notes: row.notes ?? undefined,
-    finalPrice: row.final_price ?? undefined,
-    discount: row.discount ?? undefined,
-    paymentMethod: row.payment_method ?? undefined,
-})
+const mapRowToAppointment = (row: any, closedDates?: Set<string>): AppointmentRecord => {
+    const appointmentDate = row.start_at ? row.start_at.split('T')[0] : null
+    const isBlocked = !!(closedDates && appointmentDate && closedDates.has(appointmentDate))
+
+    return {
+        id: row.id,
+        tenantId: row.tenant_id,
+        serviceId: row.service_id ?? undefined,
+        employeeId: row.employee_id ?? undefined,
+        customerId: row.customer_id ?? undefined,
+        customerName: row.customers?.full_name ?? undefined,
+        serviceName: row.services?.name ?? undefined,
+        startAt: row.start_at,
+        endAt: row.end_at ?? undefined,
+        durationMinutes: row.duration_minutes ?? undefined,
+        price: row.price ?? undefined,
+        currency: row.currency ?? "BRL",
+        channel: row.channel ?? undefined,
+        status: row.status,
+        notes: row.notes ?? undefined,
+        finalPrice: row.final_price ?? undefined,
+        discount: row.discount ?? undefined,
+        paymentMethod: row.payment_method ?? undefined,
+        isBlocked,
+    }
+}
 
 // Customers
 const mapRowToClient = (row: any): ClientRecord => ({
@@ -166,29 +172,50 @@ export function useTenantAppointments(tenantId?: string) {
         let isMounted = true
         setLoading(true)
 
-        // Relational query: join customers and services for names
-        supabase
-            .from("appointments")
-            .select(`
-                id, tenant_id, service_id, employee_id, customer_id,
-                start_at, end_at, duration_minutes,
-                price, currency, channel, status, notes,
-                final_price, discount, payment_method,
-                customers(full_name),
-                services(name)
-            `)
-            .eq("tenant_id", tenantId)
-            .order("start_at", { ascending: true })
-            .then(({ data: rows, error }) => {
-                if (!isMounted) return
-                if (error) {
-                    console.error("[useTenantAppointments] Erro ao carregar agendamentos:", error.message)
-                    setData([])
-                } else {
-                    setData(rows ? rows.map(mapRowToAppointment) : [])
-                }
-                setLoading(false)
-            })
+        // Buscar fechamentos e appointments em paralelo
+        Promise.all([
+            // 1. Buscar fechamentos fechados (status='closed')
+            supabase
+                .from("daily_closings")
+                .select("closing_date")
+                .eq("tenant_id", tenantId)
+                .eq("status", "closed"),
+
+            // 2. Buscar appointments com relações
+            supabase
+                .from("appointments")
+                .select(`
+                    id, tenant_id, service_id, employee_id, customer_id,
+                    start_at, end_at, duration_minutes,
+                    price, currency, channel, status, notes,
+                    final_price, discount, payment_method,
+                    customers(full_name),
+                    services(name)
+                `)
+                .eq("tenant_id", tenantId)
+                .order("start_at", { ascending: true })
+        ]).then(([closingsResult, appointmentsResult]) => {
+            if (!isMounted) return
+
+            // Criar Set de datas fechadas para lookup rápido
+            const closedDates = new Set<string>()
+            if (closingsResult.data) {
+                closingsResult.data.forEach(c => closedDates.add(c.closing_date))
+            }
+
+            if (appointmentsResult.error) {
+                console.error("[useTenantAppointments] Erro ao carregar agendamentos:", appointmentsResult.error.message)
+                setData([])
+            } else {
+                setData(appointmentsResult.data ? appointmentsResult.data.map(row => mapRowToAppointment(row, closedDates)) : [])
+            }
+            setLoading(false)
+        }).catch(err => {
+            if (!isMounted) return
+            console.error("[useTenantAppointments] Erro ao carregar dados:", err)
+            setData([])
+            setLoading(false)
+        })
 
         return () => { isMounted = false }
     }, [tenantId, trigger])

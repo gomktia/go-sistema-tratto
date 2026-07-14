@@ -83,6 +83,8 @@ export type AppointmentRecord = {
     finalPrice?: number
     discount?: number
     paymentMethod?: string
+    // Bloqueio por fechamento diário (PR 5.1)
+    isBlocked?: boolean
 }
 
 // Comissão por atendimento (PR 4)

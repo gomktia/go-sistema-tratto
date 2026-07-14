@@ -37,9 +37,11 @@ export function NewAppointmentModal({ isOpen, onClose, onSuccess, tenantId, appo
     const [conflictError, setConflictError] = useState<string | null>(null)
     const [appointmentType, setAppointmentType] = useState<AppointmentType>("appointment")
     const [formData, setFormData] = useState(getDefaultFormData())
+    const [closedDates, setClosedDates] = useState<Set<string>>(new Set())
 
     const isBlocked = appointmentType === "blocked"
     const isEditing = Boolean(appointment)
+    const isDateClosed = closedDates.has(formData.date)
 
     const isSubmitDisabled =
         loading ||
@@ -47,11 +49,31 @@ export function NewAppointmentModal({ isOpen, onClose, onSuccess, tenantId, appo
         !formData.date ||
         !formData.time ||
         (isBlocked && !formData.notes.trim()) ||
-        (!isBlocked && (!formData.customerId || !formData.serviceId))
+        (!isBlocked && (!formData.customerId || !formData.serviceId)) ||
+        isDateClosed
 
     const { data: customers } = useTenantCustomers(tenantId)
     const { data: services } = useTenantServices(tenantId)
     const { data: employees } = useTenantEmployees(tenantId)
+
+    // Buscar datas fechadas ao abrir modal
+    useEffect(() => {
+        if (!isOpen || !tenantId) return
+
+        const supabase = getSupabaseBrowserClient()
+        if (!supabase) return
+
+        supabase
+            .from("daily_closings")
+            .select("closing_date")
+            .eq("tenant_id", tenantId)
+            .eq("status", "closed")
+            .then(({ data }) => {
+                if (data) {
+                    setClosedDates(new Set(data.map(c => c.closing_date)))
+                }
+            })
+    }, [isOpen, tenantId])
 
     useEffect(() => {
         if (!isOpen) {
@@ -79,6 +101,13 @@ export function NewAppointmentModal({ isOpen, onClose, onSuccess, tenantId, appo
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+
+        // Bloquear se dia estiver fechado
+        if (isDateClosed) {
+            alert("Dia fechado. Reabra o fechamento para criar/editar agendamentos.")
+            return
+        }
+
         setLoading(true)
 
         try {
@@ -347,6 +376,12 @@ export function NewAppointmentModal({ isOpen, onClose, onSuccess, tenantId, appo
                     {conflictError && (
                         <p className="text-sm font-medium text-red-500 rounded-lg bg-red-50 px-3 py-2">
                             {conflictError}
+                        </p>
+                    )}
+
+                    {isDateClosed && (
+                        <p className="text-sm font-medium text-amber-700 rounded-lg bg-amber-50 px-3 py-2 border border-amber-200">
+                            ⚠️ Dia fechado. Reabra o fechamento para criar/editar agendamentos.
                         </p>
                     )}
 

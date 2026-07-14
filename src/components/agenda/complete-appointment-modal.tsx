@@ -66,11 +66,19 @@ export function CompleteAppointmentModal({
         loading ||
         !paymentMethod ||
         parsedFinalPrice < 0 ||
-        parsedDiscount < 0
+        parsedDiscount < 0 ||
+        appointment?.isBlocked
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!appointment) return
+
+        // Bloquear se dia estiver fechado
+        if (appointment.isBlocked) {
+            alert("Dia fechado. Reabra o fechamento para concluir agendamentos.")
+            return
+        }
+
         setLoading(true)
 
         try {
