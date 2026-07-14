@@ -10,7 +10,8 @@ import type { EmployeeRecord, AppointmentRecord, ServiceRecord } from "@/types/c
 import type { GridSize } from "@/types/agenda"
 import { ROW_HEIGHTS, COLUMN_WIDTHS } from "@/types/agenda"
 
-// Generate time slots from 08:00 to 20:00
+// Generate time slots from 08:00 to 20:00 (13 slots total)
+// Trinks vai de 8h até 18h, mas deixamos até 20h para flexibilidade
 const timeSlots = Array.from({ length: 13 }, (_, i) => i + 8)
 
 type AppointmentView = AppointmentRecord & {
@@ -108,7 +109,7 @@ export const AgendaGrid = memo(function AgendaGrid({
         : -100
 
     return (
-        <div className="flex-1 flex overflow-hidden touch-pan-x">
+        <div className="flex-1 flex overflow-y-auto overflow-x-hidden touch-pan-x">
             {/* Coluna de horários - Escondida em mobile */}
             {!isMobileView && (
                 <div
