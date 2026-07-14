@@ -3,6 +3,7 @@
 import { useMemo, memo } from "react"
 import { format, isSameDay } from "date-fns"
 import { motion, AnimatePresence } from "framer-motion"
+import { Lock } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import type { EmployeeRecord, AppointmentRecord, ServiceRecord } from "@/types/catalog"
@@ -232,18 +233,20 @@ export const AgendaGrid = memo(function AgendaGrid({
                                                 <motion.div
                                                     key={apt.id}
                                                     initial={{ scale: 0.9, opacity: 0 }}
-                                                    animate={{ scale: 1, opacity: 1 }}
-                                                    whileHover={{ scale: 1.02, y: -2 }}
-                                                    whileTap={{ scale: 0.98 }}
+                                                    animate={{ scale: 1, opacity: apt.isBlocked ? 0.6 : 1 }}
+                                                    whileHover={apt.isBlocked ? {} : { scale: 1.02, y: -2 }}
+                                                    whileTap={apt.isBlocked ? {} : { scale: 0.98 }}
                                                     className={cn(
-                                                        "absolute left-1 right-1 sm:left-2 sm:right-2 rounded-lg sm:rounded-xl overflow-hidden shadow-lg cursor-pointer group active:shadow-xl touch-manipulation",
+                                                        "absolute left-1 right-1 sm:left-2 sm:right-2 rounded-lg sm:rounded-xl overflow-hidden shadow-lg group active:shadow-xl touch-manipulation",
+                                                        apt.isBlocked ? "cursor-not-allowed" : "cursor-pointer",
                                                         isHighlighted && "ring-2 ring-yellow-400 ring-offset-2"
                                                     )}
-                                                    onClick={() => onAppointmentClick?.(apt)}
+                                                    onClick={() => !apt.isBlocked && onAppointmentClick?.(apt)}
+                                                    title={apt.isBlocked ? "Dia fechado. Reabra o fechamento para editar." : undefined}
                                                     style={{
                                                         top: layout.top,
                                                         height: layout.height,
-                                                        minHeight: '44px', // Touch target mínimo
+                                                        minHeight: '44px',
                                                         zIndex: isHighlighted ? 10 : 5,
                                                     }}
                                                 >
@@ -254,7 +257,8 @@ export const AgendaGrid = memo(function AgendaGrid({
 
                                                     <div className="relative h-full flex flex-col p-2 sm:p-3 text-white">
                                                         <div className="flex items-center justify-between gap-1 sm:gap-2 mb-0.5 sm:mb-1">
-                                                            <span className="text-[10px] sm:text-xs font-bold">
+                                                            <span className="text-[10px] sm:text-xs font-bold flex items-center gap-1">
+                                                                {apt.isBlocked && <Lock className="w-3 h-3" />}
                                                                 {startLabel} - {endLabel}
                                                             </span>
                                                             <Badge
@@ -275,46 +279,48 @@ export const AgendaGrid = memo(function AgendaGrid({
                                                         </p>
 
                                                         {/* Botões de ação (aparecem no hover em telas maiores) */}
-                                                        <div className="flex flex-wrap gap-1 mt-auto pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            {apt.status === 'pending' && (
-                                                                <button
-                                                                    onClick={e => {
-                                                                        e.stopPropagation()
-                                                                        onUpdateStatus?.(apt.id, 'confirmed')
-                                                                    }}
-                                                                    className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#64A500]/20 hover:bg-[#64A500]/40 transition-colors"
-                                                                    style={{ color: '#64A500' }}
-                                                                >
-                                                                    Confirmar
-                                                                </button>
-                                                            )}
+                                                        {!apt.isBlocked && (
+                                                            <div className="flex flex-wrap gap-1 mt-auto pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                {apt.status === 'pending' && (
+                                                                    <button
+                                                                        onClick={e => {
+                                                                            e.stopPropagation()
+                                                                            onUpdateStatus?.(apt.id, 'confirmed')
+                                                                        }}
+                                                                        className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#64A500]/20 hover:bg-[#64A500]/40 transition-colors"
+                                                                        style={{ color: '#64A500' }}
+                                                                    >
+                                                                        Confirmar
+                                                                    </button>
+                                                                )}
 
-                                                            {apt.status === 'confirmed' && (
-                                                                <button
-                                                                    onClick={e => {
-                                                                        e.stopPropagation()
-                                                                        onUpdateStatus?.(apt.id, 'in_progress')
-                                                                    }}
-                                                                    className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#65DDC8]/20 hover:bg-[#65DDC8]/40 transition-colors"
-                                                                    style={{ color: '#65DDC8' }}
-                                                                >
-                                                                    Iniciar
-                                                                </button>
-                                                            )}
+                                                                {apt.status === 'confirmed' && (
+                                                                    <button
+                                                                        onClick={e => {
+                                                                            e.stopPropagation()
+                                                                            onUpdateStatus?.(apt.id, 'in_progress')
+                                                                        }}
+                                                                        className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#65DDC8]/20 hover:bg-[#65DDC8]/40 transition-colors"
+                                                                        style={{ color: '#65DDC8' }}
+                                                                    >
+                                                                        Iniciar
+                                                                    </button>
+                                                                )}
 
-                                                            {apt.status === 'in_progress' && (
-                                                                <button
-                                                                    onClick={e => {
-                                                                        e.stopPropagation()
-                                                                        onUpdateStatus?.(apt.id, 'completed')
-                                                                    }}
-                                                                    className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#88B2D5]/20 hover:bg-[#88B2D5]/40 transition-colors"
-                                                                    style={{ color: '#88B2D5' }}
-                                                                >
-                                                                    Finalizar
-                                                                </button>
-                                                            )}
-                                                        </div>
+                                                                {apt.status === 'in_progress' && (
+                                                                    <button
+                                                                        onClick={e => {
+                                                                            e.stopPropagation()
+                                                                            onUpdateStatus?.(apt.id, 'completed')
+                                                                        }}
+                                                                        className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#88B2D5]/20 hover:bg-[#88B2D5]/40 transition-colors"
+                                                                        style={{ color: '#88B2D5' }}
+                                                                    >
+                                                                        Finalizar
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </motion.div>
                                             )
