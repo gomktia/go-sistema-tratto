@@ -14,7 +14,9 @@ import {
     Users,
     Percent,
     AlertCircle,
-    Wallet
+    Wallet,
+    History,
+    CheckCircle
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -22,22 +24,39 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useTenantBySlug, useTenantEmployees, useTenantCommissions, useTenantAppointments } from "@/hooks/useTenantRecords"
+import { useTenantBySlug, useTenantEmployees, useTenantCommissions, useTenantAppointments, useTenantCommissionPayments, useTenantDailyClosings } from "@/hooks/useTenantRecords"
 import { formatCurrency } from "@/lib/utils"
 import { toast } from "sonner"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import type { CommissionPaymentRecord } from "@/types/catalog"
 
 type PeriodFilter = 'today' | 'week' | 'month'
+type PaymentMethod = 'cash' | 'pix' | 'transfer' | 'check'
 
 export default function FinancialPage() {
     const params = useParams()
     const tenantSlug = params.tenantSlug as string
     const { data: tenant } = useTenantBySlug(tenantSlug)
     const { data: employees } = useTenantEmployees(tenant?.id)
-    const { data: commissionRows } = useTenantCommissions(tenant?.id)
+    const { data: commissionRows, refetch: refetchCommissions } = useTenantCommissions(tenant?.id)
     const { data: allAppointments } = useTenantAppointments(tenant?.id)
+    const { data: commissionPayments, refetch: refetchPayments } = useTenantCommissionPayments(tenant?.id)
+    const { data: dailyClosings } = useTenantDailyClosings(tenant?.id)
 
-    // --- FILTRO DE PERÍODO ---
+    // --- FILTRO DE PERÍODO (STATS) ---
     const [selectedPeriod, setSelectedPeriod] = useState<PeriodFilter>('month')
+
+    // --- FILTRO DE PERÍODO (COMISSÕES) ---
+    const [commissionPeriod, setCommissionPeriod] = useState<PeriodFilter>('month')
+    const [showPaidCommissions, setShowPaidCommissions] = useState(false)
+
+    // --- MODAL DE PAGAMENTO ---
+    const [paymentModalOpen, setPaymentModalOpen] = useState(false)
+    const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null)
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pix')
+    const [paymentNotes, setPaymentNotes] = useState('')
+    const [paymentProcessing, setPaymentProcessing] = useState(false)
 
     // --- CONFIGURAÇÕES DE COMISSÃO (Estado Local Mockado) ---
     const [settings, setSettings] = useState({
@@ -120,28 +139,161 @@ export default function FinancialPage() {
         }
     }, [allAppointments, commissionRows, selectedPeriod])
 
-    // --- COMISSÕES PERSISTIDAS (appointment_commissions) ---
-    const commissions = employees.flatMap(emp => {
-        const rows = commissionRows.filter(r => r.employeeId === emp.id)
-        if (rows.length === 0) return []
-        const grossValue       = rows.reduce((sum, r) => sum + r.finalPrice, 0)
-        const deductions       = rows.reduce((sum, r) => sum + r.discount, 0)
-        const baseValue        = rows.reduce((sum, r) => sum + r.baseAmount, 0)
-        const commissionAmount = rows.reduce((sum, r) => sum + r.commissionAmount, 0)
-        const rate             = rows[0]?.commissionRate ?? 0
-        return [{
-            id: emp.id,
-            name: emp.fullName,
-            totalServices: rows.length,
-            grossValue,          // final_price acumulado
-            deductions,          // discount acumulado
-            baseValue,           // base_amount acumulado (grossValue - deductions)
-            commissionRate: rate / 100,
-            finalValue: commissionAmount,
-            status: commissionAmount > 0 ? 'pending' : 'paid',
-        }]
-    })
+    // --- COMISSÕES FILTRADAS POR PERÍODO E STATUS ---
+    const commissions = useMemo(() => {
+        const { start, end } = getPeriodDates(commissionPeriod)
 
+        return employees.flatMap(emp => {
+            // Filtrar comissões do profissional no período
+            const rows = commissionRows.filter(r => {
+                if (r.employeeId !== emp.id) return false
+                const commDate = new Date(r.createdAt)
+                const inPeriod = commDate >= start && commDate <= end
+
+                // Filtrar por status de pagamento
+                const isPaid = !!r.commissionPaymentId
+                if (!showPaidCommissions && isPaid) return false // Ocultar pagas
+                if (showPaidCommissions && !isPaid) return false // Mostrar só pagas
+
+                return inPeriod
+            })
+
+            if (rows.length === 0) return []
+
+            const grossValue       = rows.reduce((sum, r) => sum + r.finalPrice, 0)
+            const deductions       = rows.reduce((sum, r) => sum + r.discount, 0)
+            const baseValue        = rows.reduce((sum, r) => sum + r.baseAmount, 0)
+            const commissionAmount = rows.reduce((sum, r) => sum + r.commissionAmount, 0)
+            const rate             = rows[0]?.commissionRate ?? 0
+            const isPaid           = rows.every(r => !!r.commissionPaymentId)
+
+            return [{
+                id: emp.id,
+                name: emp.fullName,
+                totalServices: rows.length,
+                grossValue,
+                deductions,
+                baseValue,
+                commissionRate: rate / 100,
+                finalValue: commissionAmount,
+                isPaid,
+            }]
+        })
+    }, [employees, commissionRows, commissionPeriod, showPaidCommissions])
+
+    // --- VALIDAÇÃO DE FECHAMENTO DIÁRIO ---
+    const isPeriodClosed = useMemo(() => {
+        const { start, end } = getPeriodDates(commissionPeriod)
+
+        // Verificar se TODOS os dias do período estão fechados
+        const closedDatesSet = new Set(dailyClosings.map(c => c.closingDate))
+
+        // Iterar por cada dia do período
+        let currentDate = new Date(start)
+        while (currentDate <= end) {
+            const dateStr = currentDate.toISOString().split('T')[0]
+            if (!closedDatesSet.has(dateStr)) {
+                return false // Dia não fechado encontrado
+            }
+            currentDate.setDate(currentDate.getDate() + 1)
+        }
+
+        return true // Todos os dias estão fechados
+    }, [commissionPeriod, dailyClosings])
+
+    // --- PROCESSAR PAGAMENTO DE COMISSÃO ---
+    const handlePayCommission = async (employeeId: string, employeeName: string) => {
+        if (!isPeriodClosed) {
+            toast.error("Período não fechado", {
+                description: "Feche todos os dias do período antes de pagar comissões."
+            })
+            return
+        }
+
+        setSelectedEmployee(employeeId)
+        setPaymentModalOpen(true)
+    }
+
+    const confirmPayment = async () => {
+        if (!selectedEmployee || !tenant?.id) return
+
+        setPaymentProcessing(true)
+
+        try {
+            const supabase = await import("@/lib/supabase/client").then(m => m.getSupabaseBrowserClient())
+            if (!supabase) throw new Error("Supabase client not available")
+
+            const { start, end } = getPeriodDates(commissionPeriod)
+            const periodStart = start.toISOString().split('T')[0]
+            const periodEnd = end.toISOString().split('T')[0]
+
+            // Buscar comissões não pagas do profissional no período
+            const unpaidCommissions = commissionRows.filter(r => {
+                if (r.employeeId !== selectedEmployee) return false
+                if (r.commissionPaymentId) return false // Já paga
+                const commDate = new Date(r.createdAt)
+                return commDate >= start && commDate <= end
+            })
+
+            if (unpaidCommissions.length === 0) {
+                toast.error("Nenhuma comissão pendente", {
+                    description: "Todas as comissões deste profissional já foram pagas."
+                })
+                setPaymentProcessing(false)
+                return
+            }
+
+            const totalAmount = unpaidCommissions.reduce((sum, r) => sum + r.commissionAmount, 0)
+
+            // 1. Criar registro de pagamento
+            const { data: payment, error: paymentError } = await supabase
+                .from("commission_payments")
+                .insert({
+                    tenant_id: tenant.id,
+                    employee_id: selectedEmployee,
+                    period_start: periodStart,
+                    period_end: periodEnd,
+                    total_amount: totalAmount,
+                    payment_method: paymentMethod,
+                    notes: paymentNotes || null,
+                })
+                .select()
+                .single()
+
+            if (paymentError) throw paymentError
+
+            // 2. Atualizar comissões para linkar ao pagamento
+            const commissionIds = unpaidCommissions.map(r => r.id)
+            const { error: updateError } = await supabase
+                .from("appointment_commissions")
+                .update({ commission_payment_id: payment.id })
+                .in("id", commissionIds)
+
+            if (updateError) throw updateError
+
+            toast.success("Pagamento registrado!", {
+                description: `${formatCurrency(totalAmount)} pago via ${paymentMethod}.`
+            })
+
+            // Resetar e fechar modal
+            setPaymentModalOpen(false)
+            setSelectedEmployee(null)
+            setPaymentMethod('pix')
+            setPaymentNotes('')
+
+            // Refetch data
+            refetchCommissions()
+            refetchPayments()
+
+        } catch (error) {
+            console.error("Erro ao processar pagamento:", error)
+            toast.error("Erro ao processar pagamento", {
+                description: error instanceof Error ? error.message : "Erro desconhecido"
+            })
+        } finally {
+            setPaymentProcessing(false)
+        }
+    }
 
     return (
         <div className="space-y-8 p-8 max-w-[1600px] mx-auto pb-32">
@@ -229,12 +381,16 @@ export default function FinancialPage() {
             </div>
 
             <Tabs defaultValue="commissions" className="space-y-6">
-                <TabsList className="bg-slate-100 dark:bg-zinc-800 p-1 rounded-xl">
-                    <TabsTrigger value="commissions" className="flex-1 rounded-lg gap-2 data-[state=active]:bg-white">
+                <TabsList className="bg-slate-100 dark:bg-zinc-800 p-1 rounded-xl flex-wrap">
+                    <TabsTrigger value="commissions" className="flex-1 min-w-[180px] rounded-lg gap-2 data-[state=active]:bg-white">
                         <Users className="w-4 h-4" />
                         Pagamento de Comissões
                     </TabsTrigger>
-                    <TabsTrigger value="settings" className="flex-1 rounded-lg gap-2 data-[state=active]:bg-white">
+                    <TabsTrigger value="history" className="flex-1 min-w-[180px] rounded-lg gap-2 data-[state=active]:bg-white">
+                        <History className="w-4 h-4" />
+                        Histórico de Pagamentos
+                    </TabsTrigger>
+                    <TabsTrigger value="settings" className="flex-1 min-w-[180px] rounded-lg gap-2 data-[state=active]:bg-white">
                         <Percent className="w-4 h-4" />
                         Configurar Taxas
                     </TabsTrigger>
@@ -243,8 +399,8 @@ export default function FinancialPage() {
                 <TabsContent value="commissions">
                     <Card className="border-none shadow-lg bg-white dark:bg-zinc-900">
                         <CardHeader>
-                            <div className="flex justify-between items-center">
-                                <div>
+                            <div className="flex justify-between items-start gap-4">
+                                <div className="flex-1">
                                     <CardTitle>Fechamento de Comissões</CardTitle>
                                     <CardDescription>Comissões calculadas no fechamento de cada atendimento e persistidas no banco.</CardDescription>
                                 </div>
@@ -252,6 +408,59 @@ export default function FinancialPage() {
                                     <AlertCircle className="w-3 h-3" />
                                     Cálculo: (Valor Final - Desconto) x % Profissional
                                 </Badge>
+                            </div>
+
+                            {/* Filtros de Comissões */}
+                            <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t">
+                                <div className="flex items-center gap-2">
+                                    <Label className="text-xs text-slate-600">Período:</Label>
+                                    <div className="flex items-center gap-1 bg-slate-100 dark:bg-zinc-800 p-1 rounded-lg">
+                                        <Button
+                                            size="sm"
+                                            variant={commissionPeriod === 'today' ? 'default' : 'ghost'}
+                                            onClick={() => setCommissionPeriod('today')}
+                                            className="h-7 text-xs"
+                                        >
+                                            Hoje
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            variant={commissionPeriod === 'week' ? 'default' : 'ghost'}
+                                            onClick={() => setCommissionPeriod('week')}
+                                            className="h-7 text-xs"
+                                        >
+                                            Semana
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            variant={commissionPeriod === 'month' ? 'default' : 'ghost'}
+                                            onClick={() => setCommissionPeriod('month')}
+                                            className="h-7 text-xs"
+                                        >
+                                            Mês
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    <Label htmlFor="show-paid" className="text-xs text-slate-600 cursor-pointer">
+                                        Exibir pagas:
+                                    </Label>
+                                    <input
+                                        id="show-paid"
+                                        type="checkbox"
+                                        checked={showPaidCommissions}
+                                        onChange={(e) => setShowPaidCommissions(e.target.checked)}
+                                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300 cursor-pointer"
+                                    />
+                                </div>
+
+                                {!isPeriodClosed && (
+                                    <Badge variant="destructive" className="gap-1">
+                                        <AlertCircle className="w-3 h-3" />
+                                        Período não fechado
+                                    </Badge>
+                                )}
                             </div>
                         </CardHeader>
                         <CardContent>
@@ -299,15 +508,108 @@ export default function FinancialPage() {
                                                     {formatCurrency(comm.finalValue)}
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
-                                                    <Button size="sm" className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white">
-                                                        Pagar
-                                                    </Button>
+                                                    {comm.isPaid ? (
+                                                        <Badge className="bg-slate-200 text-slate-600">
+                                                            ✓ Pago
+                                                        </Badge>
+                                                    ) : (
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={() => handlePayCommission(comm.id, comm.name)}
+                                                            disabled={!isPeriodClosed}
+                                                            className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            title={!isPeriodClosed ? "Feche o período antes de pagar" : "Pagar comissão"}
+                                                        >
+                                                            Pagar
+                                                        </Button>
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
                             </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="history">
+                    <Card className="border-none shadow-lg bg-white dark:bg-zinc-900">
+                        <CardHeader>
+                            <CardTitle>Histórico de Pagamentos</CardTitle>
+                            <CardDescription>Registro de todos os pagamentos de comissões realizados.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="rounded-xl border border-slate-100 dark:border-zinc-800 overflow-hidden">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="bg-slate-50 dark:bg-zinc-800/50 text-slate-500 font-medium text-xs uppercase tracking-wider">
+                                        <tr>
+                                            <th className="px-6 py-4">Data</th>
+                                            <th className="px-6 py-4">Profissional</th>
+                                            <th className="px-6 py-4">Período</th>
+                                            <th className="px-6 py-4">Valor</th>
+                                            <th className="px-6 py-4">Método</th>
+                                            <th className="px-6 py-4">Observações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+                                        {commissionPayments.length === 0 && (
+                                            <tr>
+                                                <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
+                                                    Nenhum pagamento registrado ainda.
+                                                </td>
+                                            </tr>
+                                        )}
+                                        {commissionPayments.map((payment) => {
+                                            const employee = employees.find(e => e.id === payment.employeeId)
+                                            const methodLabels: Record<PaymentMethod, string> = {
+                                                pix: 'PIX',
+                                                transfer: 'Transferência',
+                                                cash: 'Dinheiro',
+                                                check: 'Cheque'
+                                            }
+
+                                            return (
+                                                <tr key={payment.id} className="hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors">
+                                                    <td className="px-6 py-4 text-slate-900 dark:text-white">
+                                                        {new Date(payment.paidAt).toLocaleDateString('pt-BR')}
+                                                    </td>
+                                                    <td className="px-6 py-4 font-semibold text-slate-900 dark:text-white">
+                                                        {employee?.fullName || 'Profissional não encontrado'}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-slate-600 text-xs">
+                                                        {new Date(payment.periodStart).toLocaleDateString('pt-BR')} até{' '}
+                                                        {new Date(payment.periodEnd).toLocaleDateString('pt-BR')}
+                                                    </td>
+                                                    <td className="px-6 py-4 font-bold text-emerald-600">
+                                                        {formatCurrency(payment.totalAmount)}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                                                            {methodLabels[payment.paymentMethod]}
+                                                        </Badge>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-slate-500 text-xs">
+                                                        {payment.notes || '-'}
+                                                    </td>
+                                                </tr>
+                                            )
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {commissionPayments.length > 0 && (
+                                <div className="mt-4 flex items-center justify-between text-sm text-slate-500">
+                                    <div className="flex items-center gap-2">
+                                        <CheckCircle className="w-4 h-4 text-emerald-600" />
+                                        <span>{commissionPayments.length} pagamento(s) registrado(s)</span>
+                                    </div>
+                                    <div className="font-bold text-slate-900 dark:text-white">
+                                        Total pago: {formatCurrency(commissionPayments.reduce((sum, p) => sum + p.totalAmount, 0))}
+                                    </div>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </TabsContent>
@@ -391,6 +693,106 @@ export default function FinancialPage() {
                     </div>
                 </TabsContent>
             </Tabs>
+
+            {/* Modal de Confirmação de Pagamento */}
+            <Dialog open={paymentModalOpen} onOpenChange={setPaymentModalOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Confirmar Pagamento de Comissão</DialogTitle>
+                        <DialogDescription>
+                            Registre o pagamento das comissões do período selecionado.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="payment-employee" className="text-sm font-medium">
+                                Profissional
+                            </Label>
+                            <Input
+                                id="payment-employee"
+                                value={employees.find(e => e.id === selectedEmployee)?.fullName || ''}
+                                disabled
+                                className="bg-slate-50"
+                            />
+                        </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="payment-period" className="text-sm font-medium">
+                                Período
+                            </Label>
+                            <Input
+                                id="payment-period"
+                                value={`${commissionPeriod === 'today' ? 'Hoje' : commissionPeriod === 'week' ? 'Esta Semana' : 'Este Mês'}`}
+                                disabled
+                                className="bg-slate-50"
+                            />
+                        </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="payment-total" className="text-sm font-medium">
+                                Valor Total
+                            </Label>
+                            <Input
+                                id="payment-total"
+                                value={formatCurrency(commissions.find(c => c.id === selectedEmployee)?.finalValue || 0)}
+                                disabled
+                                className="bg-slate-50 font-bold text-emerald-600"
+                            />
+                        </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="payment-method" className="text-sm font-medium">
+                                Método de Pagamento *
+                            </Label>
+                            <Select value={paymentMethod} onValueChange={(val) => setPaymentMethod(val as PaymentMethod)}>
+                                <SelectTrigger id="payment-method">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="pix">PIX</SelectItem>
+                                    <SelectItem value="transfer">Transferência Bancária</SelectItem>
+                                    <SelectItem value="cash">Dinheiro</SelectItem>
+                                    <SelectItem value="check">Cheque</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="payment-notes" className="text-sm font-medium">
+                                Observações (opcional)
+                            </Label>
+                            <textarea
+                                id="payment-notes"
+                                rows={3}
+                                value={paymentNotes}
+                                onChange={(e) => setPaymentNotes(e.target.value)}
+                                placeholder="Ex: Comprovante #12345"
+                                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                            />
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setPaymentModalOpen(false)}
+                            disabled={paymentProcessing}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={confirmPayment}
+                            disabled={paymentProcessing}
+                            className="bg-emerald-600 hover:bg-emerald-700"
+                        >
+                            {paymentProcessing ? "Processando..." : "Confirmar Pagamento"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }
