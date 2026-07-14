@@ -65,13 +65,13 @@ export const AgendaHeader = memo(function AgendaHeader({
                     <ChevronLeft className="h-4 w-4" />
                 </Button>
 
-                <div className="min-w-[200px] text-center">
-                    <span className="text-sm font-bold">
-                        {format(currentDate, "d 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                    </span>
-                    <span className="text-xs text-muted-foreground ml-1.5">
+                <div className="min-w-[140px] text-center">
+                    <div className="text-sm font-bold leading-tight">
+                        {format(currentDate, "d MMM yyyy", { locale: ptBR })}
+                    </div>
+                    <div className="text-xs text-muted-foreground leading-tight capitalize">
                         {format(currentDate, "EEEE", { locale: ptBR })}
-                    </span>
+                    </div>
                 </div>
 
                 <Button
