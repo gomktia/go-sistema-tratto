@@ -111,13 +111,7 @@ export const AgendaGrid = memo(function AgendaGrid({
                 className="border-r border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/50 sticky left-0 z-20"
                 style={{ width: '80px' }}
             >
-                <div
-                    className="h-16 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-center"
-                >
-                    <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                        Horários
-                    </span>
-                </div>
+                <div className="h-14 border-b border-slate-200 dark:border-zinc-800" />
                 <div className="overflow-y-auto">
                     {timeSlots.map(hour => (
                         <div
@@ -158,18 +152,28 @@ export const AgendaGrid = memo(function AgendaGrid({
                             >
                                 {/* Header do profissional */}
                                 <div
-                                    className="h-16 border-b border-slate-200 dark:border-zinc-800 px-4 flex items-center gap-3 bg-white dark:bg-zinc-900 sticky top-0 z-10"
+                                    className="h-14 border-b border-slate-200 dark:border-zinc-800 px-3 flex items-center gap-2.5 bg-white dark:bg-zinc-900 sticky top-0 z-10"
                                 >
-                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center font-bold text-sm text-white shadow-md">
-                                        {employee.fullName.charAt(0)}
-                                    </div>
+                                    {employee.avatarUrl ? (
+                                        <img
+                                            src={employee.avatarUrl}
+                                            alt={employee.fullName}
+                                            className="w-9 h-9 rounded-full object-cover shadow-sm"
+                                        />
+                                    ) : (
+                                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center font-bold text-sm text-white shadow-sm">
+                                            {employee.fullName.charAt(0)}
+                                        </div>
+                                    )}
                                     <div className="flex-1 min-w-0">
                                         <p className="font-bold text-sm truncate text-foreground">
                                             {employee.fullName}
                                         </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {employeeAppointments.length} agendamentos
-                                        </p>
+                                        {employee.role && (
+                                            <p className="text-xs text-muted-foreground truncate">
+                                                {employee.role}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 
