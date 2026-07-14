@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useParams } from "next/navigation"
 import { motion } from "framer-motion"
 import {
@@ -27,9 +27,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useTenantBySlug, useTenantEmployees, useTenantCommissions } from "@/hooks/useTenantRecords"
+import { useTenantBySlug, useTenantEmployees, useTenantCommissions, useTenantAppointments } from "@/hooks/useTenantRecords"
 import { formatCurrency } from "@/lib/utils"
 import { toast } from "sonner"
+
+type PeriodFilter = 'today' | 'week' | 'month'
 
 export default function FinancialPage() {
     const params = useParams()
@@ -37,6 +39,10 @@ export default function FinancialPage() {
     const { data: tenant } = useTenantBySlug(tenantSlug)
     const { data: employees } = useTenantEmployees(tenant?.id)
     const { data: commissionRows } = useTenantCommissions(tenant?.id)
+    const { data: allAppointments } = useTenantAppointments(tenant?.id)
+
+    // --- FILTRO DE PERÍODO ---
+    const [selectedPeriod, setSelectedPeriod] = useState<PeriodFilter>('month')
 
     // --- STRIPE STATES ---
     const [isStripeConnected, setIsStripeConnected] = useState(false)
@@ -55,6 +61,74 @@ export default function FinancialPage() {
         setSettings(prev => ({ ...prev, [key]: value }))
     }
 
+    // --- CÁLCULO DE PERÍODO ---
+    const getPeriodDates = (period: PeriodFilter) => {
+        const now = new Date()
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+        switch (period) {
+            case 'today':
+                return {
+                    start: today,
+                    end: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+                }
+            case 'week':
+                const weekStart = new Date(today)
+                weekStart.setDate(today.getDate() - today.getDay()) // Domingo
+                const weekEnd = new Date(weekStart)
+                weekEnd.setDate(weekStart.getDate() + 7)
+                return { start: weekStart, end: weekEnd }
+            case 'month':
+                const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+                const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
+                return { start: monthStart, end: monthEnd }
+            default:
+                return { start: today, end: new Date(today.getTime() + 24 * 60 * 60 * 1000) }
+        }
+    }
+
+    // --- STATS FINANCEIROS REAIS ---
+    const stats = useMemo(() => {
+        const { start, end } = getPeriodDates(selectedPeriod)
+
+        // Filtrar appointments do período
+        const periodAppointments = allAppointments.filter(apt => {
+            const aptDate = new Date(apt.startAt)
+            return aptDate >= start && aptDate <= end
+        })
+
+        // FATURAMENTO BRUTO: soma de finalPrice dos appointments concluídos
+        const revenue = periodAppointments
+            .filter(apt => apt.status === 'completed')
+            .reduce((sum, apt) => sum + (apt.finalPrice || 0), 0)
+
+        // COMISSÕES: soma das comissões do período
+        const periodCommissions = commissionRows.filter(comm => {
+            const commDate = new Date(comm.createdAt)
+            return commDate >= start && commDate <= end
+        })
+        const commissionExpenses = periodCommissions.reduce((sum, comm) => sum + comm.commissionAmount, 0)
+
+        // DESPESAS TOTAIS (por enquanto só comissões, pode adicionar taxas depois)
+        const expenses = commissionExpenses
+
+        // LUCRO LÍQUIDO
+        const profit = revenue - expenses
+
+        // PENDENTE: agendamentos confirmados ou pendentes
+        const pending = periodAppointments
+            .filter(apt => apt.status === 'pending' || apt.status === 'confirmed')
+            .reduce((sum, apt) => sum + (apt.finalPrice || apt.price || 0), 0)
+
+        return {
+            revenue,
+            expenses,
+            profit,
+            pending,
+            profitMargin: revenue > 0 ? ((profit / revenue) * 100).toFixed(0) : '0'
+        }
+    }, [allAppointments, commissionRows, selectedPeriod])
+
     const handleConnectStripe = () => {
         setIsConnecting(true)
         // Simulate OAuth flow
@@ -63,14 +137,6 @@ export default function FinancialPage() {
             setIsStripeConnected(true)
             toast.success("Conta Stripe conectada com sucesso!")
         }, 2000)
-    }
-
-    // Mock Financial Data (To be replaced with real aggregations)
-    const stats = {
-        revenue: 45280.00,
-        expenses: 12450.00,
-        profit: 32830.00,
-        pending: 3450.00
     }
 
     // --- COMISSÕES PERSISTIDAS (appointment_commissions) ---
@@ -104,10 +170,32 @@ export default function FinancialPage() {
                     <p className="text-slate-500 text-lg">Seu lucro blindado com cálculo automático de taxas.</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="outline" className="gap-2">
-                        <Calendar className="w-4 h-4" />
-                        Este Mês
-                    </Button>
+                    <div className="flex items-center gap-2 bg-slate-100 dark:bg-zinc-800 p-1 rounded-lg">
+                        <Button
+                            size="sm"
+                            variant={selectedPeriod === 'today' ? 'default' : 'ghost'}
+                            onClick={() => setSelectedPeriod('today')}
+                            className="h-8"
+                        >
+                            Hoje
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant={selectedPeriod === 'week' ? 'default' : 'ghost'}
+                            onClick={() => setSelectedPeriod('week')}
+                            className="h-8"
+                        >
+                            Semana
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant={selectedPeriod === 'month' ? 'default' : 'ghost'}
+                            onClick={() => setSelectedPeriod('month')}
+                            className="h-8"
+                        >
+                            Mês
+                        </Button>
+                    </div>
                     <Button className="gap-2 bg-slate-900 text-white hover:bg-slate-800">
                         <Download className="w-4 h-4" />
                         Relatório DRE
@@ -144,7 +232,7 @@ export default function FinancialPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">{formatCurrency(stats.profit)}</div>
-                        <p className="text-xs text-emerald-600/80 mt-1">O que sobra no seu bolso (72%)</p>
+                        <p className="text-xs text-emerald-600/80 mt-1">O que sobra no seu bolso ({stats.profitMargin}%)</p>
                     </CardContent>
                 </Card>
                 <Card className="bg-white dark:bg-zinc-900 shadow-sm border-l-4 border-l-amber-500">
