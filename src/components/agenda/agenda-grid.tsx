@@ -105,21 +105,21 @@ export const AgendaGrid = memo(function AgendaGrid({
         : -100
 
     return (
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex overflow-hidden touch-pan-x">
             {/* Coluna de horários */}
             <div
                 className="border-r border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/50 sticky left-0 z-20"
-                style={{ width: '80px' }}
+                style={{ width: '60px' }}
             >
                 <div className="h-14 border-b border-slate-200 dark:border-zinc-800" />
                 <div className="overflow-y-auto">
                     {timeSlots.map(hour => (
                         <div
                             key={hour}
-                            className="flex flex-col items-center justify-start pt-3 border-b border-slate-200 dark:border-zinc-800 relative"
+                            className="flex flex-col items-center justify-start pt-2 sm:pt-3 border-b border-slate-200 dark:border-zinc-800 relative"
                             style={{ height: rowHeight }}
                         >
-                            <span className="text-sm font-bold text-foreground">
+                            <span className="text-xs sm:text-sm font-bold text-foreground">
                                 {String(hour).padStart(2, '0')}:00
                             </span>
                             {/* Linha pontilhada na meia hora */}
@@ -133,12 +133,16 @@ export const AgendaGrid = memo(function AgendaGrid({
             </div>
 
             {/* Grid de profissionais */}
-            <div className="flex-1 flex overflow-x-auto">
+            <div className="flex-1 flex overflow-x-auto scroll-smooth">
                 <AnimatePresence mode="popLayout">
                     {employees.map((employee, idx) => {
                         const employeeAppointments = todayAppointments.filter(
                             apt => apt.employeeId === employee.id
                         )
+
+                        // Largura responsiva: menor em mobile
+                        const mobileWidth = '160px'
+                        const desktopWidth = columnWidth
 
                         return (
                             <motion.div
@@ -147,30 +151,33 @@ export const AgendaGrid = memo(function AgendaGrid({
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, scale: 0.95 }}
                                 transition={{ delay: idx * 0.05, duration: 0.4 }}
-                                className="border-r border-slate-200 dark:border-zinc-800 last:border-r-0 relative"
-                                style={{ minWidth: columnWidth }}
+                                className="border-r border-slate-200 dark:border-zinc-800 last:border-r-0 relative flex-shrink-0"
+                                style={{
+                                    width: `min(${mobileWidth}, 100vw - 60px)`,
+                                    minWidth: mobileWidth
+                                }}
                             >
                                 {/* Header do profissional */}
                                 <div
-                                    className="h-14 border-b border-slate-200 dark:border-zinc-800 px-3 flex items-center gap-2.5 bg-white dark:bg-zinc-900 sticky top-0 z-10"
+                                    className="h-14 border-b border-slate-200 dark:border-zinc-800 px-2 sm:px-3 flex items-center gap-1.5 sm:gap-2.5 bg-white dark:bg-zinc-900 sticky top-0 z-10"
                                 >
                                     {employee.avatarUrl ? (
                                         <img
                                             src={employee.avatarUrl}
                                             alt={employee.fullName}
-                                            className="w-9 h-9 rounded-full object-cover shadow-sm"
+                                            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover shadow-sm flex-shrink-0"
                                         />
                                     ) : (
-                                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center font-bold text-sm text-white shadow-sm">
+                                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center font-bold text-xs sm:text-sm text-white shadow-sm flex-shrink-0">
                                             {employee.fullName.charAt(0)}
                                         </div>
                                     )}
                                     <div className="flex-1 min-w-0">
-                                        <p className="font-bold text-sm truncate text-foreground">
+                                        <p className="font-bold text-xs sm:text-sm truncate text-foreground">
                                             {employee.fullName}
                                         </p>
                                         {employee.role && (
-                                            <p className="text-xs text-muted-foreground truncate">
+                                            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
                                                 {employee.role}
                                             </p>
                                         )}
@@ -224,14 +231,16 @@ export const AgendaGrid = memo(function AgendaGrid({
                                                     initial={{ scale: 0.9, opacity: 0 }}
                                                     animate={{ scale: 1, opacity: 1 }}
                                                     whileHover={{ scale: 1.02, y: -2 }}
+                                                    whileTap={{ scale: 0.98 }}
                                                     className={cn(
-                                                        "absolute left-2 right-2 rounded-xl overflow-hidden shadow-lg cursor-pointer group",
+                                                        "absolute left-1 right-1 sm:left-2 sm:right-2 rounded-lg sm:rounded-xl overflow-hidden shadow-lg cursor-pointer group active:shadow-xl touch-manipulation",
                                                         isHighlighted && "ring-2 ring-yellow-400 ring-offset-2"
                                                     )}
                                                     onClick={() => onAppointmentClick?.(apt)}
                                                     style={{
                                                         top: layout.top,
                                                         height: layout.height,
+                                                        minHeight: '44px', // Touch target mínimo
                                                         zIndex: isHighlighted ? 10 : 5,
                                                     }}
                                                 >
@@ -240,14 +249,14 @@ export const AgendaGrid = memo(function AgendaGrid({
                                                         style={getStatusStyles(apt.status)}
                                                     />
 
-                                                    <div className="relative h-full flex flex-col p-3 text-white">
-                                                        <div className="flex items-center justify-between gap-2 mb-1">
-                                                            <span className="text-xs font-bold">
+                                                    <div className="relative h-full flex flex-col p-2 sm:p-3 text-white">
+                                                        <div className="flex items-center justify-between gap-1 sm:gap-2 mb-0.5 sm:mb-1">
+                                                            <span className="text-[10px] sm:text-xs font-bold">
                                                                 {startLabel} - {endLabel}
                                                             </span>
                                                             <Badge
                                                                 variant="outline"
-                                                                className="h-5 text-[10px] font-bold px-1.5 bg-white/90 border-none"
+                                                                className="h-4 sm:h-5 text-[9px] sm:text-[10px] font-bold px-1 sm:px-1.5 bg-white/90 border-none"
                                                                 style={{
                                                                     color: getStatusColor(apt.status),
                                                                 }}
@@ -255,10 +264,10 @@ export const AgendaGrid = memo(function AgendaGrid({
                                                                 {apt.duration}m
                                                             </Badge>
                                                         </div>
-                                                        <p className="font-bold text-sm mb-1 line-clamp-1">
+                                                        <p className="font-bold text-xs sm:text-sm mb-0.5 sm:mb-1 line-clamp-1">
                                                             {apt.customerName ?? 'Cliente'}
                                                         </p>
-                                                        <p className="text-xs font-medium opacity-90 line-clamp-1">
+                                                        <p className="text-[10px] sm:text-xs font-medium opacity-90 line-clamp-1">
                                                             {apt.service?.name ?? apt.serviceName ?? 'Serviço'}
                                                         </p>
 

@@ -87,8 +87,12 @@ export default function AgendaPage() {
             }
         }
 
+        // Sidebar fechada por padrão em mobile
+        const isMobile = window.innerWidth < 768
         if (savedSidebarOpen !== null) {
-            setSidebarOpen(savedSidebarOpen === 'true')
+            setSidebarOpen(isMobile ? false : savedSidebarOpen === 'true')
+        } else {
+            setSidebarOpen(!isMobile)
         }
 
         // Atualizar employee selecionado via URL

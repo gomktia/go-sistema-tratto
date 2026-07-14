@@ -43,19 +43,19 @@ export const AgendaHeader = memo(function AgendaHeader({
     }
 
     return (
-        <div className="h-12 border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center px-3 gap-3">
+        <div className="h-12 border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center px-2 sm:px-3 gap-1.5 sm:gap-3">
             {/* Botão toggle sidebar */}
             <Button
                 variant="ghost"
                 size="icon"
                 onClick={onToggleSidebar}
-                className="h-8 w-8"
+                className="h-8 w-8 flex-shrink-0"
             >
                 <Menu className="h-4 w-4" />
             </Button>
 
             {/* Navegação de data */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
                 <Button
                     variant="ghost"
                     size="icon"
@@ -65,11 +65,11 @@ export const AgendaHeader = memo(function AgendaHeader({
                     <ChevronLeft className="h-4 w-4" />
                 </Button>
 
-                <div className="min-w-[140px] text-center">
-                    <div className="text-sm font-bold leading-tight">
+                <div className="min-w-[100px] sm:min-w-[140px] text-center">
+                    <div className="text-xs sm:text-sm font-bold leading-tight">
                         {format(currentDate, "d MMM yyyy", { locale: ptBR })}
                     </div>
-                    <div className="text-xs text-muted-foreground leading-tight capitalize">
+                    <div className="text-[10px] sm:text-xs text-muted-foreground leading-tight capitalize hidden sm:block">
                         {format(currentDate, "EEEE", { locale: ptBR })}
                     </div>
                 </div>
@@ -84,9 +84,9 @@ export const AgendaHeader = memo(function AgendaHeader({
                 </Button>
             </div>
 
-            {/* Campo de busca */}
-            <div className="flex-1 max-w-md">
-                <div className="relative">
+            {/* Campo de busca - Escondido em mobile pequeno */}
+            <div className="hidden md:flex flex-1 max-w-md">
+                <div className="relative w-full">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                     <Input
                         value={searchQuery}
@@ -112,20 +112,23 @@ export const AgendaHeader = memo(function AgendaHeader({
                 </div>
             </div>
 
+            {/* Spacer para empurrar botões à direita em mobile */}
+            <div className="flex-1 md:hidden" />
+
             {/* Botão + Agendar */}
             <Button
                 onClick={onNewAppointment}
-                className="h-8 px-4 text-sm rounded-lg bg-[#FF7A00] hover:bg-[#FF7A00]/90 text-white font-semibold"
+                className="h-8 px-2 sm:px-4 text-sm rounded-lg bg-[#FF7A00] hover:bg-[#FF7A00]/90 text-white font-semibold flex-shrink-0"
             >
-                <Plus className="h-4 w-4 mr-1.5" />
-                Agendar
+                <Plus className="h-4 w-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">Agendar</span>
             </Button>
 
-            {/* Botão configurações (opcional) */}
+            {/* Botão configurações - Escondido em mobile pequeno */}
             <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8"
+                className="h-8 w-8 hidden sm:flex flex-shrink-0"
             >
                 <Settings className="h-3.5 w-3.5" />
             </Button>
