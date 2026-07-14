@@ -60,7 +60,7 @@ export const AgendaHeader = memo(function AgendaHeader({
                     variant="ghost"
                     size="icon"
                     onClick={() => navigateDate('prev')}
-                    className="h-8 w-8"
+                    className="h-8 w-8 text-[#FF7A00] hover:text-[#FF7A00] hover:bg-[#FF7A00]/10"
                 >
                     <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -78,7 +78,7 @@ export const AgendaHeader = memo(function AgendaHeader({
                     variant="ghost"
                     size="icon"
                     onClick={() => navigateDate('next')}
-                    className="h-8 w-8"
+                    className="h-8 w-8 text-[#FF7A00] hover:text-[#FF7A00] hover:bg-[#FF7A00]/10"
                 >
                     <ChevronRight className="h-4 w-4" />
                 </Button>

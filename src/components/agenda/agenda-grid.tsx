@@ -29,6 +29,7 @@ interface AgendaGridProps {
     searchQuery?: string
     onAppointmentClick?: (appointment: AppointmentView) => void
     onUpdateStatus?: (appointmentId: string, newStatus: string) => void
+    isMobileView?: boolean
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -59,6 +60,7 @@ export const AgendaGrid = memo(function AgendaGrid({
     searchQuery,
     onAppointmentClick,
     onUpdateStatus,
+    isMobileView = false,
 }: AgendaGridProps) {
     const rowHeight = ROW_HEIGHTS[gridSize.row]
     const columnWidth = COLUMN_WIDTHS[gridSize.column]
@@ -106,12 +108,13 @@ export const AgendaGrid = memo(function AgendaGrid({
 
     return (
         <div className="flex-1 flex overflow-hidden touch-pan-x">
-            {/* Coluna de horários */}
-            <div
-                className="border-r border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/50 sticky left-0 z-20"
-                style={{ width: '60px' }}
-            >
-                <div className="h-14 border-b border-slate-200 dark:border-zinc-800" />
+            {/* Coluna de horários - Escondida em mobile */}
+            {!isMobileView && (
+                <div
+                    className="border-r border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/50 sticky left-0 z-20"
+                    style={{ width: '60px' }}
+                >
+                    <div className="h-14 border-b border-slate-200 dark:border-zinc-800" />
                 <div className="overflow-y-auto">
                     {timeSlots.map(hour => (
                         <div
@@ -130,7 +133,8 @@ export const AgendaGrid = memo(function AgendaGrid({
                         </div>
                     ))}
                 </div>
-            </div>
+                </div>
+            )}
 
             {/* Grid de profissionais */}
             <div className="flex-1 flex overflow-x-auto scroll-smooth">
@@ -140,10 +144,6 @@ export const AgendaGrid = memo(function AgendaGrid({
                             apt => apt.employeeId === employee.id
                         )
 
-                        // Largura responsiva: menor em mobile
-                        const mobileWidth = '160px'
-                        const desktopWidth = columnWidth
-
                         return (
                             <motion.div
                                 key={employee.id}
@@ -151,10 +151,13 @@ export const AgendaGrid = memo(function AgendaGrid({
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, scale: 0.95 }}
                                 transition={{ delay: idx * 0.05, duration: 0.4 }}
-                                className="border-r border-slate-200 dark:border-zinc-800 last:border-r-0 relative flex-shrink-0"
-                                style={{
-                                    width: `min(${mobileWidth}, 100vw - 60px)`,
-                                    minWidth: mobileWidth
+                                className={cn(
+                                    "border-r border-slate-200 dark:border-zinc-800 last:border-r-0 relative",
+                                    isMobileView ? "w-full" : "flex-shrink-0"
+                                )}
+                                style={isMobileView ? {} : {
+                                    width: `min(160px, 100vw - 60px)`,
+                                    minWidth: '160px'
                                 }}
                             >
                                 {/* Header do profissional */}

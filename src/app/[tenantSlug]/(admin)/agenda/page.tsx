@@ -10,6 +10,7 @@ import { CompleteAppointmentModal } from "@/components/agenda/complete-appointme
 import { AgendaSidebar } from "@/components/agenda/agenda-sidebar"
 import { AgendaHeader } from "@/components/agenda/agenda-header"
 import { AgendaGrid } from "@/components/agenda/agenda-grid"
+import { EmployeeCarousel } from "@/components/agenda/employee-carousel"
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client"
 import type { AgendaFilters } from "@/types/agenda"
 import { DEFAULT_FILTERS } from "@/types/agenda"
@@ -35,6 +36,8 @@ export default function AgendaPage() {
     const [showCompleteModal, setShowCompleteModal] = useState(false)
     const [appointmentToComplete, setAppointmentToComplete] = useState<AppointmentRecord | null>(null)
     const [isMounted, setIsMounted] = useState(false)
+    const [selectedMobileEmployee, setSelectedMobileEmployee] = useState<string | null>(null)
+    const [isMobileView, setIsMobileView] = useState(false)
 
     // Dados
     const { data: serviceRecords } = useTenantServices(currentTenant.id)
@@ -73,6 +76,23 @@ export default function AgendaPage() {
         }))
     }, [serviceCategoryRecords])
 
+    // Detectar mobile view
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobileView(window.innerWidth < 768)
+        }
+        checkMobile()
+        window.addEventListener('resize', checkMobile)
+        return () => window.removeEventListener('resize', checkMobile)
+    }, [])
+
+    // Selecionar primeiro profissional em mobile
+    useEffect(() => {
+        if (isMobileView && employeeRecords.length > 0 && !selectedMobileEmployee) {
+            setSelectedMobileEmployee(employeeRecords[0].id)
+        }
+    }, [isMobileView, employeeRecords, selectedMobileEmployee])
+
     // Carregar preferências do localStorage
     useEffect(() => {
         setIsMounted(true)
@@ -101,6 +121,7 @@ export default function AgendaPage() {
                 ...prev,
                 selectedEmployees: [employeeFromUrl],
             }))
+            setSelectedMobileEmployee(employeeFromUrl)
         }
     }, [employeeFromUrl])
 
@@ -114,11 +135,18 @@ export default function AgendaPage() {
 
     // Filtrar profissionais
     const filteredEmployees = useMemo(() => {
+        // Em mobile, mostrar apenas o profissional selecionado no carrossel
+        if (isMobileView && selectedMobileEmployee) {
+            const employee = employeeRecords.find(e => e.id === selectedMobileEmployee)
+            return employee ? [employee] : []
+        }
+
+        // Desktop: usar filtros normais
         if (filters.selectedEmployees.includes('all')) {
             return employeeRecords
         }
         return employeeRecords.filter(e => filters.selectedEmployees.includes(e.id))
-    }, [employeeRecords, filters.selectedEmployees])
+    }, [employeeRecords, filters.selectedEmployees, isMobileView, selectedMobileEmployee])
 
     // Filtrar appointments
     const filteredAppointments = useMemo(() => {
@@ -223,9 +251,9 @@ export default function AgendaPage() {
 
             {/* Layout Principal */}
             <div className="flex h-screen overflow-hidden">
-                {/* Sidebar recolhível */}
+                {/* Sidebar recolhível - Escondida em mobile */}
                 <AgendaSidebar
-                    isOpen={sidebarOpen}
+                    isOpen={sidebarOpen && !isMobileView}
                     filters={filters}
                     onFiltersChange={setFilters}
                     employees={employeeRecords}
@@ -240,6 +268,15 @@ export default function AgendaPage() {
 
                 {/* Main content */}
                 <div className="flex-1 flex flex-col overflow-hidden">
+                    {/* Carrossel de profissionais - Apenas mobile */}
+                    {isMobileView && (
+                        <EmployeeCarousel
+                            employees={employeeRecords}
+                            selectedEmployeeId={selectedMobileEmployee}
+                            onSelectEmployee={setSelectedMobileEmployee}
+                        />
+                    )}
+
                     <AgendaHeader
                         currentDate={currentDate}
                         onDateChange={setCurrentDate}
@@ -263,6 +300,7 @@ export default function AgendaPage() {
                         searchQuery={searchQuery}
                         onAppointmentClick={handleAppointmentClick}
                         onUpdateStatus={updateAppointmentStatus}
+                        isMobileView={isMobileView}
                     />
                 </div>
             </div>
