@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { useTenant } from "@/contexts/tenant-context"
-import { useTenantAppointments, useTenantEmployees, useTenantServices } from "@/hooks/useTenantRecords"
+import { useTenantAppointments, useTenantEmployees, useTenantServices, useTenantServiceCategories } from "@/hooks/useTenantRecords"
 import type { AppointmentRecord, ServiceRecord } from "@/types/catalog"
 import { NewAppointmentModal } from "@/components/agenda/new-appointment-modal"
 import { CompleteAppointmentModal } from "@/components/agenda/complete-appointment-modal"
@@ -29,6 +29,7 @@ export default function AgendaPage() {
     const [currentDate, setCurrentDate] = useState<Date>(new Date())
     const [sidebarOpen, setSidebarOpen] = useState(true)
     const [filters, setFilters] = useState<AgendaFilters>(DEFAULT_FILTERS)
+    const [searchQuery, setSearchQuery] = useState<string>('')
     const [isNewAppointmentModalOpen, setIsNewAppointmentModalOpen] = useState(false)
     const [selectedAppointment, setSelectedAppointment] = useState<AppointmentRecord | null>(null)
     const [showCompleteModal, setShowCompleteModal] = useState(false)
@@ -39,6 +40,7 @@ export default function AgendaPage() {
     const { data: serviceRecords } = useTenantServices(currentTenant.id)
     const { data: employeeRecords } = useTenantEmployees(currentTenant.id)
     const { data: appointmentRecords, refetch: refetchAppointments } = useTenantAppointments(currentTenant.id)
+    const { data: serviceCategoryRecords } = useTenantServiceCategories(currentTenant.id)
 
     // Mapa de serviços
     const serviceMap = useMemo(() => {
@@ -62,19 +64,14 @@ export default function AgendaPage() {
         })
     ), [appointmentRecords, serviceMap])
 
-    // Categorias únicas dos serviços (mock - ajustar conforme database)
+    // Categorias dos serviços (dados reais do banco)
     const serviceCategories = useMemo(() => {
-        // TODO: Buscar categorias reais do banco
-        // Por enquanto, retornar categorias fictícias baseadas no Trinks
-        return [
-            { id: 'alo', name: 'Alongamento', shortCode: 'ALO' },
-            { id: 'cab', name: 'Cabelo', shortCode: 'CAB' },
-            { id: 'int', name: 'Integral', shortCode: 'INT' },
-            { id: 'mao', name: 'Mão', shortCode: 'MÃO' },
-            { id: 'maq', name: 'Maquiagem', shortCode: 'MAQ' },
-            { id: 'sob', name: 'Sobrancelha', shortCode: 'SOB' },
-        ]
-    }, [])
+        return serviceCategoryRecords.map(cat => ({
+            id: cat.id,
+            name: cat.name,
+            shortCode: cat.shortCode || cat.name.substring(0, 3).toUpperCase()
+        }))
+    }, [serviceCategoryRecords])
 
     // Carregar preferências do localStorage
     useEffect(() => {
@@ -135,22 +132,31 @@ export default function AgendaPage() {
             }
 
             // Filtrar por categoria de serviço
-            // TODO: implementar quando houver categoryId no ServiceRecord
-            // const service = serviceMap.get(apt.serviceId ?? '')
-            // if (filters.selectedServiceCategories.length > 0 &&
-            //     !filters.selectedServiceCategories.includes('all') &&
-            //     !filters.selectedServiceCategories.includes(service?.categoryId ?? '')) {
-            //     return false
-            // }
+            if (!filters.selectedServiceCategories.includes('all')) {
+                const service = serviceMap.get(apt.serviceId ?? '')
+                if (filters.selectedServiceCategories.length > 0 &&
+                    !filters.selectedServiceCategories.includes(service?.categoryId ?? '')) {
+                    return false
+                }
+            }
 
             // Filtrar ausências de profissional
             if (!filters.showAbsences && apt.status === 'staff_unavailable') {
                 return false
             }
 
+            // Filtrar por busca de cliente
+            if (searchQuery.trim()) {
+                const query = searchQuery.toLowerCase()
+                const customerName = (apt.customerName || '').toLowerCase()
+                if (!customerName.includes(query)) {
+                    return false
+                }
+            }
+
             return true
         })
-    }, [tenantAppointments, filters, serviceMap])
+    }, [tenantAppointments, filters, serviceMap, searchQuery])
 
     // Atualizar status do appointment
     const updateAppointmentStatus = async (appointmentId: string, newStatus: string) => {
@@ -239,6 +245,10 @@ export default function AgendaPage() {
                             setIsNewAppointmentModalOpen(true)
                         }}
                         sidebarOpen={sidebarOpen}
+                        searchQuery={searchQuery}
+                        onSearchChange={setSearchQuery}
+                        totalAppointments={tenantAppointments.length}
+                        filteredCount={filteredAppointments.length}
                     />
 
                     <AgendaGrid
@@ -246,6 +256,7 @@ export default function AgendaPage() {
                         appointments={filteredAppointments}
                         currentDate={currentDate}
                         gridSize={filters.gridSize}
+                        searchQuery={searchQuery}
                         onAppointmentClick={handleAppointmentClick}
                         onUpdateStatus={updateAppointmentStatus}
                     />

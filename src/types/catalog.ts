@@ -13,6 +13,20 @@ export type ServiceRecord = {
     imageUrl?: string
 }
 
+export type ServiceCategoryRecord = {
+    id: string
+    tenantId: string
+    name: string
+    shortCode?: string
+    description?: string
+    color?: string
+    icon?: string
+    displayOrder: number
+    isActive: boolean
+    createdAt?: string
+    updatedAt?: string
+}
+
 export type EmployeeRecord = {
     id: string
     tenantId: string

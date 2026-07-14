@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, memo } from "react"
 import { Calendar as CalendarIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -36,7 +36,7 @@ const STATUS_CONFIG: Array<{
     { value: 'cancelled', label: 'Cancelado', color: '#DA9CE0' },
 ]
 
-export function AgendaSidebar({
+export const AgendaSidebar = memo(function AgendaSidebar({
     isOpen,
     filters,
     onFiltersChange,
@@ -435,4 +435,4 @@ export function AgendaSidebar({
             )}
         </div>
     )
-}
+})

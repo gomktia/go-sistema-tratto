@@ -11,6 +11,7 @@ import type {
     EmployeeRecord,
     ProductRecord,
     ServiceRecord,
+    ServiceCategoryRecord,
     StaffAvailabilityRecord,
 } from "@/types/catalog"
 import {
@@ -90,6 +91,20 @@ const mapRowToService = (row: any): ServiceRecord => ({
     imageUrl: row.image_url,
     requiresConfirmation: false,
     currency: "BRL"
+})
+
+const mapRowToServiceCategory = (row: any): ServiceCategoryRecord => ({
+    id: row.id,
+    tenantId: row.tenant_id,
+    name: row.name,
+    shortCode: row.short_code ?? undefined,
+    description: row.description ?? undefined,
+    color: row.color ?? undefined,
+    icon: row.icon ?? undefined,
+    displayOrder: row.display_order ?? 0,
+    isActive: row.is_active ?? true,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
 })
 
 const mapRowToEmployee = (row: any): EmployeeRecord => ({
@@ -217,6 +232,53 @@ export function useTenantServices(tenantId?: string) {
                 } else {
                     setError(null)
                     setData(rows ? rows.map(mapRowToService) : [])
+                }
+                setLoading(false)
+            })
+
+        return () => { isMounted = false }
+    }, [tenantId, trigger])
+
+    return { data, loading, error, refetch }
+}
+
+export function useTenantServiceCategories(tenantId?: string) {
+    const [data, setData] = useState<ServiceCategoryRecord[]>([])
+    const [loading, setLoading] = useState<boolean>(isSupabaseConfigured && !!tenantId)
+    const [error, setError] = useState<string | null>(null)
+    const [trigger, setTrigger] = useState(0)
+
+    const refetch = () => setTrigger(prev => prev + 1)
+
+    useEffect(() => {
+        const supabase = getSupabaseBrowserClient()
+        if (!isSupabaseConfigured || !supabase || !tenantId) {
+            setLoading(false)
+            setData([])
+            setError(null)
+            return
+        }
+
+        let isMounted = true
+        setLoading(true)
+        setError(null)
+
+        supabase
+            .from("service_categories")
+            .select("id, tenant_id, name, short_code, description, color, icon, display_order, is_active, created_at, updated_at")
+            .eq("tenant_id", tenantId)
+            .eq("is_active", true)
+            .order("display_order", { ascending: true })
+            .order("name", { ascending: true })
+            .then(({ data: rows, error: queryError }) => {
+                if (!isMounted) return
+                if (queryError) {
+                    console.error("[useTenantServiceCategories] Erro ao carregar categorias:", queryError.message)
+                    setError(queryError.message)
+                    setData([])
+                } else {
+                    setError(null)
+                    setData(rows ? rows.map(mapRowToServiceCategory) : [])
                 }
                 setLoading(false)
             })

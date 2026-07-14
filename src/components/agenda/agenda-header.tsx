@@ -1,10 +1,12 @@
 "use client"
 
+import { memo } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { ChevronLeft, ChevronRight, Menu, Plus, Search, Settings } from "lucide-react"
+import { ChevronLeft, ChevronRight, Menu, Plus, Search, Settings, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
 interface AgendaHeaderProps {
@@ -13,14 +15,22 @@ interface AgendaHeaderProps {
     onToggleSidebar: () => void
     onNewAppointment: () => void
     sidebarOpen: boolean
+    searchQuery: string
+    onSearchChange: (query: string) => void
+    totalAppointments?: number
+    filteredCount?: number
 }
 
-export function AgendaHeader({
+export const AgendaHeader = memo(function AgendaHeader({
     currentDate,
     onDateChange,
     onToggleSidebar,
     onNewAppointment,
     sidebarOpen,
+    searchQuery,
+    onSearchChange,
+    totalAppointments,
+    filteredCount,
 }: AgendaHeaderProps) {
     const navigateDate = (direction: 'prev' | 'next') => {
         const newDate = new Date(currentDate)
@@ -75,12 +85,47 @@ export function AgendaHeader({
             </div>
 
             {/* Campo de busca */}
-            <div className="flex-1 max-w-md relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                    placeholder="Buscar clientes agendados hoje"
-                    className="pl-10 h-10 rounded-xl border-slate-200 dark:border-zinc-800"
-                />
+            <div className="flex-1 max-w-md flex items-center gap-2">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        value={searchQuery}
+                        onChange={(e) => onSearchChange(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Escape') {
+                                onSearchChange('')
+                            }
+                        }}
+                        placeholder="Buscar clientes agendados hoje"
+                        className="pl-10 pr-10 h-10 rounded-xl border-slate-200 dark:border-zinc-800"
+                    />
+                    {searchQuery && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onSearchChange('')}
+                            className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
+                    )}
+                </div>
+
+                {/* Contador de resultados */}
+                {filteredCount !== undefined && totalAppointments !== undefined && (
+                    <Badge
+                        variant="secondary"
+                        className={cn(
+                            "h-10 px-3 text-xs font-semibold",
+                            searchQuery && filteredCount < totalAppointments && "bg-yellow-100 text-yellow-800 border-yellow-300"
+                        )}
+                    >
+                        {searchQuery && filteredCount < totalAppointments
+                            ? `${filteredCount} de ${totalAppointments}`
+                            : `${filteredCount} agendamento${filteredCount !== 1 ? 's' : ''}`
+                        }
+                    </Badge>
+                )}
             </div>
 
             {/* Botão + Agendar */}
@@ -102,4 +147,4 @@ export function AgendaHeader({
             </Button>
         </div>
     )
-}
+})

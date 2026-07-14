@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, memo } from "react"
 import { format, isSameDay } from "date-fns"
 import { motion, AnimatePresence } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
@@ -26,6 +26,7 @@ interface AgendaGridProps {
         row: GridSize
         column: GridSize
     }
+    searchQuery?: string
     onAppointmentClick?: (appointment: AppointmentView) => void
     onUpdateStatus?: (appointmentId: string, newStatus: string) => void
 }
@@ -50,11 +51,12 @@ const STATUS_LABELS: Record<string, string> = {
     cancelled: 'Cancelado',
 }
 
-export function AgendaGrid({
+export const AgendaGrid = memo(function AgendaGrid({
     employees,
     appointments,
     currentDate,
     gridSize,
+    searchQuery,
     onAppointmentClick,
     onUpdateStatus,
 }: AgendaGridProps) {
@@ -199,18 +201,23 @@ export function AgendaGrid({
                                             )
                                             const endLabel = format(endTime, 'HH:mm')
 
+                                            const isHighlighted = searchQuery && searchQuery.trim().length > 0
+
                                             return (
                                                 <motion.div
                                                     key={apt.id}
                                                     initial={{ scale: 0.9, opacity: 0 }}
                                                     animate={{ scale: 1, opacity: 1 }}
                                                     whileHover={{ scale: 1.02, y: -2 }}
-                                                    className="absolute left-2 right-2 rounded-xl overflow-hidden shadow-lg cursor-pointer group"
+                                                    className={cn(
+                                                        "absolute left-2 right-2 rounded-xl overflow-hidden shadow-lg cursor-pointer group",
+                                                        isHighlighted && "ring-2 ring-yellow-400 ring-offset-2"
+                                                    )}
                                                     onClick={() => onAppointmentClick?.(apt)}
                                                     style={{
                                                         top: layout.top,
                                                         height: layout.height,
-                                                        zIndex: 5,
+                                                        zIndex: isHighlighted ? 10 : 5,
                                                     }}
                                                 >
                                                     <div
@@ -294,4 +301,4 @@ export function AgendaGrid({
             </div>
         </div>
     )
-}
+})
