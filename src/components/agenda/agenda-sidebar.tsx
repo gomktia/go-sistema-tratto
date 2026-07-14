@@ -149,14 +149,14 @@ export const AgendaSidebar = memo(function AgendaSidebar({
             )}
         >
             {isOpen && (
-                <div className="flex flex-col h-full overflow-y-auto p-4 space-y-6">
+                <div className="flex flex-col h-full overflow-y-auto p-3 space-y-4">
                     {/* 1. Calendário Mensal */}
                     <div>
                         <Calendar
                             mode="single"
                             selected={currentDate}
                             onSelect={(date) => date && onDateChange(date)}
-                            className="rounded-md border"
+                            className="rounded-md border w-full"
                         />
                     </div>
 

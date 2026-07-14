@@ -122,12 +122,17 @@ export const AgendaGrid = memo(function AgendaGrid({
                     {timeSlots.map(hour => (
                         <div
                             key={hour}
-                            className="flex flex-col items-center justify-start pt-3 border-b border-slate-200 dark:border-zinc-800"
+                            className="flex flex-col items-center justify-start pt-3 border-b border-slate-200 dark:border-zinc-800 relative"
                             style={{ height: rowHeight }}
                         >
                             <span className="text-sm font-bold text-foreground">
                                 {String(hour).padStart(2, '0')}:00
                             </span>
+                            {/* Linha pontilhada na meia hora */}
+                            <div
+                                className="absolute left-0 right-0 border-t border-dashed border-slate-200 dark:border-zinc-700/50"
+                                style={{ top: '50%' }}
+                            />
                         </div>
                     ))}
                 </div>
@@ -175,7 +180,13 @@ export const AgendaGrid = memo(function AgendaGrid({
                                             key={hour}
                                             className="border-b border-slate-100 dark:border-zinc-800/50 relative hover:bg-slate-50 dark:hover:bg-zinc-900/30 transition-colors"
                                             style={{ height: rowHeight }}
-                                        />
+                                        >
+                                            {/* Linha pontilhada na meia hora */}
+                                            <div
+                                                className="absolute left-0 right-0 border-t border-dashed border-slate-200 dark:border-zinc-700/50"
+                                                style={{ top: '50%' }}
+                                            />
+                                        </div>
                                     ))}
 
                                     {/* Indicador de hora atual */}
