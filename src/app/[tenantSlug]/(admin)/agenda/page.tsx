@@ -4,11 +4,12 @@ import { useMemo, useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { useTenant } from "@/contexts/tenant-context"
 import { useTenantAppointments, useTenantEmployees, useTenantServices, useTenantServiceCategories } from "@/hooks/useTenantRecords"
-import type { AppointmentRecord, ServiceRecord } from "@/types/catalog"
+import type { AppointmentRecord, ServiceRecord, AppointmentStatus } from "@/types/catalog"
 import { NewAppointmentModal } from "@/components/agenda/new-appointment-modal"
 import { CompleteAppointmentModal } from "@/components/agenda/complete-appointment-modal"
 import { AgendaSidebar } from "@/components/agenda/agenda-sidebar"
 import { AgendaHeader } from "@/components/agenda/agenda-header"
+import { AgendaStatusBar } from "@/components/agenda/agenda-status-bar"
 import { AgendaGrid } from "@/components/agenda/agenda-grid"
 import { EmployeeCarousel } from "@/components/agenda/employee-carousel"
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client"
@@ -190,6 +191,50 @@ export default function AgendaPage() {
         })
     }, [tenantAppointments, filters, serviceMap, searchQuery])
 
+    // Appointments do dia atual (para contadores e totalizadores)
+    const todayAppointments = useMemo(() => {
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const tomorrow = new Date(today)
+        tomorrow.setDate(tomorrow.getDate() + 1)
+
+        return filteredAppointments.filter(apt => {
+            const aptDate = new Date(apt.startDate)
+            aptDate.setHours(0, 0, 0, 0)
+            return aptDate.getTime() === today.getTime()
+        })
+    }, [filteredAppointments])
+
+    // Contadores por status
+    const statusCounts = useMemo(() => {
+        const counts = {
+            all: todayAppointments.length,
+            pending: todayAppointments.filter(a => a.status === 'pending').length,
+            confirmed: todayAppointments.filter(a => a.status === 'confirmed').length,
+            in_progress: todayAppointments.filter(a => a.status === 'in_progress').length,
+            completed: todayAppointments.filter(a => a.status === 'completed').length,
+            cancelled: todayAppointments.filter(a => a.status === 'cancelled').length,
+            no_show: todayAppointments.filter(a => a.status === 'no_show').length,
+        }
+        return counts
+    }, [todayAppointments])
+
+    // Totalizador de receita (appointments confirmed + completed)
+    const todayRevenue = useMemo(() => {
+        return todayAppointments
+            .filter(apt => apt.status === 'confirmed' || apt.status === 'completed')
+            .reduce((sum, apt) => sum + (apt.finalPrice || apt.price || 0), 0)
+    }, [todayAppointments])
+
+    // Toggle para mostrar/ocultar cancelados
+    const [showCancelled, setShowCancelled] = useState(true)
+
+    // Filtro final aplicando toggle de cancelados
+    const displayedAppointments = useMemo(() => {
+        if (showCancelled) return filteredAppointments
+        return filteredAppointments.filter(apt => apt.status !== 'cancelled')
+    }, [filteredAppointments, showCancelled])
+
     // Atualizar status do appointment
     const updateAppointmentStatus = async (appointmentId: string, newStatus: string) => {
         if (isSupabaseConfigured) {
@@ -212,6 +257,13 @@ export default function AgendaPage() {
     const handleAppointmentClick = (appointment: AppointmentView) => {
         setSelectedAppointment(appointment)
         setIsNewAppointmentModalOpen(true)
+    }
+
+    const handleStatusFilterChange = (statuses: AppointmentStatus[]) => {
+        setFilters(prev => ({
+            ...prev,
+            selectedStatuses: statuses
+        }))
     }
 
     if (!isMounted) {
@@ -292,9 +344,18 @@ export default function AgendaPage() {
                         filteredCount={filteredAppointments.length}
                     />
 
+                    <AgendaStatusBar
+                        statusCounts={statusCounts}
+                        todayRevenue={todayRevenue}
+                        selectedStatuses={filters.selectedStatuses}
+                        onStatusFilterChange={handleStatusFilterChange}
+                        showCancelled={showCancelled}
+                        onShowCancelledChange={setShowCancelled}
+                    />
+
                     <AgendaGrid
                         employees={filteredEmployees}
-                        appointments={filteredAppointments}
+                        appointments={displayedAppointments}
                         currentDate={currentDate}
                         gridSize={filters.gridSize}
                         searchQuery={searchQuery}
