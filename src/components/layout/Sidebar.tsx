@@ -54,6 +54,13 @@ export function Sidebar() {
                 { icon: Scissors, label: "Serviços", href: `/${slug}/servicos`, permission: null },
                 { icon: UserCircle, label: "Profissionais", href: `/${slug}/funcionarios`, permission: null },
             ]
+        },
+        {
+            title: "Financeiro",
+            items: [
+                { icon: DollarSign, label: "Financeiro", href: `/${slug}/financeiro`, permission: null },
+                { icon: ClipboardList, label: "Fechamento Diário", href: `/${slug}/fechamento`, permission: null },
+            ]
         }
     ]
 
