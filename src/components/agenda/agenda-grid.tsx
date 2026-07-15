@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils"
 import type { EmployeeRecord, AppointmentRecord, ServiceRecord } from "@/types/catalog"
 import type { GridSize } from "@/types/agenda"
 import { ROW_HEIGHTS, COLUMN_WIDTHS } from "@/types/agenda"
+import { AppointmentStatusMenu } from "./appointment-status-menu"
 
 // Generate time slots from 08:00 to 20:00 (13 slots total)
 // Trinks vai de 8h até 18h, mas deixamos até 20h para flexibilidade
@@ -279,49 +280,14 @@ export const AgendaGrid = memo(function AgendaGrid({
                                                             {apt.service?.name ?? apt.serviceName ?? 'Serviço'}
                                                         </p>
 
-                                                        {/* Botões de ação (aparecem no hover em telas maiores) */}
-                                                        {!apt.isBlocked && (
-                                                            <div className="flex flex-wrap gap-1 mt-auto pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                {apt.status === 'pending' && (
-                                                                    <button
-                                                                        onClick={e => {
-                                                                            e.stopPropagation()
-                                                                            onUpdateStatus?.(apt.id, 'confirmed')
-                                                                        }}
-                                                                        className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#64A500]/20 hover:bg-[#64A500]/40 transition-colors"
-                                                                        style={{ color: '#64A500' }}
-                                                                    >
-                                                                        Confirmar
-                                                                    </button>
-                                                                )}
-
-                                                                {apt.status === 'confirmed' && (
-                                                                    <button
-                                                                        onClick={e => {
-                                                                            e.stopPropagation()
-                                                                            onUpdateStatus?.(apt.id, 'in_progress')
-                                                                        }}
-                                                                        className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#65DDC8]/20 hover:bg-[#65DDC8]/40 transition-colors"
-                                                                        style={{ color: '#65DDC8' }}
-                                                                    >
-                                                                        Iniciar
-                                                                    </button>
-                                                                )}
-
-                                                                {apt.status === 'in_progress' && (
-                                                                    <button
-                                                                        onClick={e => {
-                                                                            e.stopPropagation()
-                                                                            onUpdateStatus?.(apt.id, 'completed')
-                                                                        }}
-                                                                        className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#88B2D5]/20 hover:bg-[#88B2D5]/40 transition-colors"
-                                                                        style={{ color: '#88B2D5' }}
-                                                                    >
-                                                                        Finalizar
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                        )}
+                                                        {/* Menu de alterar status (aparece no hover) */}
+                                                        <div className="flex flex-wrap gap-1 mt-auto pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <AppointmentStatusMenu
+                                                                currentStatus={apt.status}
+                                                                onStatusChange={(newStatus) => onUpdateStatus?.(apt.id, newStatus)}
+                                                                disabled={apt.isBlocked}
+                                                            />
+                                                        </div>
                                                     </div>
                                                 </motion.div>
                                             )

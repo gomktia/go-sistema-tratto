@@ -20,6 +20,7 @@ type AppointmentView = AppointmentRecord & {
     service?: ServiceRecord
     startDate: Date
     duration: number
+    isBlocked?: boolean
 }
 
 export default function AgendaPage() {
@@ -39,6 +40,7 @@ export default function AgendaPage() {
     const [isMounted, setIsMounted] = useState(false)
     const [selectedMobileEmployee, setSelectedMobileEmployee] = useState<string | null>(null)
     const [isMobileView, setIsMobileView] = useState(false)
+    const [closedDates, setClosedDates] = useState<Set<string>>(new Set())
 
     // Dados
     const { data: serviceRecords } = useTenantServices(currentTenant.id)
@@ -53,20 +55,23 @@ export default function AgendaPage() {
         return map
     }, [serviceRecords])
 
-    // Appointments enriquecidos
+    // Appointments enriquecidos com bloqueio por dia fechado
     const tenantAppointments = useMemo<AppointmentView[]>(() => (
         appointmentRecords.map((apt) => {
             const service = apt.serviceId ? serviceMap.get(apt.serviceId) : undefined
             const startDate = new Date(apt.startAt)
             const duration = apt.durationMinutes ?? service?.durationMinutes ?? 60
+            const appointmentDate = startDate.toISOString().split('T')[0]
+            const isBlocked = closedDates.has(appointmentDate)
             return {
                 ...apt,
                 service,
                 startDate,
                 duration,
+                isBlocked,
             }
         })
-    ), [appointmentRecords, serviceMap])
+    ), [appointmentRecords, serviceMap, closedDates])
 
     // Categorias dos serviços (dados reais do banco)
     const serviceCategories = useMemo(() => {
@@ -86,6 +91,25 @@ export default function AgendaPage() {
         window.addEventListener('resize', checkMobile)
         return () => window.removeEventListener('resize', checkMobile)
     }, [])
+
+    // Buscar dias fechados
+    useEffect(() => {
+        if (isSupabaseConfigured) {
+            const supabase = getSupabaseBrowserClient()
+            if (!supabase) return
+
+            supabase
+                .from("daily_closures")
+                .select("closing_date")
+                .eq("tenant_id", currentTenant.id)
+                .eq("status", "closed")
+                .then(({ data }) => {
+                    if (data) {
+                        setClosedDates(new Set(data.map(c => c.closing_date)))
+                    }
+                })
+        }
+    }, [currentTenant.id])
 
     // Selecionar primeiro profissional em mobile
     useEffect(() => {
