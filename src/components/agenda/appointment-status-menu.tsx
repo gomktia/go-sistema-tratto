@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils"
 interface AppointmentStatusMenuProps {
     currentStatus: AppointmentStatus
     onStatusChange: (newStatus: AppointmentStatus) => void
+    onComplete?: () => void // Callback para abrir modal de conclusão
     disabled?: boolean
 }
 
@@ -43,6 +44,7 @@ const STATUS_OPTIONS: Array<{
 export const AppointmentStatusMenu = memo(function AppointmentStatusMenu({
     currentStatus,
     onStatusChange,
+    onComplete,
     disabled = false,
 }: AppointmentStatusMenuProps) {
     const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
@@ -50,6 +52,12 @@ export const AppointmentStatusMenu = memo(function AppointmentStatusMenu({
 
     const handleStatusClick = (status: AppointmentStatus, requiresConfirmation: boolean) => {
         if (status === currentStatus) return
+
+        // Status "completed" abre modal de conclusão (se callback fornecido)
+        if (status === 'completed' && onComplete) {
+            onComplete()
+            return
+        }
 
         if (requiresConfirmation) {
             setPendingStatus(status)
