@@ -60,10 +60,7 @@ export default function FinancialPage() {
 
     // --- CONFIGURAÇÕES DE COMISSÃO (Estado Local Mockado) ---
     const [settings, setSettings] = useState({
-        cardFeeCredit: 3.5, // 3.5%
-        cardFeeDebit: 1.5,  // 1.5%
         defaultCommission: 40, // 40%
-        deductFeesFromCommission: true // Se true, desconta taxa cartão antes de calcular comissão
     })
 
     // Função para atualizar configurações
@@ -615,44 +612,7 @@ export default function FinancialPage() {
                 </TabsContent>
 
                 <TabsContent value="settings">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <Card className="border-none shadow-md">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <CreditCard className="w-5 h-5 text-purple-600" />
-                                    Taxas da Maquininha
-                                </CardTitle>
-                                <CardDescription>Informe as taxas para descontar antes da comissão.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-6">
-                                <div className="space-y-3">
-                                    <div className="flex justify-between">
-                                        <label className="text-sm font-medium text-slate-700">Crédito (%)</label>
-                                        <span className="text-sm font-bold text-purple-600">{settings.cardFeeCredit}%</span>
-                                    </div>
-                                    <input
-                                        type="range" min="0" max="10" step="0.1"
-                                        value={settings.cardFeeCredit}
-                                        onChange={(e) => updateSetting('cardFeeCredit', Number(e.target.value))}
-                                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
-                                    />
-                                    <p className="text-xs text-slate-400">Quanto sua máquina cobra no crédito.</p>
-                                </div>
-                                <div className="space-y-3">
-                                    <div className="flex justify-between">
-                                        <label className="text-sm font-medium text-slate-700">Débito (%)</label>
-                                        <span className="text-sm font-bold text-purple-600">{settings.cardFeeDebit}%</span>
-                                    </div>
-                                    <input
-                                        type="range" min="0" max="5" step="0.1"
-                                        value={settings.cardFeeDebit}
-                                        onChange={(e) => updateSetting('cardFeeDebit', Number(e.target.value))}
-                                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
-                                    />
-                                </div>
-                            </CardContent>
-                        </Card>
-
+                    <div className="grid grid-cols-1 gap-6">
                         <Card className="border-none shadow-md">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
