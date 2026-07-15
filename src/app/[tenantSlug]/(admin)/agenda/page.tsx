@@ -243,11 +243,11 @@ export default function AgendaPage() {
         return counts
     }, [todayAppointments])
 
-    // Totalizador de receita (appointments confirmed + completed)
+    // Totalizador de receita realizada (apenas appointments completed com finalPrice)
     const todayRevenue = useMemo(() => {
         return todayAppointments
-            .filter(apt => apt.status === 'confirmed' || apt.status === 'completed')
-            .reduce((sum, apt) => sum + (apt.finalPrice || apt.price || 0), 0)
+            .filter(apt => apt.status === 'completed')
+            .reduce((sum, apt) => sum + (apt.finalPrice || 0), 0)
     }, [todayAppointments])
 
     // Toggle para mostrar/ocultar cancelados
@@ -281,6 +281,11 @@ export default function AgendaPage() {
     const handleAppointmentClick = (appointment: AppointmentView) => {
         setSelectedAppointment(appointment)
         setIsNewAppointmentModalOpen(true)
+    }
+
+    const handleCompleteAppointment = (appointment: AppointmentView) => {
+        setAppointmentToComplete(appointment)
+        setShowCompleteModal(true)
     }
 
     const handleStatusFilterChange = (statuses: AppointmentStatus[]) => {
@@ -385,6 +390,7 @@ export default function AgendaPage() {
                         searchQuery={searchQuery}
                         onAppointmentClick={handleAppointmentClick}
                         onUpdateStatus={updateAppointmentStatus}
+                        onCompleteAppointment={handleCompleteAppointment}
                         isMobileView={isMobileView}
                     />
                 </div>

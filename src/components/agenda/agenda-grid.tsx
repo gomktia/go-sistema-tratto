@@ -32,6 +32,7 @@ interface AgendaGridProps {
     searchQuery?: string
     onAppointmentClick?: (appointment: AppointmentView) => void
     onUpdateStatus?: (appointmentId: string, newStatus: string) => void
+    onCompleteAppointment?: (appointment: AppointmentView) => void
     isMobileView?: boolean
 }
 
@@ -63,6 +64,7 @@ export const AgendaGrid = memo(function AgendaGrid({
     searchQuery,
     onAppointmentClick,
     onUpdateStatus,
+    onCompleteAppointment,
     isMobileView = false,
 }: AgendaGridProps) {
     const rowHeight = ROW_HEIGHTS[gridSize.row]
@@ -285,6 +287,7 @@ export const AgendaGrid = memo(function AgendaGrid({
                                                             <AppointmentStatusMenu
                                                                 currentStatus={apt.status}
                                                                 onStatusChange={(newStatus) => onUpdateStatus?.(apt.id, newStatus)}
+                                                                onComplete={() => onCompleteAppointment?.(apt)}
                                                                 disabled={apt.isBlocked}
                                                             />
                                                         </div>
