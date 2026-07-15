@@ -281,16 +281,6 @@ export const AgendaGrid = memo(function AgendaGrid({
                                                         <p className="text-[10px] sm:text-xs font-medium opacity-90 line-clamp-1">
                                                             {apt.service?.name ?? apt.serviceName ?? 'Serviço'}
                                                         </p>
-
-                                                        {/* Menu de alterar status (aparece no hover) */}
-                                                        <div className="flex flex-wrap gap-1 mt-auto pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <AppointmentStatusMenu
-                                                                currentStatus={apt.status}
-                                                                onStatusChange={(newStatus) => onUpdateStatus?.(apt.id, newStatus)}
-                                                                onComplete={() => onCompleteAppointment?.(apt)}
-                                                                disabled={apt.isBlocked}
-                                                            />
-                                                        </div>
                                                     </div>
                                                 </motion.div>
                                             )
